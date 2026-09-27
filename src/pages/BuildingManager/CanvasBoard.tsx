@@ -1,10 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, Button, Card, Empty, List, Space, Spin, Tag, Typography } from 'antd'
+import {
+  Alert,
+  Button,
+  Card,
+  Empty,
+  List,
+  Space,
+  Spin,
+  Tag,
+  Typography,
+} from 'antd'
 import type Konva from 'konva'
-import { Circle, Image as KonvaImage, Label, Layer, Stage, Tag as KonvaTag, Text } from 'react-konva'
+import {
+  Circle,
+  Image as KonvaImage,
+  Label,
+  Layer,
+  Stage,
+  Tag as KonvaTag,
+  Text,
+} from 'react-konva'
 import { DeleteOutlined } from '@ant-design/icons'
 import { useFloorStore } from '../../store/useFloorStore'
-import type { Poi } from '../../types/poi'
+import { percentToPixel, pixelToPercent } from '../../utils/canvasCoordinates'
 
 const { Text: AntText } = Typography
 
@@ -43,13 +61,6 @@ function useElementWidth<T extends HTMLElement>() {
   }, [])
 
   return [ref, width] as const
-}
-
-function poiToImagePosition(poi: Poi, mapWidth: number, mapHeight: number) {
-  return {
-    x: (poi.xPercent / 100) * mapWidth,
-    y: (poi.yPercent / 100) * mapHeight,
-  }
 }
 
 export function CanvasBoard() {
@@ -102,12 +113,16 @@ export function CanvasBoard() {
       return
     }
 
-    const imageX = position.x / scale
-    const imageY = position.y / scale
+    const pixelX = position.x / scale
+    const pixelY = position.y / scale
 
     await addPoi({
-      xPercent: (imageX / selectedFloor.mapWidth) * 100,
-      yPercent: (imageY / selectedFloor.mapHeight) * 100,
+      ...pixelToPercent(
+        pixelX,
+        pixelY,
+        selectedFloor.mapWidth,
+        selectedFloor.mapHeight,
+      ),
       type: 'custom',
     })
   }
@@ -121,8 +136,12 @@ export function CanvasBoard() {
     }
 
     await movePoi(poiId, {
-      xPercent: (event.target.x() / selectedFloor.mapWidth) * 100,
-      yPercent: (event.target.y() / selectedFloor.mapHeight) * 100,
+      ...pixelToPercent(
+        event.target.x(),
+        event.target.y(),
+        selectedFloor.mapWidth,
+        selectedFloor.mapHeight,
+      ),
     })
   }
 
@@ -168,8 +187,9 @@ export function CanvasBoard() {
                     />
                   ) : null}
                   {pois.map((poi) => {
-                    const position = poiToImagePosition(
-                      poi,
+                    const { pixelX, pixelY } = percentToPixel(
+                      poi.x,
+                      poi.y,
                       selectedFloor.mapWidth,
                       selectedFloor.mapHeight,
                     )
@@ -177,8 +197,8 @@ export function CanvasBoard() {
                     return (
                       <Circle
                         key={poi.id}
-                        x={position.x}
-                        y={position.y}
+                        x={pixelX}
+                        y={pixelY}
                         radius={16}
                         fill="#f97316"
                         stroke="#ffffff"
@@ -189,8 +209,9 @@ export function CanvasBoard() {
                     )
                   })}
                   {pois.map((poi) => {
-                    const position = poiToImagePosition(
-                      poi,
+                    const { pixelX, pixelY } = percentToPixel(
+                      poi.x,
+                      poi.y,
                       selectedFloor.mapWidth,
                       selectedFloor.mapHeight,
                     )
@@ -198,8 +219,8 @@ export function CanvasBoard() {
                     return (
                       <Label
                         key={`${poi.id}-label`}
-                        x={position.x + 18}
-                        y={position.y - 17}
+                        x={pixelX + 18}
+                        y={pixelY - 17}
                         listening={false}
                       >
                         <KonvaTag fill="#111827" cornerRadius={4} />
@@ -241,7 +262,7 @@ export function CanvasBoard() {
                   <Tag color="blue">{poi.type}</Tag>
                 </Space>
                 <AntText type="secondary">
-                  {poi.xPercent.toFixed(1)}%, {poi.yPercent.toFixed(1)}%
+                  {poi.x.toFixed(1)}%, {poi.y.toFixed(1)}%
                 </AntText>
               </Space>
             </List.Item>

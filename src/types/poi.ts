@@ -5,7 +5,9 @@ export type Poi = {
   floorId: string
   name: string
   type: PoiType
-  xPercent: number
-  yPercent: number
+  /** 0-100, percentage on the floor plan width. Not a pixel value. */
+  x: number
+  /** 0-100, percentage on the floor plan height. Not a pixel value. */
+  y: number
 }
 

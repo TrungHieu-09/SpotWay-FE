@@ -2,10 +2,11 @@ import { create } from 'zustand'
 import { createFloor, getFloors, saveFloorPois } from '../api/floors'
 import type { Floor } from '../types/floor'
 import type { Poi, PoiType } from '../types/poi'
+import { clampPercent } from '../utils/canvasCoordinates'
 
 type NewPoiInput = {
-  xPercent: number
-  yPercent: number
+  x: number
+  y: number
   type?: PoiType
 }
 
@@ -23,13 +24,9 @@ type FloorState = {
   addPoi: (poi: NewPoiInput) => Promise<void>
   movePoi: (
     poiId: string,
-    position: Pick<Poi, 'xPercent' | 'yPercent'>,
+    position: Pick<Poi, 'x' | 'y'>,
   ) => Promise<void>
   removePoi: (poiId: string) => Promise<void>
-}
-
-function clampPercent(value: number) {
-  return Math.min(100, Math.max(0, Number(value.toFixed(2))))
 }
 
 function syncFloorPois(floors: Floor[], floorId: string, pois: Poi[]) {
@@ -115,8 +112,8 @@ export const useFloorStore = create<FloorState>((set, get) => ({
         floorId: selectedFloor.id,
         name: `POI ${get().pois.length + 1}`,
         type: poi.type ?? 'custom',
-        xPercent: clampPercent(poi.xPercent),
-        yPercent: clampPercent(poi.yPercent),
+        x: clampPercent(poi.x),
+        y: clampPercent(poi.y),
       },
     ]
 
@@ -153,8 +150,8 @@ export const useFloorStore = create<FloorState>((set, get) => ({
       poi.id === poiId
         ? {
             ...poi,
-            xPercent: clampPercent(position.xPercent),
-            yPercent: clampPercent(position.yPercent),
+            x: clampPercent(position.x),
+            y: clampPercent(position.y),
           }
         : poi,
     )
