@@ -4,8 +4,21 @@ import 'antd/dist/reset.css'
 import './index.css'
 import App from './App.tsx'
 
+declare global {
+  interface Window {
+    __resetMock?: () => void
+  }
+}
+
 async function enableMocking() {
-  if (!import.meta.env.DEV || import.meta.env.VITE_ENABLE_MSW === 'false') {
+  if (!import.meta.env.DEV) {
+    return
+  }
+
+  const { resetMockStorage } = await import('./mocks/persist')
+  window.__resetMock = resetMockStorage
+
+  if (import.meta.env.VITE_ENABLE_MSW === 'false') {
     return
   }
 

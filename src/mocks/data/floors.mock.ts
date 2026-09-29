@@ -1,5 +1,6 @@
 import type { Floor } from '../../types/floor'
 import type { Poi } from '../../types/poi'
+import { loadFromStorage, MOCK_STORAGE_KEYS } from '../persist'
 
 export const mallPlan =
   'data:image/svg+xml;utf8,' +
@@ -34,7 +35,7 @@ export const officePlan =
   <text x="710" y="525" font-family="Arial" font-size="38" fill="#111827">Workspace</text>
 </svg>`)
 
-export const floors: Floor[] = [
+export const initialFloorsSeed: Floor[] = [
   {
     id: 'floor-1',
     buildingId: 'bldg-1',
@@ -172,6 +173,8 @@ export const floors: Floor[] = [
     pois: [],
   },
 ]
+
+export const floors = loadFromStorage(MOCK_STORAGE_KEYS.floors, initialFloorsSeed)
 
 export function fallbackMap() {
   return mallPlan

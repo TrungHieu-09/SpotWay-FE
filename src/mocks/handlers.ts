@@ -1,6 +1,7 @@
 import { delay, http, HttpResponse } from 'msw'
 import { buildings } from './data/buildings.mock'
 import { fallbackMap, floors } from './data/floors.mock'
+import { MOCK_STORAGE_KEYS, saveToStorage } from './persist'
 import type { Building } from '../types/building'
 import type { CreateFloorPayload, Floor } from '../types/floor'
 import type { Poi } from '../types/poi'
@@ -24,6 +25,19 @@ function makeFloor(payload: CreateFloorPayload): Floor {
   }
 }
 
+async function planImageToUrl(file: File) {
+  const buffer = await file.arrayBuffer()
+  const bytes = new Uint8Array(buffer)
+  const chunkSize = 0x8000
+  let binary = ''
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
+  }
+
+  return `data:${file.type};base64,${btoa(binary)}`
+}
+
 export const handlers = [
   http.get(endpoint('/buildings'), async () => {
     await delay(250)
@@ -34,7 +48,7 @@ export const handlers = [
     await delay(350)
     const formData = await request.formData()
     const file = formData.get('planImage')
-    const fileUrl = file instanceof File ? URL.createObjectURL(file) : fallbackMap()
+    const fileUrl = file instanceof File ? await planImageToUrl(file) : fallbackMap()
     const building: Building = {
       id: `bldg-${crypto.randomUUID()}`,
       name: String(formData.get('name') ?? 'Untitled building'),
@@ -54,6 +68,8 @@ export const handlers = [
         mapImageUrl: fileUrl,
       }),
     )
+    saveToStorage(MOCK_STORAGE_KEYS.buildings, buildings)
+    saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
 
     return HttpResponse.json(building, { status: 201 })
   }),
@@ -76,6 +92,8 @@ export const handlers = [
     if (building) {
       building.floorCount += 1
     }
+    saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
+    saveToStorage(MOCK_STORAGE_KEYS.buildings, buildings)
 
     return HttpResponse.json(floor, { status: 201 })
   }),
@@ -90,6 +108,7 @@ export const handlers = [
     }
 
     floor.pois = payload
+    saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
     return HttpResponse.json(floor.pois)
   }),
 ]

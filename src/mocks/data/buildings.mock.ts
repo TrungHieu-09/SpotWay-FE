@@ -1,7 +1,8 @@
 import type { Building } from '../../types/building'
+import { loadFromStorage, MOCK_STORAGE_KEYS } from '../persist'
 import { mallPlan, officePlan } from './floors.mock'
 
-export const buildings: Building[] = [
+export const initialBuildingsSeed: Building[] = [
   {
     id: 'bldg-1',
     name: 'Saigon Central Mall',
@@ -39,4 +40,9 @@ export const buildings: Building[] = [
     planImageUrl: mallPlan,
   },
 ]
+
+export const buildings = loadFromStorage(
+  MOCK_STORAGE_KEYS.buildings,
+  initialBuildingsSeed,
+)
 
