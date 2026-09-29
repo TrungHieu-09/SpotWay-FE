@@ -10,6 +10,7 @@ import {
   Typography,
 } from 'antd'
 import { EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 import { CreateBuildingModal } from './CreateBuildingModal'
 import { useBuildingStore } from '../../store/useBuildingStore'
 import type { Building } from '../../types/building'
@@ -18,6 +19,7 @@ const { Text, Title } = Typography
 
 export function BuildingListPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const navigate = useNavigate()
   const buildings = useBuildingStore((state) => state.buildings)
   const isLoading = useBuildingStore((state) => state.isLoading)
   const loadBuildings = useBuildingStore((state) => state.loadBuildings)
@@ -53,7 +55,7 @@ export function BuildingListPage() {
       </section>
 
       <Card title="Building inventory" className="tool-card">
-        <Table
+        <Table<Building>
           rowKey="id"
           loading={isLoading}
           dataSource={buildings}
@@ -97,9 +99,13 @@ export function BuildingListPage() {
               title: 'Hành động',
               key: 'actions',
               width: 160,
-              render: () => (
+              render: (_value: unknown, record) => (
                 <Space>
-                  <Button size="small" icon={<EyeOutlined />}>
+                  <Button
+                    size="small"
+                    icon={<EyeOutlined />}
+                    onClick={() => navigate(`/owner/buildings/${record.id}`)}
+                  >
                     Xem chi tiết
                   </Button>
                   <Button size="small" icon={<EditOutlined />}>

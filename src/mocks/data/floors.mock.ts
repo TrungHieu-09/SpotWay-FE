@@ -41,6 +41,7 @@ export const initialFloorsSeed: Floor[] = [
     buildingId: 'bldg-1',
     name: 'Ground Floor',
     level: 0,
+    publishStatus: 'published',
     mapImageUrl: mallPlan,
     mapWidth: 1200,
     mapHeight: 760,
@@ -68,6 +69,7 @@ export const initialFloorsSeed: Floor[] = [
     buildingId: 'bldg-1',
     name: 'Level 2',
     level: 2,
+    publishStatus: 'draft',
     mapImageUrl: mallPlan,
     mapWidth: 1200,
     mapHeight: 760,
@@ -78,6 +80,7 @@ export const initialFloorsSeed: Floor[] = [
     buildingId: 'bldg-1',
     name: 'Level 3',
     level: 3,
+    publishStatus: 'draft',
     mapImageUrl: mallPlan,
     mapWidth: 1200,
     mapHeight: 760,
@@ -88,6 +91,7 @@ export const initialFloorsSeed: Floor[] = [
     buildingId: 'bldg-2',
     name: 'Office Level 5',
     level: 5,
+    publishStatus: 'published',
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
@@ -107,6 +111,7 @@ export const initialFloorsSeed: Floor[] = [
     buildingId: 'bldg-2',
     name: 'Office Level 6',
     level: 6,
+    publishStatus: 'draft',
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
@@ -117,6 +122,7 @@ export const initialFloorsSeed: Floor[] = [
     buildingId: 'bldg-3',
     name: 'Lobby',
     level: 1,
+    publishStatus: 'published',
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
@@ -127,6 +133,7 @@ export const initialFloorsSeed: Floor[] = [
     buildingId: 'bldg-3',
     name: 'Workspace',
     level: 2,
+    publishStatus: 'published',
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
@@ -137,6 +144,7 @@ export const initialFloorsSeed: Floor[] = [
     buildingId: 'bldg-3',
     name: 'Labs',
     level: 3,
+    publishStatus: 'draft',
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
@@ -147,6 +155,7 @@ export const initialFloorsSeed: Floor[] = [
     buildingId: 'bldg-3',
     name: 'Event Floor',
     level: 4,
+    publishStatus: 'draft',
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
@@ -157,6 +166,7 @@ export const initialFloorsSeed: Floor[] = [
     buildingId: 'bldg-4',
     name: 'Ground Floor',
     level: 0,
+    publishStatus: 'draft',
     mapImageUrl: mallPlan,
     mapWidth: 1200,
     mapHeight: 760,
@@ -167,6 +177,7 @@ export const initialFloorsSeed: Floor[] = [
     buildingId: 'bldg-4',
     name: 'Level 2',
     level: 2,
+    publishStatus: 'draft',
     mapImageUrl: mallPlan,
     mapWidth: 1200,
     mapHeight: 760,
@@ -174,7 +185,12 @@ export const initialFloorsSeed: Floor[] = [
   },
 ]
 
-export const floors = loadFromStorage(MOCK_STORAGE_KEYS.floors, initialFloorsSeed)
+export const floors = loadFromStorage(MOCK_STORAGE_KEYS.floors, initialFloorsSeed).map(
+  (floor) => ({
+    ...floor,
+    publishStatus: floor.publishStatus ?? 'draft',
+  }),
+)
 
 export function fallbackMap() {
   return mallPlan

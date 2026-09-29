@@ -18,6 +18,7 @@ function makeFloor(payload: CreateFloorPayload): Floor {
     buildingId: payload.buildingId,
     name: payload.name,
     level: payload.level,
+    publishStatus: payload.publishStatus ?? 'draft',
     mapImageUrl: payload.mapImageUrl ?? fallbackMap(),
     mapWidth: payload.mapWidth ?? 1200,
     mapHeight: payload.mapHeight ?? 760,

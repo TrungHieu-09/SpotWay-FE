@@ -11,9 +11,10 @@ type BuildingState = {
   error: string | null
   loadBuildings: () => Promise<void>
   createBuilding: (payload: CreateBuildingPayload) => Promise<Building>
+  getBuildingById: (buildingId: string) => Building | undefined
 }
 
-export const useBuildingStore = create<BuildingState>((set) => ({
+export const useBuildingStore = create<BuildingState>((set, get) => ({
   buildings: [],
   isLoading: false,
   error: null,
@@ -35,6 +36,10 @@ export const useBuildingStore = create<BuildingState>((set) => ({
     const building = await createBuildingRequest(payload)
     set((state) => ({ buildings: [building, ...state.buildings] }))
     return building
+  },
+
+  getBuildingById(buildingId) {
+    return get().buildings.find((building) => building.id === buildingId)
   },
 }))
 

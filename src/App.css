@@ -101,6 +101,31 @@
   font-size: 13px;
 }
 
+.building-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 20px;
+}
+
+.building-plan-image {
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.floor-detail-card {
+  margin-top: 20px;
+}
+
+.floor-count-note {
+  margin-top: 12px;
+}
+
 .manager-layout {
   display: grid;
   grid-template-columns: 292px minmax(0, 1fr);
@@ -253,6 +278,10 @@
   .page-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .building-detail-grid {
+    grid-template-columns: 1fr;
   }
 
   .manager-layout,

@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from '../components/layout/AppLayout'
 import { ProtectedRoute } from '../components/layout/ProtectedRoute'
+import { BuildingDetailPage } from '../pages/BuildingOwner/BuildingDetailPage'
 import { BuildingListPage } from '../pages/BuildingOwner/BuildingListPage'
 import { ManagerLayout } from '../pages/BuildingManager/ManagerLayout'
 
@@ -15,6 +16,10 @@ export const router = createBrowserRouter([
         ),
         children: [
           { path: 'owner/buildings', element: <BuildingListPage /> },
+          {
+            path: 'owner/buildings/:buildingId',
+            element: <BuildingDetailPage />,
+          },
         ],
       },
       {
