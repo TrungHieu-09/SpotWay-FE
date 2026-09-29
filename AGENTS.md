@@ -1,7 +1,7 @@
 # AGENTS.md — Quy ước bắt buộc cho agent code trong dự án Indoor Spatial Management System (FE — indoor-spatial-fe)
 
 > File này gộp toàn bộ skill trong `project-skills/`. Đọc kỹ trước khi code bất kỳ task nào.
-> Nếu agent hỗ trợ đọc thư mục `project-skills/*/SKILL.md` riêng lẻ, có thể đọc trực tiếp ở đó thay vì file này. File này chỉ để đảm bảo agent nào cũng đọc được (nhiều tool chỉ tự động quét AGENTS.md/CLAUDE.md ở root).
+> Nếu agent hỗ trợ đọc thư mục `project-skills/*/SKILL.md` riêng lẻ, có thể đọc trực tiếp ở đó thay vì file này.
 
 ---
 
@@ -144,8 +144,8 @@ interface Floor {
 interface Poi {
   id: string;
   floorId: string;
-  x: number;   // 0-100, phần trăm theo chiều ngang ảnh sơ đồ
-  y: number;   // 0-100, phần trăm theo chiều dọc ảnh sơ đồ
+  x: number;   // 0-100, phần trăm theo chiều ngang ảnh sơ đồ (không phải pixel)
+  y: number;   // 0-100, phần trăm theo chiều dọc ảnh sơ đồ (không phải pixel)
   type: "store" | "elevator" | "stair" | "toilet" | "exit" | "other";
   label: string;
 }
@@ -162,8 +162,8 @@ interface Poi {
 interface Node {
   id: string;
   floorId: string;
-  x: number;   // 0-100, CÙNG quy ước với Poi.x
-  y: number;   // 0-100, CÙNG quy ước với Poi.y
+  x: number;   // 0-100, CÙNG quy ước với Poi.x (phần trăm, không phải pixel)
+  y: number;   // 0-100, CÙNG quy ước với Poi.y (phần trăm, không phải pixel)
   isElevatorLink?: boolean; // true nếu node này liên kết thang máy xuyên tầng
 }
 
@@ -197,19 +197,21 @@ Lý do: ảnh sơ đồ hiển thị với kích thước khác nhau tuỳ màn 
 Khi người dùng click/drag trên canvas (Konva trả về toạ độ pixel theo Stage hiện tại):
 
 ```ts
-// Từ pixel trên Stage -> phần trăm (để lưu/gửi API)
+// Từ pixel trên Stage -> phần trăm (để lưu/gửi API — kết quả trả về CHÍNH LÀ field x/y sẽ lưu)
+// Tham số đầu vào đặt tên pixelX/pixelY để không nhầm với x/y (phần trăm) ở output.
 function pixelToPercent(pixelX: number, pixelY: number, stageWidth: number, stageHeight: number) {
   return {
-    x: (pixelX / stageWidth) * 100,
-    y: (pixelY / stageHeight) * 100,
+    x: (pixelX / stageWidth) * 100,   // đây là x phần trăm — giá trị này lưu vào store/API
+    y: (pixelY / stageHeight) * 100,  // đây là y phần trăm — giá trị này lưu vào store/API
   };
 }
 
-// Từ phần trăm (lấy từ API/store) -> pixel để vẽ trên Stage hiện tại
-function percentToPixel(percentX: number, percentY: number, stageWidth: number, stageHeight: number) {
+// Từ phần trăm (lấy từ API/store, field x/y) -> pixel để vẽ trên Stage hiện tại
+// Kết quả trả về đặt tên pixelX/pixelY để không nhầm với x/y (phần trăm) ở input.
+function percentToPixel(x: number, y: number, stageWidth: number, stageHeight: number) {
   return {
-    x: (percentX / 100) * stageWidth,
-    y: (percentY / 100) * stageHeight,
+    pixelX: (x / 100) * stageWidth,   // chỉ dùng cục bộ để vẽ Konva shape, KHÔNG lưu/gửi API
+    pixelY: (y / 100) * stageHeight,
   };
 }
 ```
@@ -221,10 +223,14 @@ function percentToPixel(percentX: number, percentY: number, stageWidth: number, 
 - Khi vẽ POI/Node đã có (từ store/API) lên canvas: lấy toạ độ phần trăm, convert qua `percentToPixel` bằng kích thước Stage hiện tại, rồi mới truyền vào props `x`/`y` của Konva shape.
 - Khi kéo (drag) object: `onDragEnd` lấy vị trí pixel mới, convert qua `pixelToPercent` trước khi cập nhật store.
 
+## Đặt tên field — bắt buộc
+- Field lưu trong store/type/API LUÔN đặt tên `x`/`y` (không phải `xPercent`/`yPercent`, không phải `posX`/`posY`) — phải khớp với `mock-api-contract`. Giá trị của `x`/`y` LUÔN là phần trăm (0-100), KHÔNG phải pixel — luôn chú thích rõ điều này bằng comment ở chỗ khai báo type, để không ai hiểu nhầm là pixel.
+- Khi cần biến cục bộ chứa toạ độ pixel (chỉ dùng để vẽ, không lưu/gửi đi), đặt tên `pixelX`/`pixelY` để phân biệt rõ với `x`/`y` (phần trăm).
+
 ## Không được làm
-- Không lưu thẳng `e.target.x()` (pixel) vào store hoặc gửi API.
+- Không lưu thẳng `e.target.x()` (pixel) vào field `x`/`y` của store hoặc API — phải convert qua `pixelToPercent` trước.
 - Không hardcode kích thước Stage (ví dụ `width={800}`) — luôn đo kích thước container thực tế (dùng `useRef` + `getBoundingClientRect`, hoặc thư viện resize observer).
-- Không tự đổi field name `x`/`y` thành tên khác (ví dụ `posX`) — phải khớp với `mock-api-contract`.
+- Không tự đổi tên field `x`/`y` thành tên khác — phải khớp với `mock-api-contract`.
 
 ## Khi cần chia sẻ logic giữa POI và Node/Edge
 Nếu cả 2 phần (POI của Kiệt, Node/Edge của KDuy) đều cần `pixelToPercent`/`percentToPixel`, nên tách 2 hàm này ra file dùng chung, ví dụ `src/utils/canvasCoordinates.ts`, thay vì mỗi người viết 1 bản riêng — tránh sai lệch công thức giữa 2 phần.
