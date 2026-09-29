@@ -16,6 +16,7 @@ import {
   Image as KonvaImage,
   Label,
   Layer,
+  Rect,
   Stage,
   Tag as KonvaTag,
   Text,
@@ -26,26 +27,39 @@ import { percentToPixel, pixelToPercent } from '../../utils/canvasCoordinates'
 
 const { Text: AntText } = Typography
 
+type ImageStatus = 'idle' | 'loading' | 'loaded' | 'failed'
+
 function useImage(src?: string) {
   const [image, setImage] = useState<HTMLImageElement | null>(null)
+  const [status, setStatus] = useState<ImageStatus>('idle')
 
   useEffect(() => {
     if (!src) {
       setImage(null)
+      setStatus('idle')
       return
     }
 
     const nextImage = new window.Image()
-    nextImage.onload = () => setImage(nextImage)
+    setImage(null)
+    setStatus('loading')
+    nextImage.onload = () => {
+      setImage(nextImage)
+      setStatus('loaded')
+    }
+    nextImage.onerror = () => {
+      setImage(null)
+      setStatus('failed')
+    }
     nextImage.src = src
   }, [src])
 
-  return image
+  return { image, status }
 }
 
-function useElementWidth<T extends HTMLElement>() {
+function useElementSize<T extends HTMLElement>() {
   const ref = useRef<T | null>(null)
-  const [width, setWidth] = useState(900)
+  const [size, setSize] = useState({ width: 0, height: 0 })
 
   useEffect(() => {
     if (!ref.current) {
@@ -53,18 +67,21 @@ function useElementWidth<T extends HTMLElement>() {
     }
 
     const observer = new ResizeObserver(([entry]) => {
-      setWidth(Math.max(320, Math.floor(entry.contentRect.width)))
+      setSize({
+        width: Math.floor(entry.contentRect.width),
+        height: Math.floor(entry.contentRect.height),
+      })
     })
     observer.observe(ref.current)
 
     return () => observer.disconnect()
   }, [])
 
-  return [ref, width] as const
+  return [ref, size] as const
 }
 
 export function CanvasBoard() {
-  const [containerRef, width] = useElementWidth<HTMLDivElement>()
+  const [stageHostRef, stageHostSize] = useElementSize<HTMLDivElement>()
   const selectedFloor = useFloorStore((state) => state.selectedFloor)
   const pois = useFloorStore((state) => state.pois)
   const isPoiSaving = useFloorStore((state) => state.isPoiSaving)
@@ -74,12 +91,24 @@ export function CanvasBoard() {
   const removePoi = useFloorStore((state) => state.removePoi)
   const mapImage = useImage(selectedFloor?.mapImageUrl)
 
-  const scale = useMemo(() => {
+  const stageSize = useMemo(() => {
     if (!selectedFloor) {
-      return 1
+      return { width: 0, height: 0 }
     }
-    return Math.min(width / selectedFloor.mapWidth, 1)
-  }, [selectedFloor, width])
+
+    const scale = Math.min(
+      stageHostSize.width / selectedFloor.mapWidth,
+      stageHostSize.height / selectedFloor.mapHeight,
+      1,
+    )
+
+    return {
+      width: Math.round(selectedFloor.mapWidth * scale),
+      height: Math.round(selectedFloor.mapHeight * scale),
+    }
+  }, [selectedFloor, stageHostSize.height, stageHostSize.width])
+
+  const canRenderStage = stageSize.width > 0 && stageSize.height > 0
 
   if (!selectedFloor) {
     return (
@@ -90,9 +119,6 @@ export function CanvasBoard() {
       </Card>
     )
   }
-
-  const stageWidth = Math.round(selectedFloor.mapWidth * scale)
-  const stageHeight = Math.round(selectedFloor.mapHeight * scale)
 
   async function handleStageClick(event: Konva.KonvaEventObject<MouseEvent>) {
     if (!selectedFloor) {
@@ -113,15 +139,12 @@ export function CanvasBoard() {
       return
     }
 
-    const pixelX = position.x / scale
-    const pixelY = position.y / scale
-
     await addPoi({
       ...pixelToPercent(
-        pixelX,
-        pixelY,
-        selectedFloor.mapWidth,
-        selectedFloor.mapHeight,
+        position.x,
+        position.y,
+        stageSize.width,
+        stageSize.height,
       ),
       type: 'custom',
     })
@@ -139,8 +162,8 @@ export function CanvasBoard() {
       ...pixelToPercent(
         event.target.x(),
         event.target.y(),
-        selectedFloor.mapWidth,
-        selectedFloor.mapHeight,
+        stageSize.width,
+        stageSize.height,
       ),
     })
   }
@@ -148,7 +171,7 @@ export function CanvasBoard() {
   return (
     <div className="canvas-workspace">
       <Card className="tool-card canvas-card">
-        <div className="canvas-shell" ref={containerRef}>
+        <div className="canvas-shell">
           <div className="canvas-toolbar">
             <div>
               <strong>{selectedFloor.name}</strong>
@@ -168,73 +191,107 @@ export function CanvasBoard() {
             />
           ) : null}
 
-          <Spin spinning={isPoiSaving || !mapImage}>
-            <div className="stage-wrap" style={{ width: stageWidth }}>
-              <Stage
-                width={stageWidth}
-                height={stageHeight}
-                scaleX={scale}
-                scaleY={scale}
-                onClick={handleStageClick}
-              >
-                <Layer>
-                  {mapImage ? (
-                    <KonvaImage
-                      name="map-background"
-                      image={mapImage}
-                      width={selectedFloor.mapWidth}
-                      height={selectedFloor.mapHeight}
-                    />
-                  ) : null}
-                  {pois.map((poi) => {
-                    const { pixelX, pixelY } = percentToPixel(
-                      poi.x,
-                      poi.y,
-                      selectedFloor.mapWidth,
-                      selectedFloor.mapHeight,
-                    )
-
-                    return (
-                      <Circle
-                        key={poi.id}
-                        x={pixelX}
-                        y={pixelY}
-                        radius={16}
-                        fill="#f97316"
-                        stroke="#ffffff"
-                        strokeWidth={5}
-                        draggable
-                        onDragEnd={(event) => handlePoiDragEnd(poi.id, event)}
-                      />
-                    )
-                  })}
-                  {pois.map((poi) => {
-                    const { pixelX, pixelY } = percentToPixel(
-                      poi.x,
-                      poi.y,
-                      selectedFloor.mapWidth,
-                      selectedFloor.mapHeight,
-                    )
-
-                    return (
-                      <Label
-                        key={`${poi.id}-label`}
-                        x={pixelX + 18}
-                        y={pixelY - 17}
-                        listening={false}
-                      >
-                        <KonvaTag fill="#111827" cornerRadius={4} />
-                        <Text
-                          text={poi.name}
-                          fontSize={14}
-                          fill="#ffffff"
-                          padding={6}
+          <Spin spinning={isPoiSaving}>
+            <div className="stage-host" ref={stageHostRef}>
+              {canRenderStage ? (
+                <div
+                  className="stage-wrap"
+                  style={{ width: stageSize.width, height: stageSize.height }}
+                >
+                  <Stage
+                    width={stageSize.width}
+                    height={stageSize.height}
+                    onClick={handleStageClick}
+                  >
+                    <Layer>
+                      {mapImage.image ? (
+                        <KonvaImage
+                          name="map-background"
+                          image={mapImage.image}
+                          width={stageSize.width}
+                          height={stageSize.height}
                         />
-                      </Label>
-                    )
-                  })}
-                </Layer>
-              </Stage>
+                      ) : (
+                        <>
+                          <Rect
+                            name="map-background"
+                            width={stageSize.width}
+                            height={stageSize.height}
+                            fill="#f1f5f9"
+                            stroke="#94a3b8"
+                            strokeWidth={2}
+                          />
+                          <Text
+                            x={24}
+                            y={24}
+                            text={
+                              mapImage.status === 'failed'
+                                ? 'Không tải được ảnh sơ đồ'
+                                : 'Đang tải ảnh sơ đồ'
+                            }
+                            fontSize={18}
+                            fill="#475569"
+                            listening={false}
+                          />
+                        </>
+                      )}
+                      {pois.map((poi) => {
+                        const { pixelX, pixelY } = percentToPixel(
+                          poi.x,
+                          poi.y,
+                          stageSize.width,
+                          stageSize.height,
+                        )
+
+                        return (
+                          <Circle
+                            key={poi.id}
+                            x={pixelX}
+                            y={pixelY}
+                            radius={16}
+                            fill="#f97316"
+                            stroke="#ffffff"
+                            strokeWidth={5}
+                            draggable
+                            onDragEnd={(event) =>
+                              handlePoiDragEnd(poi.id, event)
+                            }
+                          />
+                        )
+                      })}
+                      {pois.map((poi) => {
+                        const { pixelX, pixelY } = percentToPixel(
+                          poi.x,
+                          poi.y,
+                          stageSize.width,
+                          stageSize.height,
+                        )
+
+                        return (
+                          <Label
+                            key={`${poi.id}-label`}
+                            x={pixelX + 18}
+                            y={pixelY - 17}
+                            listening={false}
+                          >
+                            <KonvaTag fill="#111827" cornerRadius={4} />
+                            <Text
+                              text={poi.name}
+                              fontSize={14}
+                              fill="#ffffff"
+                              padding={6}
+                            />
+                          </Label>
+                        )
+                      })}
+                    </Layer>
+                  </Stage>
+                </div>
+              ) : (
+                <div className="stage-empty">
+                  <Empty description="Đang đo kích thước canvas" />
+                </div>
+              )}
             </div>
           </Spin>
         </div>

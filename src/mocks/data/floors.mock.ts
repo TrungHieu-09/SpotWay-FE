@@ -1,6 +1,18 @@
 import type { Floor } from '../../types/floor'
 import type { Poi } from '../../types/poi'
+import { clampPercent } from '../../utils/canvasCoordinates'
 import { loadFromStorage, MOCK_STORAGE_KEYS } from '../persist'
+
+type StoredPoi = Omit<Poi, 'x' | 'y'> &
+  Partial<Pick<Poi, 'x' | 'y'>> & {
+    xPercent?: number
+    yPercent?: number
+  }
+
+type StoredFloor = Omit<Floor, 'pois' | 'publishStatus'> &
+  Partial<Pick<Floor, 'publishStatus'>> & {
+    pois?: StoredPoi[]
+  }
 
 export const mallPlan =
   'data:image/svg+xml;utf8,' +
@@ -185,12 +197,26 @@ export const initialFloorsSeed: Floor[] = [
   },
 ]
 
-export const floors = loadFromStorage(MOCK_STORAGE_KEYS.floors, initialFloorsSeed).map(
-  (floor) => ({
+function normalizePoi(poi: StoredPoi): Poi {
+  return {
+    ...poi,
+    x: clampPercent(poi.x ?? poi.xPercent ?? 0),
+    y: clampPercent(poi.y ?? poi.yPercent ?? 0),
+  }
+}
+
+function normalizeFloor(floor: StoredFloor): Floor {
+  return {
     ...floor,
     publishStatus: floor.publishStatus ?? 'draft',
-  }),
-)
+    pois: floor.pois?.map(normalizePoi) ?? [],
+  }
+}
+
+export const floors = loadFromStorage<StoredFloor[]>(
+  MOCK_STORAGE_KEYS.floors,
+  initialFloorsSeed,
+).map(normalizeFloor)
 
 export function fallbackMap() {
   return mallPlan

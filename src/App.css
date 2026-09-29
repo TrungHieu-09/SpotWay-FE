@@ -239,6 +239,14 @@
   margin-bottom: 12px;
 }
 
+.stage-host {
+  display: flex;
+  width: 100%;
+  min-height: 520px;
+  align-items: flex-start;
+  justify-content: center;
+}
+
 .stage-wrap {
   max-width: 100%;
   overflow: hidden;
@@ -256,6 +264,16 @@
     10px -10px,
     -10px 0;
   background-size: 20px 20px;
+}
+
+.stage-empty {
+  display: grid;
+  width: 100%;
+  min-height: 520px;
+  place-items: center;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
 }
 
 .poi-card .ant-list-item {
