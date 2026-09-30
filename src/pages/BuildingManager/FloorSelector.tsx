@@ -48,7 +48,7 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
               }
               onClick={() => selectFloor(floor.id)}
             >
-              <Space direction="vertical" size={2}>
+              <Space orientation="vertical" size={2}>
                 <Text strong>{floor.name}</Text>
                 <Text type="secondary">Level {floor.level}</Text>
               </Space>

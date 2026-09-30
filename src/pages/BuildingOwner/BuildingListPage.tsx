@@ -67,11 +67,15 @@ export function BuildingListPage() {
               dataIndex: 'name',
               render: (name: string, building) => (
                 <Space>
-                  <img
-                    className="table-thumb"
-                    src={building.planImageUrl}
-                    alt=""
-                  />
+                  {building.planImageUrl ? (
+                    <img
+                      className="table-thumb"
+                      src={building.planImageUrl}
+                      alt=""
+                    />
+                  ) : (
+                    <div className="table-thumb table-thumb-placeholder" />
+                  )}
                   <strong>{name}</strong>
                 </Space>
               ),

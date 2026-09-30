@@ -1,4 +1,4 @@
-import { delay, http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse, passthrough } from 'msw'
 import { buildings } from './data/buildings.mock'
 import { fallbackMap, floors } from './data/floors.mock'
 import { MOCK_STORAGE_KEYS, saveToStorage } from './persist'
@@ -19,7 +19,8 @@ function makeFloor(payload: CreateFloorPayload): Floor {
     name: payload.name,
     level: payload.level,
     publishStatus: payload.publishStatus ?? 'draft',
-    mapImageUrl: payload.mapImageUrl ?? fallbackMap(),
+    mapImageUrl:
+      payload.mapImageUrl === undefined ? fallbackMap() : payload.mapImageUrl,
     mapWidth: payload.mapWidth ?? 1200,
     mapHeight: payload.mapHeight ?? 760,
     pois: [],
@@ -111,6 +112,20 @@ export const handlers = [
     floor.pois = payload
     saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
     return HttpResponse.json(floor.pois)
+  }),
+
+  http.get('*', ({ request }) => {
+    const url = new URL(request.url)
+    const isAppRouteImageRequest =
+      url.origin === window.location.origin &&
+      request.destination === 'image' &&
+      (url.pathname === '/manager' || url.pathname.startsWith('/owner/'))
+
+    if (isAppRouteImageRequest) {
+      return new HttpResponse(null, { status: 204 })
+    }
+
+    return passthrough()
   }),
 ]
 

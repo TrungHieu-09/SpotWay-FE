@@ -318,7 +318,7 @@ export function CanvasBoard() {
                 />,
               ]}
             >
-              <Space direction="vertical" size={2}>
+              <Space orientation="vertical" size={2}>
                 <Space>
                   <AntText strong>{poi.name}</AntText>
                   <Tag color="blue">{poi.type}</Tag>

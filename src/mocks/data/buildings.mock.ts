@@ -41,8 +41,23 @@ export const initialBuildingsSeed: Building[] = [
   },
 ]
 
-export const buildings = loadFromStorage(
+type StoredBuilding = Omit<Building, 'planImageUrl'> &
+  Partial<Pick<Building, 'planImageUrl'>>
+
+function normalizePlanImageUrl(url: string | null | undefined) {
+  const normalizedUrl = url?.trim()
+  return normalizedUrl ? normalizedUrl : null
+}
+
+function normalizeBuilding(building: StoredBuilding): Building {
+  return {
+    ...building,
+    planImageUrl: normalizePlanImageUrl(building.planImageUrl),
+  }
+}
+
+export const buildings = loadFromStorage<StoredBuilding[]>(
   MOCK_STORAGE_KEYS.buildings,
   initialBuildingsSeed,
-)
+).map(normalizeBuilding)
 

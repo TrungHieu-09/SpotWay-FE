@@ -7,7 +7,7 @@ export type Building = {
   status: BuildingStatus
   floorCount: number
   createdAt: string
-  planImageUrl: string
+  planImageUrl: string | null
 }
 
 export type CreateBuildingPayload = {

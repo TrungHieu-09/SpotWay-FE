@@ -74,6 +74,7 @@ export function CreateBuildingModal({
       onOk={() => form.submit()}
       onCancel={onClose}
       destroyOnHidden
+      forceRender
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item

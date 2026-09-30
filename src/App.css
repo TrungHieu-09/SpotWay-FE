@@ -96,6 +96,11 @@
   background: #fff;
 }
 
+.table-thumb-placeholder {
+  display: inline-block;
+  background: #f1f5f9;
+}
+
 .muted {
   color: #6b7280;
   font-size: 13px;
