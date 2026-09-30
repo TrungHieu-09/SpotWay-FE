@@ -29,12 +29,14 @@ const { Text: AntText } = Typography
 
 type ImageStatus = 'idle' | 'loading' | 'loaded' | 'failed'
 
-function useImage(src?: string) {
+function useImage(src?: string | null) {
   const [image, setImage] = useState<HTMLImageElement | null>(null)
   const [status, setStatus] = useState<ImageStatus>('idle')
 
   useEffect(() => {
-    if (!src) {
+    const normalizedSrc = src?.trim()
+
+    if (!normalizedSrc) {
       setImage(null)
       setStatus('idle')
       return
@@ -51,7 +53,7 @@ function useImage(src?: string) {
       setImage(null)
       setStatus('failed')
     }
-    nextImage.src = src
+    nextImage.src = normalizedSrc
   }, [src])
 
   return { image, status }
@@ -89,7 +91,8 @@ export function CanvasBoard() {
   const addPoi = useFloorStore((state) => state.addPoi)
   const movePoi = useFloorStore((state) => state.movePoi)
   const removePoi = useFloorStore((state) => state.removePoi)
-  const mapImage = useImage(selectedFloor?.mapImageUrl)
+  const mapImageUrl = selectedFloor?.mapImageUrl?.trim() || null
+  const mapImage = useImage(mapImageUrl)
 
   const stageSize = useMemo(() => {
     if (!selectedFloor) {
@@ -227,7 +230,9 @@ export function CanvasBoard() {
                             text={
                               mapImage.status === 'failed'
                                 ? 'Không tải được ảnh sơ đồ'
-                                : 'Đang tải ảnh sơ đồ'
+                                : mapImage.status === 'loading'
+                                  ? 'Đang tải ảnh sơ đồ'
+                                  : 'Chưa có ảnh sơ đồ'
                             }
                             fontSize={18}
                             fill="#475569"

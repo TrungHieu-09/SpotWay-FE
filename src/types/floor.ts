@@ -8,7 +8,7 @@ export type Floor = {
   name: string
   level: number
   publishStatus: FloorPublishStatus
-  mapImageUrl: string
+  mapImageUrl: string | null
   mapWidth: number
   mapHeight: number
   pois: Poi[]
@@ -19,7 +19,7 @@ export type CreateFloorPayload = {
   name: string
   level: number
   publishStatus?: FloorPublishStatus
-  mapImageUrl?: string
+  mapImageUrl?: string | null
   mapWidth?: number
   mapHeight?: number
 }

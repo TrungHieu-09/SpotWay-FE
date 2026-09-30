@@ -9,8 +9,9 @@ type StoredPoi = Omit<Poi, 'x' | 'y'> &
     yPercent?: number
   }
 
-type StoredFloor = Omit<Floor, 'pois' | 'publishStatus'> &
-  Partial<Pick<Floor, 'publishStatus'>> & {
+type StoredFloor = Omit<Floor, 'pois' | 'publishStatus' | 'mapImageUrl'> &
+  Partial<Pick<Floor, 'publishStatus' | 'mapImageUrl'>> & {
+    planImageUrl?: string | null
     pois?: StoredPoi[]
   }
 
@@ -82,7 +83,7 @@ export const initialFloorsSeed: Floor[] = [
     name: 'Level 2',
     level: 2,
     publishStatus: 'draft',
-    mapImageUrl: mallPlan,
+    mapImageUrl: null,
     mapWidth: 1200,
     mapHeight: 760,
     pois: [],
@@ -93,7 +94,7 @@ export const initialFloorsSeed: Floor[] = [
     name: 'Level 3',
     level: 3,
     publishStatus: 'draft',
-    mapImageUrl: mallPlan,
+    mapImageUrl: null,
     mapWidth: 1200,
     mapHeight: 760,
     pois: [],
@@ -205,10 +206,20 @@ function normalizePoi(poi: StoredPoi): Poi {
   }
 }
 
+function normalizeMapImageUrl(url: string | null | undefined) {
+  const normalizedUrl = url?.trim()
+  return normalizedUrl ? normalizedUrl : null
+}
+
 function normalizeFloor(floor: StoredFloor): Floor {
   return {
     ...floor,
     publishStatus: floor.publishStatus ?? 'draft',
+    mapImageUrl: normalizeMapImageUrl(
+      floor.mapImageUrl ?? floor.planImageUrl,
+    ),
+    mapWidth: floor.mapWidth ?? 1200,
+    mapHeight: floor.mapHeight ?? 760,
     pois: floor.pois?.map(normalizePoi) ?? [],
   }
 }
