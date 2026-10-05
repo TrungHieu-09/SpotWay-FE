@@ -127,6 +127,19 @@
   padding: 20px;
 }
 
+.store-picker-card {
+  margin-bottom: 20px;
+}
+
+.store-picker-card .ant-card-body {
+  display: grid;
+  gap: 10px;
+}
+
+.store-picker-select {
+  width: min(560px, 100%);
+}
+
 .store-profile-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;

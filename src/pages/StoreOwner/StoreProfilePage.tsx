@@ -16,13 +16,17 @@ import {
 } from 'antd'
 import type { RcFile, UploadFile } from 'antd/es/upload/interface'
 import { SaveOutlined, ShopOutlined, UploadOutlined } from '@ant-design/icons'
+import { getFloors } from '../../api/floors'
+import { useBuildingStore } from '../../store/useBuildingStore'
 import { useStoreStore } from '../../store/useStoreStore'
+import type { Floor } from '../../types/floor'
 import type { StoreStatus } from '../../types/store'
 
 const { Text, Title } = Typography
 const { TextArea } = Input
 
-const STORE_OWNER_STORE_ID = 'store-1'
+// POC only: replace this owner id with the authenticated Store Owner id later.
+const STORE_OWNER_ID = 'owner-1'
 const STORE_CATEGORIES = ['Thời trang', 'Ăn uống', 'Dịch vụ']
 
 type StoreProfileFormValues = {
@@ -51,21 +55,74 @@ function isRcFile(file: RcFile | undefined): file is RcFile {
 
 export function StoreProfilePage() {
   const [form] = Form.useForm<StoreProfileFormValues>()
+  const [selectedStoreId, setSelectedStoreId] = useState<string>()
+  const [floorsByBuildingId, setFloorsByBuildingId] = useState<
+    Record<string, Floor[]>
+  >({})
+  const [hasLoadedOwnerStores, setHasLoadedOwnerStores] = useState(false)
   const [logoFileList, setLogoFileList] = useState<UploadFile[]>([])
   const [galleryFileList, setGalleryFileList] = useState<UploadFile[]>([])
+  const buildings = useBuildingStore((state) => state.buildings)
+  const loadBuildings = useBuildingStore((state) => state.loadBuildings)
+  const ownerStores = useStoreStore((state) => state.ownerStores)
   const currentStore = useStoreStore((state) => state.currentStore)
   const isLoading = useStoreStore((state) => state.isLoading)
   const isSaving = useStoreStore((state) => state.isSaving)
+  const loadStoresByOwner = useStoreStore((state) => state.loadStoresByOwner)
   const loadCurrentStore = useStoreStore((state) => state.loadCurrentStore)
   const updateStore = useStoreStore((state) => state.updateStore)
   const isActive = Form.useWatch('isActive', form)
   const { message } = AntApp.useApp()
 
   useEffect(() => {
-    loadCurrentStore(STORE_OWNER_STORE_ID).catch((error: Error) =>
+    loadBuildings().catch((error: Error) => message.error(error.message))
+    loadStoresByOwner(STORE_OWNER_ID)
+      .catch((error: Error) => message.error(error.message))
+      .finally(() => setHasLoadedOwnerStores(true))
+  }, [loadBuildings, loadStoresByOwner, message])
+
+  useEffect(() => {
+    if (ownerStores.length === 0) {
+      setSelectedStoreId(undefined)
+      return
+    }
+
+    if (!selectedStoreId || !ownerStores.some((store) => store.id === selectedStoreId)) {
+      setSelectedStoreId(ownerStores[0].id)
+    }
+  }, [ownerStores, selectedStoreId])
+
+  useEffect(() => {
+    if (!selectedStoreId) {
+      return
+    }
+
+    loadCurrentStore(selectedStoreId).catch((error: Error) =>
       message.error(error.message),
     )
-  }, [loadCurrentStore, message])
+  }, [loadCurrentStore, message, selectedStoreId])
+
+  useEffect(() => {
+    const buildingIds = Array.from(
+      new Set(ownerStores.map((store) => store.buildingId)),
+    )
+
+    if (buildingIds.length === 0) {
+      setFloorsByBuildingId({})
+      return
+    }
+
+    Promise.all(
+      buildingIds.map(async (buildingId) => [
+        buildingId,
+        await getFloors(buildingId),
+      ] as const),
+    )
+      .then((floorEntries) => {
+        setFloorsByBuildingId(Object.fromEntries(floorEntries))
+      })
+      .catch((error: Error) => message.error(error.message))
+  }, [message, ownerStores])
 
   useEffect(() => {
     if (!currentStore) {
@@ -130,11 +187,22 @@ export function StoreProfilePage() {
     }
   }
 
-  if (!currentStore && !isLoading) {
+  function getBuildingName(buildingId: string) {
+    return buildings.find((building) => building.id === buildingId)?.name ?? buildingId
+  }
+
+  function getFloorName(buildingId: string, floorId: string) {
+    return (
+      floorsByBuildingId[buildingId]?.find((floor) => floor.id === floorId)?.name ??
+      floorId
+    )
+  }
+
+  if (hasLoadedOwnerStores && ownerStores.length === 0 && !isLoading) {
     return (
       <main className="workspace">
         <Card className="tool-card">
-          <Empty description="Không tìm thấy gian hàng" />
+          <Empty description="Bạn chưa có gian hàng nào" />
         </Card>
       </main>
     )
@@ -149,10 +217,30 @@ export function StoreProfilePage() {
           <Text type="secondary">Store Owner</Text>
           <Title level={1}>Hồ sơ gian hàng</Title>
         </div>
-        <Tag color={statusColor(visibleStatus)}>{visibleStatus}</Tag>
+        {currentStore ? (
+          <Tag color={statusColor(visibleStatus)}>{visibleStatus}</Tag>
+        ) : null}
       </section>
 
       <Spin spinning={isLoading}>
+        <Card className="tool-card store-picker-card">
+          <Text strong>Chọn gian hàng</Text>
+          <Select
+            className="store-picker-select"
+            value={selectedStoreId}
+            onChange={setSelectedStoreId}
+            options={ownerStores.map((store) => ({
+              value: store.id,
+              label: `${store.name} — ${getBuildingName(store.buildingId)}, ${getFloorName(
+                store.buildingId,
+                store.floorId,
+              )}`,
+            }))}
+            placeholder="Chọn gian hàng để cập nhật"
+          />
+        </Card>
+
+        {currentStore ? (
         <Card className="tool-card store-profile-card">
           <Form
             form={form}
@@ -255,6 +343,7 @@ export function StoreProfilePage() {
             </Space>
           </Form>
         </Card>
+        ) : null}
       </Spin>
     </main>
   )

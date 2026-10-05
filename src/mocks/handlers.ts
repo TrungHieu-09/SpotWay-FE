@@ -133,6 +133,12 @@ export const handlers = [
     return HttpResponse.json(floorStores)
   }),
 
+  http.get(endpoint('/owners/:ownerId/stores'), async ({ params }) => {
+    await delay(160)
+    const ownerStores = stores.filter((store) => store.ownerId === params.ownerId)
+    return HttpResponse.json(ownerStores)
+  }),
+
   http.get(endpoint('/floors/:floorId/nodes'), async ({ params }) => {
     await delay(160)
     const floorNodes = nodes.filter((node) => node.floorId === params.floorId)

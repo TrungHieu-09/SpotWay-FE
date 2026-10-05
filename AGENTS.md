@@ -151,6 +151,28 @@ interface Poi {
 }
 ```
 
+## Endpoint: Stores
+
+`GET /api/owners/:ownerId/stores` → `Store[]`
+`GET /api/floors/:floorId/stores` → `Store[]`
+`GET /api/stores/:id` → `Store`
+`PATCH /api/stores/:id` → `Store`
+
+```ts
+interface Store {
+  id: string;
+  ownerId: string;
+  buildingId: string;
+  floorId: string;
+  name: string;
+  logoUrl: string | null;
+  galleryImageUrls: string[];
+  description: string;
+  category: string;
+  status: "active" | "inactive";
+}
+```
+
 ## Endpoint: Node/Edge (người làm phần đặt Node/Edge trên canvas, ví dụ KDuy)
 
 `GET /api/floors/:floorId/nodes` → `Node[]`

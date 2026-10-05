@@ -6,6 +6,11 @@ export async function getStoresByFloor(floorId: string) {
   return data
 }
 
+export async function getStoresByOwner(ownerId: string) {
+  const { data } = await apiClient.get<Store[]>(`/owners/${ownerId}/stores`)
+  return data
+}
+
 export async function getStore(storeId: string) {
   const { data } = await apiClient.get<Store>(`/stores/${storeId}`)
   return data

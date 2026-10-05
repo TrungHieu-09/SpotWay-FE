@@ -2,6 +2,8 @@ export type StoreStatus = 'active' | 'inactive'
 
 export type Store = {
   id: string
+  ownerId: string
+  buildingId: string
   floorId: string
   name: string
   logoUrl: string | null

@@ -1,4 +1,5 @@
 import type { Store } from '../../types/store'
+import { floors } from './floors.mock'
 import { loadFromStorage, MOCK_STORAGE_KEYS } from '../persist'
 
 function storeImage(label: string, fill: string, accent: string) {
@@ -30,6 +31,8 @@ function logo(label: string, fill: string) {
 export const initialStoresSeed: Store[] = [
   {
     id: 'store-1',
+    ownerId: 'owner-1',
+    buildingId: 'bldg-1',
     floorId: 'floor-1',
     name: 'Lumi Fashion',
     logoUrl: logo('LF', '#2563eb'),
@@ -43,6 +46,8 @@ export const initialStoresSeed: Store[] = [
   },
   {
     id: 'store-2',
+    ownerId: 'owner-2',
+    buildingId: 'bldg-1',
     floorId: 'floor-1',
     name: 'Bep Saigon',
     logoUrl: logo('BS', '#16a34a'),
@@ -56,6 +61,8 @@ export const initialStoresSeed: Store[] = [
   },
   {
     id: 'store-3',
+    ownerId: 'owner-3',
+    buildingId: 'bldg-1',
     floorId: 'floor-1',
     name: 'TechCare',
     logoUrl: logo('TC', '#7c3aed'),
@@ -66,6 +73,8 @@ export const initialStoresSeed: Store[] = [
   },
   {
     id: 'store-4',
+    ownerId: 'owner-1',
+    buildingId: 'bldg-1',
     floorId: 'floor-2',
     name: 'Green Home',
     logoUrl: logo('GH', '#059669'),
@@ -76,6 +85,8 @@ export const initialStoresSeed: Store[] = [
   },
   {
     id: 'store-5',
+    ownerId: 'owner-1',
+    buildingId: 'bldg-2',
     floorId: 'floor-4',
     name: 'River Coffee',
     logoUrl: logo('RC', '#b45309'),
@@ -86,16 +97,33 @@ export const initialStoresSeed: Store[] = [
   },
 ]
 
-function normalizeStore(store: Store): Store {
+type StoredStore = Omit<Store, 'ownerId' | 'buildingId'> &
+  Partial<Pick<Store, 'ownerId' | 'buildingId'>>
+
+const legacyOwnerByStoreId: Record<string, string> = {
+  'store-1': 'owner-1',
+  'store-2': 'owner-2',
+  'store-3': 'owner-3',
+  'store-4': 'owner-1',
+  'store-5': 'owner-1',
+}
+
+function getBuildingIdByFloorId(floorId: string) {
+  return floors.find((floor) => floor.id === floorId)?.buildingId ?? 'bldg-1'
+}
+
+function normalizeStore(store: StoredStore): Store {
   return {
     ...store,
+    ownerId: store.ownerId ?? legacyOwnerByStoreId[store.id] ?? 'owner-1',
+    buildingId: store.buildingId ?? getBuildingIdByFloorId(store.floorId),
     logoUrl: store.logoUrl?.trim() ? store.logoUrl : null,
     galleryImageUrls: store.galleryImageUrls.slice(0, 5),
     status: store.status ?? 'inactive',
   }
 }
 
-export const stores = loadFromStorage<Store[]>(
+export const stores = loadFromStorage<StoredStore[]>(
   MOCK_STORAGE_KEYS.stores,
   initialStoresSeed,
 ).map(normalizeStore)
