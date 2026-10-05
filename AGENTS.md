@@ -156,6 +156,7 @@ interface Poi {
 `GET /api/floors/:floorId/nodes` → `Node[]`
 `GET /api/floors/:floorId/edges` → `Edge[]`
 `POST /api/floors/:floorId/nodes` → `Node`
+`PATCH /api/nodes/:id` → `Node`
 `POST /api/edges` → `Edge`
 
 ```ts
@@ -165,6 +166,7 @@ interface Node {
   x: number;   // 0-100, CÙNG quy ước với Poi.x
   y: number;   // 0-100, CÙNG quy ước với Poi.y
   isElevatorLink?: boolean; // true nếu node này liên kết thang máy xuyên tầng
+  elevatorGroupId?: string | null; // các node cùng group là cùng 1 cụm thang máy xuyên tầng
 }
 
 interface Edge {

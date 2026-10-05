@@ -4,6 +4,7 @@ export const MOCK_STORAGE_KEYS = {
   buildings: `${MOCK_STORAGE_PREFIX}buildings`,
   floors: `${MOCK_STORAGE_PREFIX}floors`,
   stores: `${MOCK_STORAGE_PREFIX}stores`,
+  nodes: `${MOCK_STORAGE_PREFIX}nodes`,
 } as const
 
 function getStorage() {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { App as AntApp, Layout, Select, Tabs, Typography } from 'antd'
 import { FloorSelector } from './FloorSelector'
 import { CanvasBoard } from './CanvasBoard'
+import { ElevatorLinkPanel } from './ElevatorLinkPanel'
 import { StoreListPanel } from './StoreListPanel'
 import { useBuildingStore } from '../../store/useBuildingStore'
 import { useFloorStore } from '../../store/useFloorStore'
@@ -64,6 +65,11 @@ export function ManagerLayout() {
               key: 'stores',
               label: 'Danh sách store',
               children: <StoreListPanel />,
+            },
+            {
+              key: 'elevator-links',
+              label: 'Liên kết thang máy',
+              children: <ElevatorLinkPanel />,
             },
           ]}
         />

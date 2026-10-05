@@ -1,6 +1,7 @@
 import { delay, http, HttpResponse, passthrough } from 'msw'
 import { buildings } from './data/buildings.mock'
 import { fallbackMap, floors } from './data/floors.mock'
+import { nodes } from './data/nodes.mock'
 import { stores } from './data/stores.mock'
 import { MOCK_STORAGE_KEYS, saveToStorage } from './persist'
 import type { Building } from '../types/building'
@@ -9,6 +10,7 @@ import type {
   Floor,
   UpdateFloorPayload,
 } from '../types/floor'
+import type { UpdateNodePayload } from '../types/node'
 import type { Poi } from '../types/poi'
 import type { Store, UpdateStorePayload } from '../types/store'
 
@@ -129,6 +131,52 @@ export const handlers = [
     await delay(160)
     const floorStores = stores.filter((store) => store.floorId === params.floorId)
     return HttpResponse.json(floorStores)
+  }),
+
+  http.get(endpoint('/floors/:floorId/nodes'), async ({ params }) => {
+    await delay(160)
+    const floorNodes = nodes.filter((node) => node.floorId === params.floorId)
+    return HttpResponse.json(floorNodes)
+  }),
+
+  http.patch(endpoint('/nodes/:nodeId'), async ({ params, request }) => {
+    await delay(140)
+    const node = nodes.find((item) => item.id === params.nodeId)
+
+    if (!node) {
+      return HttpResponse.json({ message: 'Node not found' }, { status: 404 })
+    }
+
+    const payload = (await request.json()) as UpdateNodePayload
+
+    if (payload.x !== undefined) {
+      node.x = payload.x
+    }
+
+    if (payload.y !== undefined) {
+      node.y = payload.y
+    }
+
+    if (payload.isElevatorLink !== undefined) {
+      node.isElevatorLink = payload.isElevatorLink
+      if (!payload.isElevatorLink) {
+        node.elevatorGroupId = null
+      }
+    }
+
+    if (payload.elevatorGroupId !== undefined) {
+      if (!node.isElevatorLink && payload.elevatorGroupId) {
+        return HttpResponse.json(
+          { message: 'Only elevator link nodes can have elevatorGroupId' },
+          { status: 400 },
+        )
+      }
+
+      node.elevatorGroupId = payload.elevatorGroupId
+    }
+
+    saveToStorage(MOCK_STORAGE_KEYS.nodes, nodes)
+    return HttpResponse.json(node)
   }),
 
   http.get(endpoint('/stores/:storeId'), async ({ params }) => {
@@ -292,6 +340,11 @@ export const handlers = [
     }
 
     floors.splice(floorIndex, 1)
+    for (let index = nodes.length - 1; index >= 0; index -= 1) {
+      if (nodes[index].floorId === floor.id) {
+        nodes.splice(index, 1)
+      }
+    }
 
     const building = buildings.find((item) => item.id === floor.buildingId)
     if (building) {
@@ -302,6 +355,7 @@ export const handlers = [
 
     saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
     saveToStorage(MOCK_STORAGE_KEYS.buildings, buildings)
+    saveToStorage(MOCK_STORAGE_KEYS.nodes, nodes)
 
     return new HttpResponse(null, { status: 204 })
   }),

@@ -161,6 +161,29 @@
   background: #f8fafc;
 }
 
+.elevator-link-panel {
+  display: grid;
+  gap: 20px;
+}
+
+.elevator-link-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.elevator-link-header h3.ant-typography {
+  margin: 0 0 4px;
+}
+
+.elevator-group-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .floor-detail-card {
   margin-top: 20px;
 }
@@ -365,6 +388,10 @@
 
   .store-profile-grid {
     grid-template-columns: 1fr;
+  }
+
+  .elevator-link-header {
+    flex-direction: column;
   }
 
   .manager-layout,
