@@ -9,7 +9,9 @@ export function AppLayout() {
   const navigate = useNavigate()
   const activePath = location.pathname.startsWith('/manager')
     ? '/manager'
-    : '/owner/buildings'
+    : location.pathname.startsWith('/store')
+      ? '/store/profile'
+      : '/owner/buildings'
 
   return (
     <Layout className="app-layout">
@@ -24,13 +26,18 @@ export function AppLayout() {
             const nextPath = String(value)
             window.localStorage.setItem(
               'demoRole',
-              nextPath === '/manager' ? 'building_manager' : 'building_owner',
+              nextPath === '/manager'
+                ? 'building_manager'
+                : nextPath === '/store/profile'
+                  ? 'store_owner'
+                  : 'building_owner',
             )
             navigate(nextPath)
           }}
           options={[
             { label: 'Building Owner', value: '/owner/buildings' },
             { label: 'Building Manager', value: '/manager' },
+            { label: 'Store Owner', value: '/store/profile' },
           ]}
         />
       </Header>

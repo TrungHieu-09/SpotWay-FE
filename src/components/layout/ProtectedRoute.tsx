@@ -9,7 +9,7 @@ export type AppRole =
 
 const defaultRouteByRole: Record<AppRole, string> = {
   guest: '/owner/buildings',
-  store_owner: '/owner/buildings',
+  store_owner: '/store/profile',
   building_manager: '/manager',
   building_owner: '/owner/buildings',
   admin: '/owner/buildings',

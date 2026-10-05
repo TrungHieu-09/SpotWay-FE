@@ -1,0 +1,60 @@
+import { apiClient } from './client'
+import type { Store, UpdateStorePayload } from '../types/store'
+
+export async function getStoresByFloor(floorId: string) {
+  const { data } = await apiClient.get<Store[]>(`/floors/${floorId}/stores`)
+  return data
+}
+
+export async function getStore(storeId: string) {
+  const { data } = await apiClient.get<Store>(`/stores/${storeId}`)
+  return data
+}
+
+export async function updateStore(
+  storeId: string,
+  payload: UpdateStorePayload,
+) {
+  const formData = new FormData()
+
+  if (payload.name !== undefined) {
+    formData.append('name', payload.name)
+  }
+
+  if (payload.category !== undefined) {
+    formData.append('category', payload.category)
+  }
+
+  if (payload.description !== undefined) {
+    formData.append('description', payload.description)
+  }
+
+  if (payload.status !== undefined) {
+    formData.append('status', payload.status)
+  }
+
+  if (payload.logoUrl !== undefined) {
+    formData.append('logoUrl', payload.logoUrl ?? '')
+  }
+
+  if (payload.logoFile) {
+    formData.append('logo', payload.logoFile)
+  }
+
+  if (payload.galleryImageUrls) {
+    formData.append(
+      'galleryImageUrls',
+      JSON.stringify(payload.galleryImageUrls),
+    )
+  }
+
+  payload.galleryFiles?.forEach((file) => {
+    formData.append('galleryImages', file)
+  })
+
+  const { data } = await apiClient.patch<Store>(`/stores/${storeId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+
+  return data
+}

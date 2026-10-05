@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { App as AntApp, Layout, Select, Typography } from 'antd'
+import { App as AntApp, Layout, Select, Tabs, Typography } from 'antd'
 import { FloorSelector } from './FloorSelector'
 import { CanvasBoard } from './CanvasBoard'
+import { StoreListPanel } from './StoreListPanel'
 import { useBuildingStore } from '../../store/useBuildingStore'
 import { useFloorStore } from '../../store/useFloorStore'
 
@@ -52,7 +53,20 @@ export function ManagerLayout() {
       </Sider>
 
       <Content className="manager-content">
-        <CanvasBoard />
+        <Tabs
+          items={[
+            {
+              key: 'canvas',
+              label: 'Canvas',
+              children: <CanvasBoard />,
+            },
+            {
+              key: 'stores',
+              label: 'Danh sách store',
+              children: <StoreListPanel />,
+            },
+          ]}
+        />
       </Content>
     </Layout>
   )

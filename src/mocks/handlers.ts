@@ -1,6 +1,7 @@
 import { delay, http, HttpResponse, passthrough } from 'msw'
 import { buildings } from './data/buildings.mock'
 import { fallbackMap, floors } from './data/floors.mock'
+import { stores } from './data/stores.mock'
 import { MOCK_STORAGE_KEYS, saveToStorage } from './persist'
 import type { Building } from '../types/building'
 import type {
@@ -9,6 +10,7 @@ import type {
   UpdateFloorPayload,
 } from '../types/floor'
 import type { Poi } from '../types/poi'
+import type { Store, UpdateStorePayload } from '../types/store'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
@@ -37,7 +39,7 @@ function makeFloor(payload: CreateFloorPayload): Floor {
   }
 }
 
-async function planImageToUrl(file: File) {
+async function fileToDataUrl(file: File) {
   const buffer = await file.arrayBuffer()
   const bytes = new Uint8Array(buffer)
   const chunkSize = 0x8000
@@ -50,6 +52,35 @@ async function planImageToUrl(file: File) {
   return `data:${file.type};base64,${btoa(binary)}`
 }
 
+function parseStringArray(value: FormDataEntryValue | null) {
+  if (typeof value !== 'string') {
+    return []
+  }
+
+  try {
+    const parsedValue: unknown = JSON.parse(value)
+    return Array.isArray(parsedValue)
+      ? parsedValue.filter((item): item is string => typeof item === 'string')
+      : []
+  } catch {
+    return []
+  }
+}
+
+function normalizeStoreStatus(value: FormDataEntryValue | null) {
+  return value === 'active' || value === 'inactive' ? value : undefined
+}
+
+function updateStoreWithPayload(store: Store, payload: UpdateStorePayload) {
+  store.name = payload.name ?? store.name
+  store.category = payload.category ?? store.category
+  store.description = payload.description ?? store.description
+  store.status = payload.status ?? store.status
+  store.logoUrl = payload.logoUrl !== undefined ? payload.logoUrl : store.logoUrl
+  store.galleryImageUrls =
+    payload.galleryImageUrls?.slice(0, 5) ?? store.galleryImageUrls
+}
+
 export const handlers = [
   http.get(endpoint('/buildings'), async () => {
     await delay(250)
@@ -60,7 +91,7 @@ export const handlers = [
     await delay(350)
     const formData = await request.formData()
     const file = formData.get('planImage')
-    const fileUrl = file instanceof File ? await planImageToUrl(file) : fallbackMap()
+    const fileUrl = file instanceof File ? await fileToDataUrl(file) : fallbackMap()
     const building: Building = {
       id: `bldg-${crypto.randomUUID()}`,
       name: String(formData.get('name') ?? 'Untitled building'),
@@ -92,6 +123,83 @@ export const handlers = [
       (floor) => floor.buildingId === params.buildingId,
     )
     return HttpResponse.json(buildingFloors)
+  }),
+
+  http.get(endpoint('/floors/:floorId/stores'), async ({ params }) => {
+    await delay(160)
+    const floorStores = stores.filter((store) => store.floorId === params.floorId)
+    return HttpResponse.json(floorStores)
+  }),
+
+  http.get(endpoint('/stores/:storeId'), async ({ params }) => {
+    await delay(160)
+    const store = stores.find((item) => item.id === params.storeId)
+
+    if (!store) {
+      return HttpResponse.json({ message: 'Store not found' }, { status: 404 })
+    }
+
+    return HttpResponse.json(store)
+  }),
+
+  http.patch(endpoint('/stores/:storeId'), async ({ params, request }) => {
+    await delay(240)
+    const store = stores.find((item) => item.id === params.storeId)
+
+    if (!store) {
+      return HttpResponse.json({ message: 'Store not found' }, { status: 404 })
+    }
+
+    const contentType = request.headers.get('content-type') ?? ''
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData()
+      const logoFile = formData.get('logo')
+      const logoUrl = formData.get('logoUrl')
+      const retainedGalleryUrls = parseStringArray(
+        formData.get('galleryImageUrls'),
+      )
+      const galleryFiles = formData
+        .getAll('galleryImages')
+        .filter((item): item is File => item instanceof File)
+
+      if (typeof formData.get('name') === 'string') {
+        store.name = String(formData.get('name'))
+      }
+
+      if (typeof formData.get('category') === 'string') {
+        store.category = String(formData.get('category'))
+      }
+
+      if (typeof formData.get('description') === 'string') {
+        store.description = String(formData.get('description'))
+      }
+
+      const status = normalizeStoreStatus(formData.get('status'))
+      if (status) {
+        store.status = status
+      }
+
+      if (logoFile instanceof File) {
+        store.logoUrl = await fileToDataUrl(logoFile)
+      } else if (typeof logoUrl === 'string') {
+        store.logoUrl = logoUrl.trim() ? logoUrl : null
+      }
+
+      const uploadedGalleryUrls = await Promise.all(
+        galleryFiles.map((file) => fileToDataUrl(file)),
+      )
+      store.galleryImageUrls = [
+        ...retainedGalleryUrls,
+        ...uploadedGalleryUrls,
+      ].slice(0, 5)
+    } else {
+      const payload = (await request.json()) as UpdateStorePayload
+      updateStoreWithPayload(store, payload)
+    }
+
+    saveToStorage(MOCK_STORAGE_KEYS.stores, stores)
+    return HttpResponse.json(store)
   }),
 
   http.post(endpoint('/floors'), async ({ request }) => {

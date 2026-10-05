@@ -4,6 +4,7 @@ import { ProtectedRoute } from '../components/layout/ProtectedRoute'
 import { BuildingDetailPage } from '../pages/BuildingOwner/BuildingDetailPage'
 import { BuildingListPage } from '../pages/BuildingOwner/BuildingListPage'
 import { ManagerLayout } from '../pages/BuildingManager/ManagerLayout'
+import { StoreProfilePage } from '../pages/StoreOwner/StoreProfilePage'
 
 export const router = createBrowserRouter([
   {
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
         ),
         children: [{ path: 'manager', element: <ManagerLayout /> }],
       },
+      { path: 'store/profile', element: <StoreProfilePage /> },
     ],
   },
   { path: '*', element: <Navigate to="/owner/buildings" replace /> },
