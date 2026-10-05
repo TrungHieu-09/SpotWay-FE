@@ -1,6 +1,12 @@
 import { create } from 'zustand'
-import { createFloor, getFloors, saveFloorPois } from '../api/floors'
-import type { Floor } from '../types/floor'
+import {
+  createFloor,
+  deleteFloor as deleteFloorRequest,
+  getFloors,
+  saveFloorPois,
+  updateFloor,
+} from '../api/floors'
+import type { Floor, FloorPublishStatus } from '../types/floor'
 import type { Poi, PoiType } from '../types/poi'
 import { clampPercent } from '../utils/canvasCoordinates'
 
@@ -8,6 +14,11 @@ type NewPoiInput = {
   x: number
   y: number
   type?: PoiType
+}
+
+type NewFloorInput = {
+  name: string
+  level: number
 }
 
 type FloorState = {
@@ -20,7 +31,12 @@ type FloorState = {
   error: string | null
   loadFloors: (buildingId: string) => Promise<void>
   selectFloor: (floorId?: string) => void
-  addFloor: (buildingId: string) => Promise<void>
+  addFloor: (buildingId: string, floor: NewFloorInput) => Promise<void>
+  deleteFloor: (floorId: string) => Promise<void>
+  updateFloorStatus: (
+    floorId: string,
+    publishStatus: FloorPublishStatus,
+  ) => Promise<void>
   addPoi: (poi: NewPoiInput) => Promise<void>
   movePoi: (
     poiId: string,
@@ -35,6 +51,10 @@ function syncFloorPois(floors: Floor[], floorId: string, pois: Poi[]) {
   )
 }
 
+function sortFloorsByLevel(floors: Floor[]) {
+  return [...floors].sort((left, right) => left.level - right.level)
+}
+
 export const useFloorStore = create<FloorState>((set, get) => ({
   floors: [],
   selectedFloorId: undefined,
@@ -47,7 +67,7 @@ export const useFloorStore = create<FloorState>((set, get) => ({
   async loadFloors(buildingId) {
     set({ isFloorLoading: true, error: null })
     try {
-      const floors = await getFloors(buildingId)
+      const floors = sortFloorsByLevel(await getFloors(buildingId))
       const selectedFloor = floors[0] ?? null
       set({
         floors,
@@ -73,24 +93,83 @@ export const useFloorStore = create<FloorState>((set, get) => ({
     })
   },
 
-  async addFloor(buildingId) {
-    const nextLevel = get().floors.length + 1
+  async addFloor(buildingId, floorInput) {
     set({ isFloorLoading: true, error: null })
     try {
       const floor = await createFloor({
         buildingId,
-        name: nextLevel === 1 ? 'Ground Floor' : `Level ${nextLevel}`,
-        level: nextLevel,
-        mapImageUrl: get().selectedFloor?.mapImageUrl,
-        mapWidth: get().selectedFloor?.mapWidth,
-        mapHeight: get().selectedFloor?.mapHeight,
+        name: floorInput.name,
+        level: floorInput.level,
+        planImageUrl: null,
+        publishStatus: 'draft',
+        mapWidth: get().selectedFloor?.mapWidth ?? 1200,
+        mapHeight: get().selectedFloor?.mapHeight ?? 760,
       })
       set((state) => ({
-        floors: [...state.floors, floor],
+        floors: sortFloorsByLevel([...state.floors, floor]),
         selectedFloor: floor,
         selectedFloorId: floor.id,
         pois: [],
       }))
+    } catch (error) {
+      set({ error: (error as Error).message })
+      throw error
+    } finally {
+      set({ isFloorLoading: false })
+    }
+  },
+
+  async deleteFloor(floorId) {
+    const deletingFloor = get().floors.find((floor) => floor.id === floorId)
+    if (!deletingFloor || get().floors.length <= 1) {
+      return
+    }
+
+    set({ isFloorLoading: true, error: null })
+    try {
+      await deleteFloorRequest(floorId)
+      const nextFloors = sortFloorsByLevel(
+        get().floors.filter((floor) => floor.id !== floorId),
+      )
+      const selectedFloor =
+        get().selectedFloorId === floorId
+          ? nextFloors[0] ?? null
+          : get().selectedFloor
+
+      set({
+        floors: nextFloors,
+        selectedFloor,
+        selectedFloorId: selectedFloor?.id,
+        pois: selectedFloor?.pois ?? [],
+      })
+    } catch (error) {
+      set({ error: (error as Error).message })
+      throw error
+    } finally {
+      set({ isFloorLoading: false })
+    }
+  },
+
+  async updateFloorStatus(floorId, publishStatus) {
+    set({ isFloorLoading: true, error: null })
+    try {
+      const updatedFloor = await updateFloor(floorId, { publishStatus })
+      const floors = sortFloorsByLevel(
+        get().floors.map((floor) =>
+          floor.id === floorId ? updatedFloor : floor,
+        ),
+      )
+      const selectedFloor =
+        get().selectedFloorId === floorId ? updatedFloor : get().selectedFloor
+
+      set({
+        floors,
+        selectedFloor,
+        pois:
+          get().selectedFloorId === floorId
+            ? updatedFloor.pois
+            : get().pois,
+      })
     } catch (error) {
       set({ error: (error as Error).message })
       throw error

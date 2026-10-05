@@ -191,6 +191,19 @@
     background 0.2s;
 }
 
+.floor-list-main {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.floor-list-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
 .floor-list-item:hover,
 .floor-list-item-active {
   border-color: #2563eb !important;
@@ -242,6 +255,11 @@
 
 .canvas-alert {
   margin-bottom: 12px;
+}
+
+.canvas-draft-note {
+  display: block;
+  margin-top: 10px;
 }
 
 .stage-host {

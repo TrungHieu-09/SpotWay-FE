@@ -23,11 +23,16 @@ import {
 } from 'react-konva'
 import { DeleteOutlined } from '@ant-design/icons'
 import { useFloorStore } from '../../store/useFloorStore'
+import type { FloorPublishStatus } from '../../types/floor'
 import { percentToPixel, pixelToPercent } from '../../utils/canvasCoordinates'
 
 const { Text: AntText } = Typography
 
 type ImageStatus = 'idle' | 'loading' | 'loaded' | 'failed'
+
+function floorStatusColor(status: FloorPublishStatus) {
+  return status === 'published' ? 'green' : 'gold'
+}
 
 function useImage(src?: string | null) {
   const [image, setImage] = useState<HTMLImageElement | null>(null)
@@ -178,6 +183,9 @@ export function CanvasBoard() {
           <div className="canvas-toolbar">
             <div>
               <strong>{selectedFloor.name}</strong>
+              <Tag color={floorStatusColor(selectedFloor.publishStatus)}>
+                {selectedFloor.publishStatus}
+              </Tag>
               <span>
                 {selectedFloor.mapWidth} x {selectedFloor.mapHeight}
               </span>
@@ -299,6 +307,12 @@ export function CanvasBoard() {
               )}
             </div>
           </Spin>
+
+          {selectedFloor.publishStatus === 'draft' ? (
+            <Text className="canvas-draft-note" type="secondary">
+              Tầng này đang ở chế độ nháp, chưa hiển thị cho Guest.
+            </Text>
+          ) : null}
         </div>
       </Card>
 

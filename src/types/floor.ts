@@ -19,8 +19,19 @@ export type CreateFloorPayload = {
   name: string
   level: number
   publishStatus?: FloorPublishStatus
+  planImageUrl?: string | null
   mapImageUrl?: string | null
   mapWidth?: number
   mapHeight?: number
 }
+
+export type UpdateFloorPayload = Partial<{
+  name: string
+  level: number
+  publishStatus: FloorPublishStatus
+  planImageUrl: string | null
+  mapImageUrl: string | null
+  mapWidth: number
+  mapHeight: number
+}>
 
