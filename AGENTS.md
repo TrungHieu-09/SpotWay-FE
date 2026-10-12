@@ -189,6 +189,8 @@ interface Node {
   y: number;   // 0-100, CÙNG quy ước với Poi.y
   isElevatorLink?: boolean; // true nếu node này liên kết thang máy xuyên tầng
   elevatorGroupId?: string | null; // các node cùng group là cùng 1 cụm thang máy xuyên tầng
+  poiId?: string | null;
+  label?: string;
 }
 
 interface Edge {
@@ -196,6 +198,76 @@ interface Edge {
   floorId: string;
   fromNodeId: string;
   toNodeId: string;
+  accessible?: boolean; // mặc định true
+}
+```
+
+## Endpoint: Geometry/Guest Routing
+
+`GET /api/floors/:floorId/geometry` → `FloorGeometry`
+`GET /api/buildings/:buildingId/destinations` → `Destination[]`
+`GET /api/routes?buildingId=&fromNodeId=&toNodeId=` → `RouteResult`
+
+```ts
+interface Point {
+  x: number; // 0-100, phần trăm theo chiều ngang ảnh sơ đồ
+  y: number; // 0-100, phần trăm theo chiều dọc ảnh sơ đồ
+}
+
+type RoomType = "store" | "corridor" | "atrium" | "office" | "toilet" | "service" | "other";
+
+interface Room {
+  id: string;
+  floorId: string;
+  name: string;
+  type: RoomType;
+  polygon: Point[];
+  storeId?: string | null;
+}
+
+interface FloorGeometry {
+  floorId: string;
+  rooms: Room[];
+  wallHeight: number;
+  status: "draft" | "confirmed";
+  updatedAt: string;
+  realWidthM: number;
+  realHeightM: number;
+}
+
+interface Destination {
+  nodeId: string;
+  label: string;
+  floorId: string;
+  floorName: string;
+  type: string;
+}
+
+interface RouteStep {
+  index: number;
+  type: "walk" | "elevator" | "arrive";
+  floorId: string;
+  nodeId: string;
+  x: number;
+  y: number;
+  bearing: number; // 0-360, 0 là hướng lên trên ảnh sơ đồ, tăng theo chiều kim đồng hồ
+  distance: number; // mét
+  instruction: string;
+}
+
+interface RouteSegment {
+  floorId: string;
+  points: Point[];
+}
+
+interface RouteResult {
+  buildingId: string;
+  fromNodeId: string;
+  toNodeId: string;
+  totalDistance: number;
+  estimatedSeconds: number;
+  steps: RouteStep[];
+  segments: RouteSegment[];
 }
 ```
 
@@ -252,6 +324,9 @@ function percentToPixel(percentX: number, percentY: number, stageWidth: number, 
 
 ## Khi cần chia sẻ logic giữa POI và Node/Edge
 Nếu cả 2 phần (POI của Kiệt, Node/Edge của KDuy) đều cần `pixelToPercent`/`percentToPixel`, nên tách 2 hàm này ra file dùng chung, ví dụ `src/utils/canvasCoordinates.ts`, thay vì mỗi người viết 1 bản riêng — tránh sai lệch công thức giữa 2 phần.
+
+## Toạ độ 3D
+Các dữ liệu dựng 3D/top-down như `Room.polygon`, `RouteSegment.points`, Node, Edge và POI vẫn dùng chung `x`/`y` phần trăm 0-100 theo mặt phẳng ảnh sơ đồ. Nếu cần chiều cao/tường, lưu bằng field riêng như `wallHeight` hoặc mét thực tế, không đổi ý nghĩa của `x`/`y`.
 
 ---
 
