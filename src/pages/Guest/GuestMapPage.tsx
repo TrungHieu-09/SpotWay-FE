@@ -107,7 +107,7 @@ export function GuestMapPage() {
     <div className="workspace guest-workspace">
       <div className="page-heading">
         <div>
-          <Text type="secondary">Guest</Text>
+          <Text type="secondary">Khách tham quan</Text>
           <Title level={1}>Bản đồ trong nhà</Title>
         </div>
         <Select

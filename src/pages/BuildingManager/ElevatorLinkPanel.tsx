@@ -110,7 +110,7 @@ export function ElevatorLinkPanel() {
   if (floors.length === 0) {
     return (
       <div className="store-list-empty">
-        <Empty description="Chọn building để xem node thang máy" />
+        <Empty description="Chọn tòa nhà để xem node thang máy" />
       </div>
     )
   }
@@ -122,7 +122,7 @@ export function ElevatorLinkPanel() {
           <div>
             <Title level={3}>Liên kết node thang máy</Title>
             <Text type="secondary">
-              UI POC tạm thời để gán elevatorGroupId cho các node thang máy.
+              Gán các node thang máy ở nhiều tầng vào cùng một nhóm liên kết.
             </Text>
           </div>
           <Button
@@ -142,11 +142,11 @@ export function ElevatorLinkPanel() {
             locale={{ emptyText: 'Chưa có node thang máy trong building này' }}
             columns={[
               {
-                title: 'Floor',
+                title: 'Tầng',
                 render: (_value: unknown, row) => (
                   <Space orientation="vertical" size={2}>
                     <Text strong>{row.floor.name}</Text>
-                    <Text type="secondary">Level {row.floor.level}</Text>
+                    <Text type="secondary">Tầng {row.floor.level}</Text>
                   </Space>
                 ),
               },
@@ -162,7 +162,7 @@ export function ElevatorLinkPanel() {
                 ),
               },
               {
-                title: 'Elevator group',
+                title: 'Nhóm thang máy',
                 width: 280,
                 render: (_value: unknown, row) => (
                   <Select

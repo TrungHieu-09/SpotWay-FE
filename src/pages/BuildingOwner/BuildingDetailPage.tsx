@@ -56,7 +56,7 @@ export function BuildingDetailPage() {
     return (
       <main className="workspace">
         <Card className="tool-card">
-          <Empty description="Không tìm thấy building">
+          <Empty description="Không tìm thấy tòa nhà">
             <Button onClick={() => navigate('/owner/buildings')}>
               Quay lại danh sách
             </Button>
@@ -70,8 +70,8 @@ export function BuildingDetailPage() {
     <main className="workspace">
       <section className="page-heading">
         <div>
-          <Text type="secondary">Building Owner</Text>
-          <Title level={1}>{building?.name ?? 'Building detail'}</Title>
+          <Text type="secondary">Chủ tòa nhà</Text>
+          <Title level={1}>{building?.name ?? 'Chi tiết tòa nhà'}</Title>
         </div>
         <Button
           icon={<ArrowLeftOutlined />}
@@ -84,7 +84,7 @@ export function BuildingDetailPage() {
       <Spin spinning={isBuildingLoading}>
         {building ? (
           <div className="building-detail-grid">
-            <Card title="Thông tin building" className="tool-card">
+            <Card title="Thông tin tòa nhà" className="tool-card">
               <Descriptions column={1} bordered size="middle">
                 <Descriptions.Item label="Tên">
                   {building.name}
@@ -94,7 +94,9 @@ export function BuildingDetailPage() {
                 </Descriptions.Item>
                 <Descriptions.Item label="Trạng thái">
                   <Tag color={building.status === 'active' ? 'green' : 'gold'}>
-                    {building.status}
+                    {building.status === 'active'
+                      ? 'Đang hoạt động'
+                      : 'Bản nháp'}
                   </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Ngày tạo">
@@ -128,14 +130,14 @@ export function BuildingDetailPage() {
             locale={{ emptyText: 'Chưa có tầng' }}
             columns={[
               { title: 'Tên tầng', dataIndex: 'name' },
-              { title: 'Level', dataIndex: 'level', width: 120 },
+              { title: 'Tầng', dataIndex: 'level', width: 120 },
               {
-                title: 'Publish status',
+                title: 'Trạng thái xuất bản',
                 dataIndex: 'publishStatus',
                 width: 160,
                 render: (status: Floor['publishStatus']) => (
                   <Tag color={status === 'published' ? 'green' : 'gold'}>
-                    {status}
+                    {status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
                   </Tag>
                 ),
               },

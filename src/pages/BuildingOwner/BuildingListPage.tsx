@@ -38,23 +38,23 @@ export function BuildingListPage() {
     <main className="workspace">
       <section className="page-heading">
         <div>
-          <Text type="secondary">Building Owner</Text>
-          <Title level={1}>Owned buildings</Title>
+          <Text type="secondary">Chủ tòa nhà</Text>
+          <Title level={1}>Tòa nhà của bạn</Title>
         </div>
         <Space size="large" wrap>
-          <Statistic title="Buildings" value={buildings.length} />
-          <Statistic title="Total floors" value={totalFloors} />
+          <Statistic title="Tòa nhà" value={buildings.length} />
+          <Statistic title="Tổng số tầng" value={totalFloors} />
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => setIsCreateOpen(true)}
           >
-            Tạo building mới
+            Tạo tòa nhà mới
           </Button>
         </Space>
       </section>
 
-      <Card title="Building inventory" className="tool-card">
+      <Card title="Danh sách tòa nhà" className="tool-card">
         <Table<Building>
           rowKey="id"
           loading={isLoading}
@@ -88,7 +88,7 @@ export function BuildingListPage() {
               width: 110,
               render: (status: Building['status']) => (
                 <Tag color={status === 'active' ? 'green' : 'gold'}>
-                  {status}
+                  {status === 'active' ? 'Đang hoạt động' : 'Bản nháp'}
                 </Tag>
               ),
             },

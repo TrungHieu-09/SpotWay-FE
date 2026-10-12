@@ -332,7 +332,7 @@ export function MapViewer2D({
   if (!floor) {
     return (
       <div className="guest-map-host">
-        <Empty description="Chọn building để xem bản đồ" />
+        <Empty description="Chọn tòa nhà để xem bản đồ" />
       </div>
     )
   }

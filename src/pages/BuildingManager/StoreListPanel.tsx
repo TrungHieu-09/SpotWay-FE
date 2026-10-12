@@ -44,7 +44,7 @@ export function StoreListPanel() {
   if (!selectedFloor) {
     return (
       <div className="store-list-empty">
-        <Empty description="Chọn tầng để xem danh sách store" />
+        <Empty description="Chọn tầng để xem danh sách gian hàng" />
       </div>
     )
   }
@@ -56,7 +56,7 @@ export function StoreListPanel() {
         loading={isLoading}
         dataSource={stores}
         pagination={false}
-        locale={{ emptyText: 'Tầng này chưa có store' }}
+        locale={{ emptyText: 'Tầng này chưa có gian hàng' }}
         columns={[
           {
             title: 'Logo',
@@ -74,17 +74,19 @@ export function StoreListPanel() {
             ),
           },
           {
-            title: 'Tên store',
+            title: 'Tên gian hàng',
             dataIndex: 'name',
             render: (name: string) => <Text strong>{name}</Text>,
           },
-          { title: 'Category', dataIndex: 'category', width: 140 },
+          { title: 'Nhóm dịch vụ', dataIndex: 'category', width: 140 },
           {
             title: 'Trạng thái',
             dataIndex: 'status',
             width: 120,
             render: (status: StoreStatus) => (
-              <Tag color={statusColor(status)}>{status}</Tag>
+              <Tag color={statusColor(status)}>
+                {status === 'active' ? 'Đang hoạt động' : 'Tạm ngưng'}
+              </Tag>
             ),
           },
           {
@@ -122,7 +124,9 @@ export function StoreListPanel() {
               <Space orientation="vertical" size={2}>
                 <Text strong>{detailStore.category}</Text>
                 <Tag color={statusColor(detailStore.status)}>
-                  {detailStore.status}
+                  {detailStore.status === 'active'
+                    ? 'Đang hoạt động'
+                    : 'Tạm ngưng'}
                 </Tag>
               </Space>
             </Space>

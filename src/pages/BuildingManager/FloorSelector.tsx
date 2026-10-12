@@ -2,10 +2,10 @@ import { useState } from 'react'
 import {
   App as AntApp,
   Button,
+  Empty,
   Form,
   Input,
   InputNumber,
-  List,
   Modal,
   Popconfirm,
   Space,
@@ -93,7 +93,7 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
   return (
     <section className="floor-selector">
       <div className="floor-selector-header">
-        <Text strong>Floors</Text>
+        <Text strong>Tầng</Text>
         <Button
           size="small"
           type="primary"
@@ -104,67 +104,72 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
       </div>
 
       <Spin spinning={isFloorLoading}>
-        <List
-          dataSource={floors}
-          locale={{ emptyText: 'Chưa có tầng' }}
-          renderItem={(floor) => (
-            <List.Item
-              className={
-                floor.id === selectedFloorId
-                  ? 'floor-list-item floor-list-item-active'
-                  : 'floor-list-item'
-              }
-              onClick={() => selectFloor(floor.id)}
-            >
-              <div className="floor-list-main">
-                <Space size={6} wrap>
-                  <Text strong>{floor.name}</Text>
-                  <Tag color={floorStatusColor(floor.publishStatus)}>
-                    {floor.publishStatus}
-                  </Tag>
-                </Space>
-                <Text type="secondary">Level {floor.level}</Text>
-              </div>
-
+        {floors.length > 0 ? (
+          <div className="floor-list">
+            {floors.map((floor) => (
               <div
-                className="floor-list-actions"
-                onClick={(event) => event.stopPropagation()}
+                key={floor.id}
+                className={
+                  floor.id === selectedFloorId
+                    ? 'floor-list-item floor-list-item-active'
+                    : 'floor-list-item'
+                }
+                onClick={() => selectFloor(floor.id)}
               >
-                <Tag>{floor.pois.length} POI</Tag>
-                <Switch
-                  size="small"
-                  checked={floor.publishStatus === 'published'}
-                  disabled={isFloorLoading}
-                  onChange={(checked) => handleToggleStatus(floor.id, checked)}
-                />
-                <Tooltip
-                  title={
-                    canDeleteFloor
-                      ? undefined
-                      : 'Building phải có ít nhất 1 tầng'
-                  }
+                <div className="floor-list-main">
+                  <Space size={6} wrap>
+                    <Text strong>{floor.name}</Text>
+                    <Tag color={floorStatusColor(floor.publishStatus)}>
+                      {floor.publishStatus === 'published'
+                        ? 'Đã xuất bản'
+                        : 'Bản nháp'}
+                    </Tag>
+                  </Space>
+                  <Text type="secondary">Tầng {floor.level}</Text>
+                </div>
+
+                <div
+                  className="floor-list-actions"
+                  onClick={(event) => event.stopPropagation()}
                 >
-                  <Popconfirm
-                    title={`Xoá tầng ${floor.name}?`}
-                    description="Toàn bộ POI của tầng này cũng sẽ bị xoá."
-                    okText="Xoá"
-                    cancelText="Hủy"
-                    okButtonProps={{ danger: true }}
-                    disabled={!canDeleteFloor}
-                    onConfirm={() => handleDeleteFloor(floor.id)}
+                  <Tag>{floor.pois.length} POI</Tag>
+                  <Switch
+                    size="small"
+                    checked={floor.publishStatus === 'published'}
+                    disabled={isFloorLoading}
+                    onChange={(checked) => handleToggleStatus(floor.id, checked)}
+                  />
+                  <Tooltip
+                    title={
+                      canDeleteFloor
+                        ? undefined
+                        : 'Tòa nhà phải có ít nhất 1 tầng'
+                    }
                   >
-                    <Button
-                      danger
-                      size="small"
-                      icon={<DeleteOutlined />}
-                      disabled={!canDeleteFloor || isFloorLoading}
-                    />
-                  </Popconfirm>
-                </Tooltip>
+                    <Popconfirm
+                      title={`Xoá tầng ${floor.name}?`}
+                      description="Toàn bộ POI của tầng này cũng sẽ bị xoá."
+                      okText="Xoá"
+                      cancelText="Hủy"
+                      okButtonProps={{ danger: true }}
+                      disabled={!canDeleteFloor}
+                      onConfirm={() => handleDeleteFloor(floor.id)}
+                    >
+                      <Button
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        disabled={!canDeleteFloor || isFloorLoading}
+                      />
+                    </Popconfirm>
+                  </Tooltip>
+                </div>
               </div>
-            </List.Item>
-          )}
-        />
+            ))}
+          </div>
+        ) : (
+          <Empty description="Chưa có tầng" />
+        )}
       </Spin>
 
       <Modal
@@ -188,10 +193,10 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
           </Form.Item>
 
           <Form.Item
-            label="Level"
+            label="Số tầng"
             name="level"
             rules={[
-              { required: true, message: 'Vui lòng nhập level' },
+              { required: true, message: 'Vui lòng nhập số tầng' },
               {
                 validator: (_, value: number | null | undefined) => {
                   if (value === null || value === undefined) {
@@ -202,7 +207,7 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
                     (floor) => floor.level === value,
                   )
                   return hasSameLevel
-                    ? Promise.reject(new Error('Level này đã tồn tại'))
+                    ? Promise.reject(new Error('Số tầng này đã tồn tại'))
                     : Promise.resolve()
                 },
               },

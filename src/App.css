@@ -22,14 +22,34 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  padding: 0;
+  border: 0;
   color: #111827;
   font-weight: 700;
   white-space: nowrap;
+  background: transparent;
 }
 
 .brand .anticon {
   color: #2563eb;
   font-size: 22px;
+}
+
+.brand-button {
+  cursor: pointer;
+}
+
+.app-footer {
+  display: flex;
+  justify-content: center;
+  padding: 20px 28px 28px;
+  background: transparent;
+}
+
+.route-loading {
+  display: grid;
+  min-height: 60vh;
+  place-items: center;
 }
 
 .workspace {
@@ -104,6 +124,60 @@
 .muted {
   color: #6b7280;
   font-size: 13px;
+}
+
+.home-workspace {
+  padding-top: 56px;
+}
+
+.home-hero {
+  max-width: 760px;
+  margin-bottom: 28px;
+}
+
+.home-hero h1.ant-typography {
+  margin: 8px 0 12px;
+  color: #111827;
+  font-size: 44px;
+  line-height: 1.08;
+}
+
+.home-hero .ant-typography {
+  font-size: 17px;
+}
+
+.home-role-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.home-role-card .ant-card-body {
+  display: grid;
+  min-height: 260px;
+  align-content: start;
+  gap: 12px;
+}
+
+.home-role-card h3.ant-typography,
+.home-role-card .ant-typography {
+  margin: 0;
+}
+
+.home-role-card .ant-btn {
+  align-self: end;
+  width: fit-content;
+}
+
+.home-role-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  color: #ffffff;
+  font-size: 22px;
+  border-radius: 8px;
+  background: #2563eb;
 }
 
 .building-detail-grid {
@@ -302,8 +376,11 @@
 }
 
 .floor-list-item {
+  display: flex;
   cursor: pointer;
   align-items: center !important;
+  justify-content: space-between;
+  gap: 12px;
   padding: 10px 12px !important;
   border: 1px solid #e5e7eb !important;
   border-radius: 8px;
@@ -429,9 +506,22 @@
   background: #f8fafc;
 }
 
-.poi-card .ant-list-item {
-  align-items: flex-start;
+.poi-list {
+  display: grid;
   gap: 12px;
+}
+
+.poi-list-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.poi-list-item:last-child {
+  border-bottom: 0;
 }
 
 .recognition-workspace {
@@ -664,6 +754,10 @@
 }
 
 @media (max-width: 900px) {
+  .home-role-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .canvas-workspace,
   .recognition-workspace {
     grid-template-columns: 1fr;
@@ -705,6 +799,10 @@
   }
 
   .store-create-upload-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-role-grid {
     grid-template-columns: 1fr;
   }
 

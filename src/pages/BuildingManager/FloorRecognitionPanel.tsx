@@ -467,7 +467,7 @@ export function FloorRecognitionPanel({
   }
 
   if (!selectedFloor) {
-    return <Empty description="Chọn building và tầng để nhận diện sơ đồ" />
+    return <Empty description="Chọn tòa nhà và tầng để nhận diện sơ đồ" />
   }
 
   return (

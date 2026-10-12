@@ -326,6 +326,11 @@ function percentToPixel(percentX: number, percentY: number, stageWidth: number, 
 ## Khi cần chia sẻ logic giữa POI và Node/Edge
 Nếu cả 2 phần (POI của Kiệt, Node/Edge của KDuy) đều cần `pixelToPercent`/`percentToPixel`, nên tách 2 hàm này ra file dùng chung, ví dụ `src/utils/canvasCoordinates.ts`, thay vì mỗi người viết 1 bản riêng — tránh sai lệch công thức giữa 2 phần.
 
+## 3D và nhận diện sơ đồ
+- POI, Node, route step và đỉnh polygon phòng vẫn lưu bằng `x`/`y` phần trăm 0-100. Không lưu toạ độ thế giới 3D vào store hoặc API.
+- Khi render 3D, chỉ chuyển sang toạ độ thế giới tại component render bằng `src/utils/worldCoordinates.ts`.
+- Geometry nhận diện sơ đồ lưu chung qua `FloorGeometry` và endpoint `/api/floors/:id/geometry`; tab 3D và trang Guest phải đọc cùng nguồn dữ liệu này, không tạo bản sao riêng.
+
 ## Toạ độ 3D
 Các dữ liệu dựng 3D/top-down như `Room.polygon`, `RouteSegment.points`, Node, Edge và POI vẫn dùng chung `x`/`y` phần trăm 0-100 theo mặt phẳng ảnh sơ đồ. Nếu cần chiều cao/tường, lưu bằng field riêng như `wallHeight` hoặc mét thực tế, không đổi ý nghĩa của `x`/`y`.
 

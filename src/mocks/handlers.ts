@@ -1,4 +1,4 @@
-import { delay, http, HttpResponse, passthrough } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import { buildings } from './data/buildings.mock'
 import { edges } from './data/edges.mock'
 import { fallbackMap, floors } from './data/floors.mock'
@@ -699,20 +699,5 @@ export const handlers = [
     return HttpResponse.json(floor.pois)
   }),
 
-  http.get('*', ({ request }) => {
-    const url = new URL(request.url)
-    const isAppRouteImageRequest =
-      url.origin === window.location.origin &&
-      request.destination === 'image' &&
-      (url.pathname === '/manager' ||
-        url.pathname === '/guest' ||
-        url.pathname.startsWith('/owner/'))
-
-    if (isAppRouteImageRequest) {
-      return new HttpResponse(null, { status: 204 })
-    }
-
-    return passthrough()
-  }),
 ]
 

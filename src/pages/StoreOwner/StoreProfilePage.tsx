@@ -34,7 +34,7 @@ import type { Store, StoreStatus } from '../../types/store'
 const { Text, Title } = Typography
 const { TextArea } = Input
 
-// POC only: replace this owner id with the authenticated Store Owner id later.
+// Replace this owner id with the authenticated user id later.
 const STORE_OWNER_ID = 'owner-1'
 const STORE_CATEGORIES = ['Thời trang', 'Ăn uống', 'Dịch vụ']
 
@@ -325,11 +325,13 @@ export function StoreProfilePage() {
     <main className="workspace">
       <section className="page-heading">
         <div>
-          <Text type="secondary">Store Owner</Text>
+          <Text type="secondary">Chủ gian hàng</Text>
           <Title level={1}>Hồ sơ gian hàng</Title>
         </div>
         {isEditingCurrentStore ? (
-          <Tag color={statusColor(visibleStatus)}>{visibleStatus}</Tag>
+          <Tag color={statusColor(visibleStatus)}>
+            {visibleStatus === 'active' ? 'Đang hoạt động' : 'Tạm ngưng'}
+          </Tag>
         ) : null}
       </section>
 
@@ -419,13 +421,15 @@ export function StoreProfilePage() {
                 render: (floorId: string, store) =>
                   getFloorName(store.buildingId, floorId),
               },
-              { title: 'Category', dataIndex: 'category', width: 140 },
+              { title: 'Nhóm dịch vụ', dataIndex: 'category', width: 140 },
               {
                 title: 'Trạng thái',
                 dataIndex: 'status',
                 width: 120,
                 render: (status: StoreStatus) => (
-                  <Tag color={statusColor(status)}>{status}</Tag>
+                  <Tag color={statusColor(status)}>
+                    {status === 'active' ? 'Đang hoạt động' : 'Tạm ngưng'}
+                  </Tag>
                 ),
               },
               {
@@ -462,17 +466,17 @@ export function StoreProfilePage() {
               <div className="store-profile-grid">
                 <div>
                   <Form.Item
-                    label="Tên store"
+                    label="Tên gian hàng"
                     name="name"
-                    rules={[{ required: true, message: 'Vui lòng nhập tên store' }]}
+                    rules={[{ required: true, message: 'Vui lòng nhập tên gian hàng' }]}
                   >
                     <Input prefix={<ShopOutlined />} placeholder="Lumi Fashion" />
                   </Form.Item>
 
                   <Form.Item
-                    label="Category"
+                    label="Nhóm dịch vụ"
                     name="category"
-                    rules={[{ required: true, message: 'Vui lòng chọn category' }]}
+                    rules={[{ required: true, message: 'Vui lòng chọn nhóm dịch vụ' }]}
                   >
                     <Select
                       options={STORE_CATEGORIES.map((category) => ({
@@ -496,7 +500,7 @@ export function StoreProfilePage() {
                     name="isActive"
                     valuePropName="checked"
                   >
-                    <Switch checkedChildren="active" unCheckedChildren="inactive" />
+                    <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
                   </Form.Item>
                 </div>
 
@@ -534,7 +538,7 @@ export function StoreProfilePage() {
                       {galleryFileList.length >= 5 ? null : (
                         <div className="upload-card-trigger">
                           <UploadOutlined />
-                          <span>Gallery</span>
+                          <span>Bộ ảnh</span>
                         </div>
                       )}
                     </Upload>
@@ -583,7 +587,9 @@ export function StoreProfilePage() {
                 </Text>
                 <Space>
                   <Tag color={statusColor(detailStore.status)}>
-                    {detailStore.status}
+                    {detailStore.status === 'active'
+                      ? 'Đang hoạt động'
+                      : 'Tạm ngưng'}
                   </Tag>
                   <Tag>{detailStore.category}</Tag>
                 </Space>
@@ -654,17 +660,17 @@ export function StoreProfilePage() {
           </Form.Item>
 
           <Form.Item
-            label="Tên store"
+            label="Tên gian hàng"
             name="name"
-            rules={[{ required: true, message: 'Vui lòng nhập tên store' }]}
+            rules={[{ required: true, message: 'Vui lòng nhập tên gian hàng' }]}
           >
             <Input prefix={<ShopOutlined />} placeholder="Tên gian hàng" />
           </Form.Item>
 
           <Form.Item
-            label="Category"
+            label="Nhóm dịch vụ"
             name="category"
-            rules={[{ required: true, message: 'Vui lòng chọn category' }]}
+            rules={[{ required: true, message: 'Vui lòng chọn nhóm dịch vụ' }]}
           >
             <Select
               options={STORE_CATEGORIES.map((category) => ({
@@ -688,7 +694,7 @@ export function StoreProfilePage() {
             name="isActive"
             valuePropName="checked"
           >
-            <Switch checkedChildren="active" unCheckedChildren="inactive" />
+            <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
           </Form.Item>
 
           <div className="store-create-upload-grid">
@@ -725,7 +731,7 @@ export function StoreProfilePage() {
                 {createGalleryFileList.length >= 5 ? null : (
                   <div className="upload-card-trigger">
                     <UploadOutlined />
-                    <span>Gallery</span>
+                    <span>Bộ ảnh</span>
                   </div>
                 )}
               </Upload>

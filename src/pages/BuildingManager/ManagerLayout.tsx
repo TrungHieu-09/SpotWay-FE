@@ -41,8 +41,8 @@ export function ManagerLayout() {
   return (
     <Layout className="workspace manager-layout">
       <Sider width={292} theme="light" className="manager-sider">
-        <Text type="secondary">Building Manager</Text>
-        <Title level={1}>Floor editor POC</Title>
+        <Text type="secondary">Quản lý tòa nhà</Text>
+        <Title level={1}>Quản lý sơ đồ tầng</Title>
         <Select
           className="full-width"
           loading={isBuildingLoading}
@@ -52,7 +52,7 @@ export function ManagerLayout() {
             value: building.id,
             label: building.name,
           }))}
-          placeholder="Chọn building"
+          placeholder="Chọn tòa nhà"
         />
         <FloorSelector buildingId={buildingId} />
       </Sider>
@@ -77,12 +77,12 @@ export function ManagerLayout() {
           items={[
             {
               key: 'canvas',
-              label: 'Canvas',
+              label: 'Bản đồ 2D',
               children: <CanvasBoard />,
             },
             {
               key: 'stores',
-              label: 'Danh sách store',
+              label: 'Danh sách gian hàng',
               children: <StoreListPanel />,
             },
             {

@@ -4,7 +4,6 @@ import {
   Button,
   Card,
   Empty,
-  List,
   Space,
   Spin,
   Tag,
@@ -135,7 +134,7 @@ export function CanvasBoard() {
     return (
       <Card className="tool-card canvas-card">
         <div className="canvas-shell canvas-shell-empty">
-          <Empty description="Chọn building và tầng" />
+          <Empty description="Chọn tòa nhà và tầng" />
         </div>
       </Card>
     )
@@ -323,40 +322,38 @@ export function CanvasBoard() {
 
           {selectedFloor.publishStatus === 'draft' ? (
             <Text className="canvas-draft-note" type="secondary">
-              Tầng này đang ở chế độ nháp, chưa hiển thị cho Guest.
+              Tầng này đang ở chế độ nháp, chưa hiển thị cho khách tham quan.
             </Text>
           ) : null}
         </div>
       </Card>
 
       <Card title="POI" className="tool-card poi-card">
-        <List
-          dataSource={pois}
-          locale={{ emptyText: 'Click lên bản đồ để thêm POI' }}
-          renderItem={(poi) => (
-            <List.Item
-              actions={[
+        {pois.length > 0 ? (
+          <div className="poi-list">
+            {pois.map((poi) => (
+              <div className="poi-list-item" key={poi.id}>
+                <Space orientation="vertical" size={2}>
+                  <Space>
+                    <AntText strong>{poi.name}</AntText>
+                    <Tag color="blue">{poi.type}</Tag>
+                  </Space>
+                  <AntText type="secondary">
+                    {poi.x.toFixed(1)}%, {poi.y.toFixed(1)}%
+                  </AntText>
+                </Space>
                 <Button
-                  key="delete"
                   danger
                   size="small"
                   icon={<DeleteOutlined />}
                   onClick={() => removePoi(poi.id)}
-                />,
-              ]}
-            >
-              <Space orientation="vertical" size={2}>
-                <Space>
-                  <AntText strong>{poi.name}</AntText>
-                  <Tag color="blue">{poi.type}</Tag>
-                </Space>
-                <AntText type="secondary">
-                  {poi.x.toFixed(1)}%, {poi.y.toFixed(1)}%
-                </AntText>
-              </Space>
-            </List.Item>
-          )}
-        />
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Empty description="Click lên bản đồ để thêm POI" />
+        )}
       </Card>
     </div>
   )

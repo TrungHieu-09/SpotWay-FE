@@ -31,13 +31,6 @@ export function CreateBuildingModal({
   const { message } = AntApp.useApp()
 
   useEffect(() => {
-    if (!open) {
-      form.resetFields()
-      setPreviewUrl(null)
-    }
-  }, [form, open])
-
-  useEffect(() => {
     return () => {
       if (previewUrl?.startsWith('blob:')) {
         URL.revokeObjectURL(previewUrl)
@@ -55,7 +48,7 @@ export function CreateBuildingModal({
         address: values.address,
         planImage: file,
       })
-      message.success('Tạo building thành công')
+      message.success('Tạo tòa nhà thành công')
       onClose()
     } catch (error) {
       message.error((error as Error).message)
@@ -66,21 +59,27 @@ export function CreateBuildingModal({
 
   return (
     <Modal
-      title="Tạo building mới"
+      title="Tạo tòa nhà mới"
       open={open}
-      okText="Tạo building"
+      okText="Tạo tòa nhà"
       cancelText="Hủy"
       confirmLoading={isSubmitting}
       onOk={() => form.submit()}
       onCancel={onClose}
+      afterOpenChange={(visible) => {
+        if (!visible) {
+          form.resetFields()
+          setPreviewUrl(null)
+        }
+      }}
       destroyOnHidden
       forceRender
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item
-          label="Tên building"
+          label="Tên tòa nhà"
           name="name"
-          rules={[{ required: true, message: 'Vui lòng nhập tên building' }]}
+          rules={[{ required: true, message: 'Vui lòng nhập tên tòa nhà' }]}
         >
           <Input prefix={<BankOutlined />} placeholder="Saigon Central Mall" />
         </Form.Item>
