@@ -1,11 +1,16 @@
 import { create } from 'zustand'
 import {
+  createStore as createStoreRequest,
   getStore,
   getStoresByFloor,
   getStoresByOwner,
   updateStore as updateStoreRequest,
 } from '../api/stores'
-import type { Store, UpdateStorePayload } from '../types/store'
+import type {
+  CreateStorePayload,
+  Store,
+  UpdateStorePayload,
+} from '../types/store'
 
 type StoreState = {
   storesByFloorId: Record<string, Store[]>
@@ -17,6 +22,7 @@ type StoreState = {
   loadStoresByFloor: (floorId: string) => Promise<void>
   loadStoresByOwner: (ownerId: string) => Promise<void>
   loadCurrentStore: (storeId?: string) => Promise<void>
+  createStore: (payload: CreateStorePayload) => Promise<Store>
   updateStore: (
     storeId: string,
     payload: UpdateStorePayload,
@@ -57,7 +63,6 @@ export const useStoreStore = create<StoreState>((set) => ({
       const stores = await getStoresByOwner(ownerId)
       set({
         ownerStores: stores,
-        currentStore: stores[0] ?? null,
       })
     } catch (error) {
       set({ error: (error as Error).message })
@@ -77,6 +82,33 @@ export const useStoreStore = create<StoreState>((set) => ({
       throw error
     } finally {
       set({ isLoading: false })
+    }
+  },
+
+  async createStore(payload) {
+    set({ isSaving: true, error: null })
+    try {
+      const store = await createStoreRequest(payload)
+      set((state) => ({
+        currentStore: store,
+        ownerStores:
+          store.ownerId === payload.ownerId
+            ? [...state.ownerStores, store]
+            : state.ownerStores,
+        storesByFloorId: {
+          ...state.storesByFloorId,
+          [store.floorId]: [
+            ...(state.storesByFloorId[store.floorId] ?? []),
+            store,
+          ],
+        },
+      }))
+      return store
+    } catch (error) {
+      set({ error: (error as Error).message })
+      throw error
+    } finally {
+      set({ isSaving: false })
     }
   },
 

@@ -24,3 +24,15 @@ export type UpdateStorePayload = Partial<{
   category: string
   status: StoreStatus
 }>
+
+export type CreateStorePayload = {
+  ownerId: string
+  buildingId: string
+  floorId: string
+  name: string
+  description: string
+  category: string
+  status: StoreStatus
+  logoFile?: File
+  galleryFiles?: File[]
+}

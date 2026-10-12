@@ -156,6 +156,7 @@ interface Poi {
 `GET /api/owners/:ownerId/stores` → `Store[]`
 `GET /api/floors/:floorId/stores` → `Store[]`
 `GET /api/stores/:id` → `Store`
+`POST /api/stores` (multipart/form-data: ownerId, buildingId, floorId, name, description, category, status, logo?, galleryImages?) → `Store`
 `PATCH /api/stores/:id` → `Store`
 
 ```ts

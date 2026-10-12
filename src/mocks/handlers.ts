@@ -15,7 +15,11 @@ import type {
 } from '../types/floor'
 import type { UpdateNodePayload } from '../types/node'
 import type { Poi } from '../types/poi'
-import type { Store, UpdateStorePayload } from '../types/store'
+import type {
+  CreateStorePayload,
+  Store,
+  UpdateStorePayload,
+} from '../types/store'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
@@ -84,6 +88,11 @@ function parseStringArray(value: FormDataEntryValue | null) {
 
 function normalizeStoreStatus(value: FormDataEntryValue | null) {
   return value === 'active' || value === 'inactive' ? value : undefined
+}
+
+function formString(formData: FormData | null, key: string, fallback = '') {
+  const value = formData?.get(key)
+  return typeof value === 'string' ? value : fallback
 }
 
 function updateStoreWithPayload(store: Store, payload: UpdateStorePayload) {
@@ -205,6 +214,60 @@ export const handlers = [
     await delay(160)
     const ownerStores = stores.filter((store) => store.ownerId === params.ownerId)
     return HttpResponse.json(ownerStores)
+  }),
+
+  http.post(endpoint('/stores'), async ({ request }) => {
+    await delay(220)
+    const contentType = request.headers.get('content-type') ?? ''
+    const payload =
+      contentType.includes('multipart/form-data')
+        ? null
+        : ((await request.json()) as CreateStorePayload)
+    const formData = payload ? null : await request.formData()
+    const ownerId = payload?.ownerId ?? formString(formData, 'ownerId')
+    const buildingId =
+      payload?.buildingId ?? formString(formData, 'buildingId')
+    const floorId = payload?.floorId ?? formString(formData, 'floorId')
+    const floor = floors.find((item) => item.id === floorId)
+
+    if (!floor) {
+      return HttpResponse.json({ message: 'Floor not found' }, { status: 404 })
+    }
+
+    if (floor.buildingId !== buildingId) {
+      return HttpResponse.json(
+        { message: 'Floor does not belong to selected building' },
+        { status: 400 },
+      )
+    }
+
+    const status = payload?.status ?? normalizeStoreStatus(formData?.get('status') ?? null)
+    const logoFile = formData?.get('logo')
+    const galleryFiles =
+      formData
+        ?.getAll('galleryImages')
+        .filter((item): item is File => item instanceof File) ?? []
+    const uploadedGalleryUrls = await Promise.all(
+      galleryFiles.map((file) => fileToDataUrl(file)),
+    )
+
+    const store: Store = {
+      id: `store-${crypto.randomUUID()}`,
+      ownerId,
+      buildingId,
+      floorId,
+      name: payload?.name ?? formString(formData, 'name', 'Untitled store'),
+      logoUrl: logoFile instanceof File ? await fileToDataUrl(logoFile) : null,
+      galleryImageUrls: uploadedGalleryUrls.slice(0, 5),
+      description: payload?.description ?? formString(formData, 'description'),
+      category: payload?.category ?? formString(formData, 'category', 'Dịch vụ'),
+      status: status ?? 'inactive',
+    }
+
+    stores.push(store)
+    saveToStorage(MOCK_STORAGE_KEYS.stores, stores)
+
+    return HttpResponse.json(store, { status: 201 })
   }),
 
   http.get(endpoint('/floors/:floorId/nodes'), async ({ params }) => {

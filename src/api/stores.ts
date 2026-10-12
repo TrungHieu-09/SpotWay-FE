@@ -1,5 +1,9 @@
 import { apiClient } from './client'
-import type { Store, UpdateStorePayload } from '../types/store'
+import type {
+  CreateStorePayload,
+  Store,
+  UpdateStorePayload,
+} from '../types/store'
 
 export async function getStoresByFloor(floorId: string) {
   const { data } = await apiClient.get<Store[]>(`/floors/${floorId}/stores`)
@@ -13,6 +17,32 @@ export async function getStoresByOwner(ownerId: string) {
 
 export async function getStore(storeId: string) {
   const { data } = await apiClient.get<Store>(`/stores/${storeId}`)
+  return data
+}
+
+export async function createStore(payload: CreateStorePayload) {
+  const formData = new FormData()
+
+  formData.append('ownerId', payload.ownerId)
+  formData.append('buildingId', payload.buildingId)
+  formData.append('floorId', payload.floorId)
+  formData.append('name', payload.name)
+  formData.append('description', payload.description)
+  formData.append('category', payload.category)
+  formData.append('status', payload.status)
+
+  if (payload.logoFile) {
+    formData.append('logo', payload.logoFile)
+  }
+
+  payload.galleryFiles?.forEach((file) => {
+    formData.append('galleryImages', file)
+  })
+
+  const { data } = await apiClient.post<Store>('/stores', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+
   return data
 }
 
