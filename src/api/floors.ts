@@ -33,8 +33,14 @@ export async function deleteFloor(floorId: string) {
 export async function saveFloorPois(
   floorId: string,
   pois: Poi[],
+  nextPoiNumber?: number,
 ) {
-  const { data } = await apiClient.patch<Poi[]>(`/floors/${floorId}/pois`, pois)
+  const payload =
+    nextPoiNumber === undefined ? pois : { pois, nextPoiNumber }
+  const { data } = await apiClient.patch<Poi[]>(
+    `/floors/${floorId}/pois`,
+    payload,
+  )
   return data
 }
 

@@ -1,7 +1,7 @@
 import type { Floor } from '../../types/floor'
 import type { Poi } from '../../types/poi'
 import { clampPercent } from '../../utils/canvasCoordinates'
-import { loadFromStorage, MOCK_STORAGE_KEYS } from '../persist'
+import { loadFromStorage, MOCK_STORAGE_KEYS, saveToStorage } from '../persist'
 
 type StoredPoi = Omit<Poi, 'x' | 'y'> &
   Partial<Pick<Poi, 'x' | 'y'>> & {
@@ -9,10 +9,14 @@ type StoredPoi = Omit<Poi, 'x' | 'y'> &
     yPercent?: number
   }
 
-type StoredFloor = Omit<Floor, 'pois' | 'publishStatus' | 'mapImageUrl'> &
+type StoredFloor = Omit<
+  Floor,
+  'pois' | 'publishStatus' | 'mapImageUrl' | 'nextPoiNumber'
+> &
   Partial<Pick<Floor, 'publishStatus' | 'mapImageUrl'>> & {
     planImageUrl?: string | null
     pois?: StoredPoi[]
+    nextPoiNumber?: number
   }
 
 export const mallPlan =
@@ -58,6 +62,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: mallPlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [
       {
         id: 'poi-1',
@@ -86,6 +91,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: null,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
   {
@@ -97,6 +103,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: null,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
   {
@@ -108,6 +115,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [
       {
         id: 'poi-3',
@@ -128,6 +136,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
   {
@@ -139,6 +148,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
   {
@@ -150,6 +160,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
   {
@@ -161,6 +172,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
   {
@@ -172,6 +184,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
   {
@@ -183,6 +196,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: mallPlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
   {
@@ -194,9 +208,17 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: mallPlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
 ]
+
+const seedFloorByBuildingLevel = new Map(
+  initialFloorsSeed.map((floor) => [
+    `${floor.buildingId}:${floor.level}`,
+    floor,
+  ]),
+)
 
 function normalizePoi(poi: StoredPoi): Poi {
   return {
@@ -211,23 +233,77 @@ function normalizeMapImageUrl(url: string | null | undefined) {
   return normalizedUrl ? normalizedUrl : null
 }
 
+function getNextPoiNumber(pois: Poi[]) {
+  const maxPoiNumber = pois.reduce((max, poi) => {
+    const match = /^POI\s+(\d+)$/.exec(poi.name.trim())
+    return match ? Math.max(max, Number(match[1])) : max
+  }, 0)
+
+  return maxPoiNumber + 1
+}
+
 function normalizeFloor(floor: StoredFloor): Floor {
+  const seedFloor = seedFloorByBuildingLevel.get(
+    `${floor.buildingId}:${floor.level}`,
+  )
+  const id = seedFloor?.id ?? floor.id
+  const pois = floor.pois?.map(normalizePoi).map((poi) => ({
+    ...poi,
+    floorId: id,
+  })) ?? []
+  const nextPoiNumberFromNames = getNextPoiNumber(pois)
+  const nextPoiNumber = floor.nextPoiNumber
+  const storedNextPoiNumber =
+    Number.isFinite(nextPoiNumber) && nextPoiNumber !== undefined && nextPoiNumber > 0
+      ? Math.floor(nextPoiNumber)
+      : nextPoiNumberFromNames
+
   return {
     ...floor,
+    id,
     publishStatus: floor.publishStatus ?? 'draft',
     mapImageUrl: normalizeMapImageUrl(
       floor.mapImageUrl ?? floor.planImageUrl,
     ),
     mapWidth: floor.mapWidth ?? 1200,
     mapHeight: floor.mapHeight ?? 760,
-    pois: floor.pois?.map(normalizePoi) ?? [],
+    pois,
+    nextPoiNumber: Math.max(storedNextPoiNumber, nextPoiNumberFromNames),
   }
 }
 
-export const floors = loadFromStorage<StoredFloor[]>(
+function mergeDuplicateFloors(normalizedFloors: Floor[]) {
+  const floorById = new Map<string, Floor>()
+
+  for (const floor of normalizedFloors) {
+    const existingFloor = floorById.get(floor.id)
+    if (!existingFloor) {
+      floorById.set(floor.id, floor)
+      continue
+    }
+
+    const poiById = new Map(existingFloor.pois.map((poi) => [poi.id, poi]))
+    for (const poi of floor.pois) {
+      poiById.set(poi.id, poi)
+    }
+
+    existingFloor.pois = [...poiById.values()]
+    existingFloor.nextPoiNumber = Math.max(
+      existingFloor.nextPoiNumber,
+      floor.nextPoiNumber,
+      getNextPoiNumber(existingFloor.pois),
+    )
+  }
+
+  return [...floorById.values()]
+}
+
+export const floors = mergeDuplicateFloors(loadFromStorage<StoredFloor[]>(
   MOCK_STORAGE_KEYS.floors,
   initialFloorsSeed,
-).map(normalizeFloor)
+).map(normalizeFloor))
+
+saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
 
 export function fallbackMap() {
   return mallPlan

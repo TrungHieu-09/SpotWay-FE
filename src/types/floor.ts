@@ -12,6 +12,7 @@ export type Floor = {
   mapWidth: number
   mapHeight: number
   pois: Poi[]
+  nextPoiNumber: number
 }
 
 export type CreateFloorPayload = {
@@ -23,6 +24,7 @@ export type CreateFloorPayload = {
   mapImageUrl?: string | null
   mapWidth?: number
   mapHeight?: number
+  nextPoiNumber?: number
 }
 
 export type UpdateFloorPayload = Partial<{
@@ -33,5 +35,6 @@ export type UpdateFloorPayload = Partial<{
   mapImageUrl: string | null
   mapWidth: number
   mapHeight: number
+  nextPoiNumber: number
 }>
 

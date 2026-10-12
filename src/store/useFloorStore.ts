@@ -45,9 +45,9 @@ type FloorState = {
   removePoi: (poiId: string) => Promise<void>
 }
 
-function syncFloorPois(floors: Floor[], floorId: string, pois: Poi[]) {
+function syncFloor(floors: Floor[], updatedFloor: Floor) {
   return floors.map((floor) =>
-    floor.id === floorId ? { ...floor, pois } : floor,
+    floor.id === updatedFloor.id ? updatedFloor : floor,
   )
 }
 
@@ -104,6 +104,7 @@ export const useFloorStore = create<FloorState>((set, get) => ({
         publishStatus: 'draft',
         mapWidth: get().selectedFloor?.mapWidth ?? 1200,
         mapHeight: get().selectedFloor?.mapHeight ?? 760,
+        nextPoiNumber: 1,
       })
       set((state) => ({
         floors: sortFloorsByLevel([...state.floors, floor]),
@@ -184,32 +185,43 @@ export const useFloorStore = create<FloorState>((set, get) => ({
       return
     }
 
+    const nextPoiNumber = selectedFloor.nextPoiNumber
     const nextPois: Poi[] = [
       ...get().pois,
       {
         id: `poi-${crypto.randomUUID()}`,
         floorId: selectedFloor.id,
-        name: `POI ${get().pois.length + 1}`,
+        name: `POI ${nextPoiNumber}`,
         type: poi.type ?? 'custom',
         x: clampPercent(poi.x),
         y: clampPercent(poi.y),
       },
     ]
+    const nextSelectedFloor = {
+      ...selectedFloor,
+      pois: nextPois,
+      nextPoiNumber: nextPoiNumber + 1,
+    }
 
     set({
       pois: nextPois,
-      floors: syncFloorPois(get().floors, selectedFloor.id, nextPois),
-      selectedFloor: { ...selectedFloor, pois: nextPois },
+      floors: syncFloor(get().floors, nextSelectedFloor),
+      selectedFloor: nextSelectedFloor,
       isPoiSaving: true,
       error: null,
     })
 
     try {
-      const savedPois = await saveFloorPois(selectedFloor.id, nextPois)
+      const savedPois = await saveFloorPois(
+        selectedFloor.id,
+        nextPois,
+        nextSelectedFloor.nextPoiNumber,
+      )
+      const savedSelectedFloor = { ...nextSelectedFloor, pois: savedPois }
       set({
         pois: savedPois,
-        floors: syncFloorPois(get().floors, selectedFloor.id, savedPois),
-        selectedFloor: { ...selectedFloor, pois: savedPois },
+        floors: syncFloor(get().floors, savedSelectedFloor),
+        selectedFloor: savedSelectedFloor,
       })
     } catch (error) {
       set({ error: (error as Error).message })
@@ -234,21 +246,27 @@ export const useFloorStore = create<FloorState>((set, get) => ({
           }
         : poi,
     )
+    const nextSelectedFloor = { ...selectedFloor, pois: nextPois }
 
     set({
       pois: nextPois,
-      floors: syncFloorPois(get().floors, selectedFloor.id, nextPois),
-      selectedFloor: { ...selectedFloor, pois: nextPois },
+      floors: syncFloor(get().floors, nextSelectedFloor),
+      selectedFloor: nextSelectedFloor,
       isPoiSaving: true,
       error: null,
     })
 
     try {
-      const savedPois = await saveFloorPois(selectedFloor.id, nextPois)
+      const savedPois = await saveFloorPois(
+        selectedFloor.id,
+        nextPois,
+        selectedFloor.nextPoiNumber,
+      )
+      const savedSelectedFloor = { ...nextSelectedFloor, pois: savedPois }
       set({
         pois: savedPois,
-        floors: syncFloorPois(get().floors, selectedFloor.id, savedPois),
-        selectedFloor: { ...selectedFloor, pois: savedPois },
+        floors: syncFloor(get().floors, savedSelectedFloor),
+        selectedFloor: savedSelectedFloor,
       })
     } catch (error) {
       set({ error: (error as Error).message })
@@ -265,20 +283,26 @@ export const useFloorStore = create<FloorState>((set, get) => ({
     }
 
     const nextPois = get().pois.filter((poi) => poi.id !== poiId)
+    const nextSelectedFloor = { ...selectedFloor, pois: nextPois }
     set({
       pois: nextPois,
-      floors: syncFloorPois(get().floors, selectedFloor.id, nextPois),
-      selectedFloor: { ...selectedFloor, pois: nextPois },
+      floors: syncFloor(get().floors, nextSelectedFloor),
+      selectedFloor: nextSelectedFloor,
       isPoiSaving: true,
       error: null,
     })
 
     try {
-      const savedPois = await saveFloorPois(selectedFloor.id, nextPois)
+      const savedPois = await saveFloorPois(
+        selectedFloor.id,
+        nextPois,
+        selectedFloor.nextPoiNumber,
+      )
+      const savedSelectedFloor = { ...nextSelectedFloor, pois: savedPois }
       set({
         pois: savedPois,
-        floors: syncFloorPois(get().floors, selectedFloor.id, savedPois),
-        selectedFloor: { ...selectedFloor, pois: savedPois },
+        floors: syncFloor(get().floors, savedSelectedFloor),
+        selectedFloor: savedSelectedFloor,
       })
     } catch (error) {
       set({ error: (error as Error).message })

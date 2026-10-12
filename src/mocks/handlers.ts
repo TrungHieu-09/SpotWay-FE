@@ -37,8 +37,18 @@ function makeFloor(payload: CreateFloorPayload): Floor {
     mapImageUrl,
     mapWidth: payload.mapWidth ?? 1200,
     mapHeight: payload.mapHeight ?? 760,
+    nextPoiNumber: payload.nextPoiNumber ?? 1,
     pois: [],
   }
+}
+
+function getNextPoiNumber(pois: Poi[]) {
+  const maxPoiNumber = pois.reduce((max, poi) => {
+    const match = /^POI\s+(\d+)$/.exec(poi.name.trim())
+    return match ? Math.max(max, Number(match[1])) : max
+  }, 0)
+
+  return maxPoiNumber + 1
 }
 
 async function fileToDataUrl(file: File) {
@@ -320,6 +330,7 @@ export const handlers = [
           : floor.mapImageUrl
     floor.mapWidth = payload.mapWidth ?? floor.mapWidth
     floor.mapHeight = payload.mapHeight ?? floor.mapHeight
+    floor.nextPoiNumber = payload.nextPoiNumber ?? floor.nextPoiNumber
 
     saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
     return HttpResponse.json(floor)
@@ -368,14 +379,27 @@ export const handlers = [
 
   http.patch(endpoint('/floors/:floorId/pois'), async ({ params, request }) => {
     await delay(140)
-    const payload = (await request.json()) as Poi[]
+    const payload = (await request.json()) as
+      | Poi[]
+      | { pois: Poi[]; nextPoiNumber?: number }
     const floor = floors.find((item) => item.id === params.floorId)
 
     if (!floor) {
-      return HttpResponse.json({ message: 'Floor not found' }, { status: 404 })
+      return HttpResponse.json(
+        {
+          message: `Không tìm thấy tầng ${String(params.floorId)} trong mock storage. Dữ liệu localStorage có thể đã cũ, hãy tải lại trang để MSW đồng bộ lại floor.`,
+        },
+        { status: 404 },
+      )
     }
 
-    floor.pois = payload
+    const pois = Array.isArray(payload) ? payload : payload.pois
+    floor.pois = pois.map((poi) => ({ ...poi, floorId: floor.id }))
+    floor.nextPoiNumber = Math.max(
+      floor.nextPoiNumber,
+      Array.isArray(payload) ? floor.nextPoiNumber : (payload.nextPoiNumber ?? 1),
+      getNextPoiNumber(floor.pois),
+    )
     saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
     return HttpResponse.json(floor.pois)
   }),
