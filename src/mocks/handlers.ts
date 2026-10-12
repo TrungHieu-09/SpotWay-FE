@@ -20,6 +20,7 @@ import type {
   Store,
   UpdateStorePayload,
 } from '../types/store'
+import type { FloorGeometry, Point, Room } from '../types/geometry'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
@@ -103,6 +104,122 @@ function updateStoreWithPayload(store: Store, payload: UpdateStorePayload) {
   store.logoUrl = payload.logoUrl !== undefined ? payload.logoUrl : store.logoUrl
   store.galleryImageUrls =
     payload.galleryImageUrls?.slice(0, 5) ?? store.galleryImageUrls
+}
+
+function clampPercent(value: number) {
+  return Math.min(100, Math.max(0, Number(value.toFixed(2))))
+}
+
+function cloneGeometry(geometry: FloorGeometry): FloorGeometry {
+  return {
+    ...geometry,
+    rooms: geometry.rooms.map((room) => ({
+      ...room,
+      polygon: room.polygon.map((point) => ({ ...point })),
+    })),
+  }
+}
+
+function offsetPoint(point: Point, roomIndex: number, pointIndex: number) {
+  const direction = pointIndex % 2 === 0 ? 1 : -1
+  const offset = 1 + ((roomIndex + pointIndex) % 3)
+  return {
+    x: clampPercent(point.x + direction * offset),
+    y: clampPercent(point.y + (pointIndex % 3 === 0 ? offset : -offset)),
+  }
+}
+
+function makeRoom(
+  floorId: string,
+  index: number,
+  name: string,
+  polygon: Point[],
+): Room {
+  return {
+    id: `room-${floorId}-${index}-${crypto.randomUUID()}`,
+    floorId,
+    name,
+    type: index === 1 ? 'corridor' : 'store',
+    storeId: null,
+    polygon,
+  }
+}
+
+function generateRecognizedGeometry(floorId: string): FloorGeometry {
+  const floor = floors.find((item) => item.id === floorId)
+  const realWidthM = floor ? Math.max(20, Math.round(floor.mapWidth / 20)) : 60
+  const realHeightM = floor ? Math.max(16, Math.round(floor.mapHeight / 20)) : 38
+  const rooms: Room[] = [
+    makeRoom(floorId, 1, 'Hành lang trung tâm', [
+      { x: 8, y: 42 },
+      { x: 92, y: 42 },
+      { x: 92, y: 58 },
+      { x: 8, y: 58 },
+    ]),
+    makeRoom(floorId, 2, 'Gian hàng A', [
+      { x: 8, y: 10 },
+      { x: 38, y: 10 },
+      { x: 38, y: 34 },
+      { x: 8, y: 34 },
+    ]),
+    makeRoom(floorId, 3, 'Gian hàng B', [
+      { x: 62, y: 10 },
+      { x: 92, y: 10 },
+      { x: 92, y: 34 },
+      { x: 62, y: 34 },
+    ]),
+    makeRoom(floorId, 4, 'Dịch vụ', [
+      { x: 62, y: 66 },
+      { x: 92, y: 66 },
+      { x: 92, y: 88 },
+      { x: 62, y: 88 },
+    ]),
+  ]
+
+  return {
+    floorId,
+    rooms,
+    wallHeight: 3.2,
+    status: 'draft',
+    updatedAt: new Date().toISOString(),
+    realWidthM,
+    realHeightM,
+  }
+}
+
+function makeRecognitionDraft(floorId: string) {
+  const existingGeometry = floorGeometry.find((item) => item.floorId === floorId)
+  if (!existingGeometry) {
+    return generateRecognizedGeometry(floorId)
+  }
+
+  const draft = cloneGeometry(existingGeometry)
+  draft.rooms = draft.rooms
+    .slice(0, Math.max(1, draft.rooms.length - 1))
+    .map((room, roomIndex) => ({
+      ...room,
+      id: `rec-${room.id}`,
+      polygon: room.polygon.map((point, pointIndex) =>
+        offsetPoint(point, roomIndex, pointIndex),
+      ),
+    }))
+  draft.status = 'draft'
+  draft.updatedAt = new Date().toISOString()
+  return draft
+}
+
+function upsertGeometry(geometry: FloorGeometry) {
+  const geometryIndex = floorGeometry.findIndex(
+    (item) => item.floorId === geometry.floorId,
+  )
+
+  if (geometryIndex >= 0) {
+    floorGeometry[geometryIndex] = geometry
+  } else {
+    floorGeometry.push(geometry)
+  }
+
+  saveToStorage(MOCK_STORAGE_KEYS.geometry, floorGeometry)
 }
 
 export const handlers = [
@@ -201,6 +318,49 @@ export const handlers = [
       )
     }
 
+    return HttpResponse.json(geometry)
+  }),
+
+  http.post(endpoint('/floors/:floorId/recognize'), async ({ params }) => {
+    await delay(1500 + Math.round(Math.random() * 500))
+    const floorId = String(params.floorId)
+    const floor = floors.find((item) => item.id === floorId)
+
+    if (!floor) {
+      return HttpResponse.json({ message: 'Floor not found' }, { status: 404 })
+    }
+
+    const draftGeometry = makeRecognitionDraft(floorId)
+    upsertGeometry(draftGeometry)
+    return HttpResponse.json(draftGeometry)
+  }),
+
+  http.put(endpoint('/floors/:floorId/geometry'), async ({ params, request }) => {
+    await delay(180)
+    const floorId = String(params.floorId)
+    const floor = floors.find((item) => item.id === floorId)
+
+    if (!floor) {
+      return HttpResponse.json({ message: 'Floor not found' }, { status: 404 })
+    }
+
+    const payload = (await request.json()) as FloorGeometry
+    const geometry: FloorGeometry = {
+      ...payload,
+      floorId,
+      rooms: payload.rooms.map((room) => ({
+        ...room,
+        floorId,
+        polygon: room.polygon.map((point) => ({
+          x: clampPercent(point.x),
+          y: clampPercent(point.y),
+        })),
+      })),
+      status: 'confirmed',
+      updatedAt: new Date().toISOString(),
+    }
+
+    upsertGeometry(geometry)
     return HttpResponse.json(geometry)
   }),
 

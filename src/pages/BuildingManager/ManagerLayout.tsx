@@ -3,6 +3,7 @@ import { App as AntApp, Layout, Select, Tabs, Typography } from 'antd'
 import { FloorSelector } from './FloorSelector'
 import { CanvasBoard } from './CanvasBoard'
 import { ElevatorLinkPanel } from './ElevatorLinkPanel'
+import { FloorRecognitionPanel } from './FloorRecognitionPanel'
 import { Manager3DPanel } from './Manager3DPanel'
 import { StoreListPanel } from './StoreListPanel'
 import { useBuildingStore } from '../../store/useBuildingStore'
@@ -13,11 +14,13 @@ const { Text, Title } = Typography
 
 export function ManagerLayout() {
   const [buildingId, setBuildingId] = useState<string>()
+  const [activeTab, setActiveTab] = useState('canvas')
+  const [isRecognitionDirty, setIsRecognitionDirty] = useState(false)
   const buildings = useBuildingStore((state) => state.buildings)
   const isBuildingLoading = useBuildingStore((state) => state.isLoading)
   const loadBuildings = useBuildingStore((state) => state.loadBuildings)
   const loadFloors = useFloorStore((state) => state.loadFloors)
-  const { message } = AntApp.useApp()
+  const { message, modal } = AntApp.useApp()
 
   useEffect(() => {
     loadBuildings().catch((error: Error) => message.error(error.message))
@@ -56,6 +59,21 @@ export function ManagerLayout() {
 
       <Content className="manager-content">
         <Tabs
+          activeKey={activeTab}
+          onChange={(nextTab) => {
+            if (activeTab === 'recognition' && isRecognitionDirty) {
+              modal.confirm({
+                title: 'Rời tab nhận diện sơ đồ?',
+                content: 'Bạn có thay đổi chưa lưu. Rời tab sẽ giữ bản nháp trên màn hình nhưng chưa lưu vào dữ liệu demo.',
+                okText: 'Rời tab',
+                cancelText: 'Ở lại',
+                onOk: () => setActiveTab(nextTab),
+              })
+              return
+            }
+
+            setActiveTab(nextTab)
+          }}
           items={[
             {
               key: 'canvas',
@@ -66,6 +84,13 @@ export function ManagerLayout() {
               key: 'stores',
               label: 'Danh sách store',
               children: <StoreListPanel />,
+            },
+            {
+              key: 'recognition',
+              label: 'Nhận diện sơ đồ',
+              children: (
+                <FloorRecognitionPanel onDirtyChange={setIsRecognitionDirty} />
+              ),
             },
             {
               key: 'map-3d',

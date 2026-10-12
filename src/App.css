@@ -434,6 +434,39 @@
   gap: 12px;
 }
 
+.recognition-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.recognition-canvas-card,
+.recognition-side-card {
+  min-width: 0;
+}
+
+.recognition-canvas-card .ant-card-body {
+  padding: 16px;
+}
+
+.recognition-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.recognition-stage-host {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: clamp(420px, 70vh, 720px);
+  align-items: flex-start;
+  justify-content: center;
+}
+
 .guest-workspace {
   width: min(1480px, 100%);
 }
@@ -631,7 +664,8 @@
 }
 
 @media (max-width: 900px) {
-  .canvas-workspace {
+  .canvas-workspace,
+  .recognition-workspace {
     grid-template-columns: 1fr;
   }
 
@@ -679,7 +713,8 @@
   }
 
   .manager-layout,
-  .canvas-workspace {
+  .canvas-workspace,
+  .recognition-workspace {
     grid-template-columns: 1fr;
   }
 
@@ -691,6 +726,7 @@
   }
 
   .canvas-toolbar,
+  .recognition-toolbar,
   .canvas-toolbar div {
     align-items: flex-start;
     flex-direction: column;

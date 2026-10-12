@@ -9,6 +9,24 @@ export async function getFloorGeometry(floorId: string) {
   return data
 }
 
+export async function recognizeFloorGeometry(floorId: string) {
+  const { data } = await apiClient.post<FloorGeometry>(
+    `/floors/${floorId}/recognize`,
+  )
+  return data
+}
+
+export async function saveFloorGeometry(
+  floorId: string,
+  geometry: FloorGeometry,
+) {
+  const { data } = await apiClient.put<FloorGeometry>(
+    `/floors/${floorId}/geometry`,
+    geometry,
+  )
+  return data
+}
+
 export async function getBuildingDestinations(buildingId: string) {
   const { data } = await apiClient.get<Destination[]>(
     `/buildings/${buildingId}/destinations`,
