@@ -7,6 +7,16 @@ export type Node = {
   y: number
   isElevatorLink?: boolean
   elevatorGroupId?: string | null
+  poiId?: string | null
+  label?: string
+}
+
+export type Edge = {
+  id: string
+  floorId: string
+  fromNodeId: string
+  toNodeId: string
+  accessible?: boolean
 }
 
 export type UpdateNodePayload = Partial<{
@@ -14,4 +24,6 @@ export type UpdateNodePayload = Partial<{
   y: number
   isElevatorLink: boolean
   elevatorGroupId: string | null
+  poiId: string | null
+  label: string
 }>

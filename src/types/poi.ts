@@ -1,4 +1,12 @@
-export type PoiType = 'entrance' | 'shop' | 'service' | 'custom'
+export type PoiType =
+  | 'entrance'
+  | 'shop'
+  | 'store'
+  | 'service'
+  | 'elevator'
+  | 'toilet'
+  | 'exit'
+  | 'custom'
 
 export type Poi = {
   id: string

@@ -1,8 +1,13 @@
 import { apiClient } from './client'
-import type { Node, UpdateNodePayload } from '../types/node'
+import type { Edge, Node, UpdateNodePayload } from '../types/node'
 
 export async function getNodesByFloor(floorId: string) {
   const { data } = await apiClient.get<Node[]>(`/floors/${floorId}/nodes`)
+  return data
+}
+
+export async function getEdgesByFloor(floorId: string) {
+  const { data } = await apiClient.get<Edge[]>(`/floors/${floorId}/edges`)
   return data
 }
 

@@ -1,9 +1,12 @@
 import { delay, http, HttpResponse, passthrough } from 'msw'
 import { buildings } from './data/buildings.mock'
+import { edges } from './data/edges.mock'
 import { fallbackMap, floors } from './data/floors.mock'
+import { floorGeometry } from './data/geometry.mock'
 import { nodes } from './data/nodes.mock'
 import { stores } from './data/stores.mock'
 import { MOCK_STORAGE_KEYS, saveToStorage } from './persist'
+import { buildRoute, getDestinations } from './routeEngine'
 import type { Building } from '../types/building'
 import type {
   CreateFloorPayload,
@@ -137,6 +140,61 @@ export const handlers = [
     return HttpResponse.json(buildingFloors)
   }),
 
+  http.get(endpoint('/buildings/:buildingId/destinations'), async ({ params }) => {
+    await delay(160)
+    return HttpResponse.json(
+      getDestinations(
+        { floors, geometries: floorGeometry, nodes, edges },
+        String(params.buildingId),
+      ),
+    )
+  }),
+
+  http.get(endpoint('/routes'), async ({ request }) => {
+    await delay(220)
+    const url = new URL(request.url)
+    const buildingId = url.searchParams.get('buildingId')
+    const fromNodeId = url.searchParams.get('fromNodeId')
+    const toNodeId = url.searchParams.get('toNodeId')
+
+    if (!buildingId || !fromNodeId || !toNodeId) {
+      return HttpResponse.json(
+        { message: 'Thiếu điểm bắt đầu hoặc điểm đến' },
+        { status: 400 },
+      )
+    }
+
+    const route = buildRoute(
+      { floors, geometries: floorGeometry, nodes, edges },
+      buildingId,
+      fromNodeId,
+      toNodeId,
+    )
+
+    if (!route) {
+      return HttpResponse.json(
+        { message: 'Không tìm thấy đường đi' },
+        { status: 404 },
+      )
+    }
+
+    return HttpResponse.json(route)
+  }),
+
+  http.get(endpoint('/floors/:floorId/geometry'), async ({ params }) => {
+    await delay(140)
+    const geometry = floorGeometry.find((item) => item.floorId === params.floorId)
+
+    if (!geometry) {
+      return HttpResponse.json(
+        { message: 'Floor geometry not found' },
+        { status: 404 },
+      )
+    }
+
+    return HttpResponse.json(geometry)
+  }),
+
   http.get(endpoint('/floors/:floorId/stores'), async ({ params }) => {
     await delay(160)
     const floorStores = stores.filter((store) => store.floorId === params.floorId)
@@ -153,6 +211,12 @@ export const handlers = [
     await delay(160)
     const floorNodes = nodes.filter((node) => node.floorId === params.floorId)
     return HttpResponse.json(floorNodes)
+  }),
+
+  http.get(endpoint('/floors/:floorId/edges'), async ({ params }) => {
+    await delay(160)
+    const floorEdges = edges.filter((edge) => edge.floorId === params.floorId)
+    return HttpResponse.json(floorEdges)
   }),
 
   http.patch(endpoint('/nodes/:nodeId'), async ({ params, request }) => {
@@ -189,6 +253,14 @@ export const handlers = [
       }
 
       node.elevatorGroupId = payload.elevatorGroupId
+    }
+
+    if (payload.poiId !== undefined) {
+      node.poiId = payload.poiId
+    }
+
+    if (payload.label !== undefined) {
+      node.label = payload.label
     }
 
     saveToStorage(MOCK_STORAGE_KEYS.nodes, nodes)
@@ -409,7 +481,9 @@ export const handlers = [
     const isAppRouteImageRequest =
       url.origin === window.location.origin &&
       request.destination === 'image' &&
-      (url.pathname === '/manager' || url.pathname.startsWith('/owner/'))
+      (url.pathname === '/manager' ||
+        url.pathname === '/guest' ||
+        url.pathname.startsWith('/owner/'))
 
     if (isAppRouteImageRequest) {
       return new HttpResponse(null, { status: 204 })

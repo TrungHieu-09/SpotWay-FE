@@ -1,14 +1,24 @@
 import type { Node } from '../../types/node'
 import { clampPercent } from '../../utils/canvasCoordinates'
-import { loadFromStorage, MOCK_STORAGE_KEYS } from '../persist'
+import { loadFromStorage, MOCK_STORAGE_KEYS, saveToStorage } from '../persist'
 
 type StoredNode = Omit<Node, 'x' | 'y' | 'elevatorGroupId'> &
-  Partial<Pick<Node, 'x' | 'y' | 'elevatorGroupId'>> & {
+  Partial<Pick<Node, 'x' | 'y' | 'elevatorGroupId' | 'poiId' | 'label'>> & {
     xPercent?: number
     yPercent?: number
   }
 
 export const initialNodesSeed: Node[] = [
+  {
+    id: 'node-gf-entrance',
+    floorId: 'floor-1',
+    x: 16,
+    y: 50,
+    isElevatorLink: false,
+    elevatorGroupId: null,
+    poiId: 'poi-1',
+    label: 'Main Entrance',
+  },
   {
     id: 'node-12',
     floorId: 'floor-1',
@@ -16,6 +26,57 @@ export const initialNodesSeed: Node[] = [
     y: 43,
     isElevatorLink: true,
     elevatorGroupId: 'elevator-group-a',
+    poiId: 'poi-gf-elevator',
+    label: 'Elevator A - Ground Floor',
+  },
+  {
+    id: 'node-gf-atrium',
+    floorId: 'floor-1',
+    x: 55,
+    y: 50,
+    isElevatorLink: false,
+    elevatorGroupId: null,
+    poiId: 'poi-2',
+    label: 'Atrium Info',
+  },
+  {
+    id: 'node-gf-lumi',
+    floorId: 'floor-1',
+    x: 27,
+    y: 40,
+    isElevatorLink: false,
+    elevatorGroupId: null,
+    poiId: 'poi-gf-lumi',
+    label: 'Lumi Fashion',
+  },
+  {
+    id: 'node-gf-bep',
+    floorId: 'floor-1',
+    x: 76,
+    y: 40,
+    isElevatorLink: false,
+    elevatorGroupId: null,
+    label: 'Bep Saigon',
+  },
+  {
+    id: 'node-gf-toilet',
+    floorId: 'floor-1',
+    x: 36,
+    y: 61,
+    isElevatorLink: false,
+    elevatorGroupId: null,
+    poiId: 'poi-gf-toilet',
+    label: 'Ground Toilet',
+  },
+  {
+    id: 'node-gf-exit',
+    floorId: 'floor-1',
+    x: 88,
+    y: 50,
+    isElevatorLink: false,
+    elevatorGroupId: null,
+    poiId: 'poi-gf-exit',
+    label: 'Emergency Exit',
   },
   {
     id: 'node-45',
@@ -24,6 +85,46 @@ export const initialNodesSeed: Node[] = [
     y: 43,
     isElevatorLink: true,
     elevatorGroupId: 'elevator-group-a',
+    poiId: 'poi-l2-elevator',
+    label: 'Elevator A - Level 2',
+  },
+  {
+    id: 'node-l2-green',
+    floorId: 'floor-2',
+    x: 26,
+    y: 40,
+    isElevatorLink: false,
+    elevatorGroupId: null,
+    poiId: 'poi-l2-green',
+    label: 'Green Home',
+  },
+  {
+    id: 'node-l2-kids',
+    floorId: 'floor-2',
+    x: 77,
+    y: 40,
+    isElevatorLink: false,
+    elevatorGroupId: null,
+    label: 'Kids Corner',
+  },
+  {
+    id: 'node-l2-service',
+    floorId: 'floor-2',
+    x: 55,
+    y: 60,
+    isElevatorLink: false,
+    elevatorGroupId: null,
+    label: 'Service Desk',
+  },
+  {
+    id: 'node-l2-toilet',
+    floorId: 'floor-2',
+    x: 35,
+    y: 61,
+    isElevatorLink: false,
+    elevatorGroupId: null,
+    poiId: 'poi-l2-toilet',
+    label: 'Level 2 Toilet',
   },
   {
     id: 'node-78',
@@ -32,6 +133,46 @@ export const initialNodesSeed: Node[] = [
     y: 43,
     isElevatorLink: true,
     elevatorGroupId: 'elevator-group-a',
+    poiId: 'poi-l3-elevator',
+    label: 'Elevator A - Level 3',
+  },
+  {
+    id: 'node-l3-cinema',
+    floorId: 'floor-3',
+    x: 26,
+    y: 40,
+    isElevatorLink: false,
+    elevatorGroupId: null,
+    poiId: 'poi-l3-cinema',
+    label: 'Cinema',
+  },
+  {
+    id: 'node-l3-food',
+    floorId: 'floor-3',
+    x: 77,
+    y: 40,
+    isElevatorLink: false,
+    elevatorGroupId: null,
+    poiId: 'poi-l3-food',
+    label: 'Food Hall',
+  },
+  {
+    id: 'node-l3-games',
+    floorId: 'floor-3',
+    x: 25,
+    y: 61,
+    isElevatorLink: false,
+    elevatorGroupId: null,
+    label: 'Game Zone',
+  },
+  {
+    id: 'node-l3-toilet',
+    floorId: 'floor-3',
+    x: 48,
+    y: 61,
+    isElevatorLink: false,
+    elevatorGroupId: null,
+    label: 'Level 3 Toilet',
   },
   {
     id: 'node-21',
@@ -40,6 +181,7 @@ export const initialNodesSeed: Node[] = [
     y: 54,
     isElevatorLink: true,
     elevatorGroupId: null,
+    label: 'Service Elevator - Ground Floor',
   },
   {
     id: 'node-52',
@@ -48,6 +190,7 @@ export const initialNodesSeed: Node[] = [
     y: 54,
     isElevatorLink: true,
     elevatorGroupId: null,
+    label: 'Service Elevator - Level 2',
   },
   {
     id: 'node-90',
@@ -56,6 +199,7 @@ export const initialNodesSeed: Node[] = [
     y: 47,
     isElevatorLink: true,
     elevatorGroupId: 'elevator-group-office',
+    label: 'Rivergate Elevator - Level 5',
   },
   {
     id: 'node-91',
@@ -64,6 +208,7 @@ export const initialNodesSeed: Node[] = [
     y: 47,
     isElevatorLink: true,
     elevatorGroupId: 'elevator-group-office',
+    label: 'Rivergate Elevator - Level 6',
   },
   {
     id: 'node-30',
@@ -72,6 +217,7 @@ export const initialNodesSeed: Node[] = [
     y: 35,
     isElevatorLink: false,
     elevatorGroupId: null,
+    label: 'Legacy Main Entrance',
   },
 ]
 
@@ -84,6 +230,8 @@ function normalizeNode(node: StoredNode): Node {
     y: clampPercent(node.y ?? node.yPercent ?? 0),
     isElevatorLink,
     elevatorGroupId: isElevatorLink ? (node.elevatorGroupId ?? null) : null,
+    poiId: node.poiId ?? null,
+    label: node.label,
   }
 }
 
@@ -91,3 +239,5 @@ export const nodes = loadFromStorage<StoredNode[]>(
   MOCK_STORAGE_KEYS.nodes,
   initialNodesSeed,
 ).map(normalizeNode)
+
+saveToStorage(MOCK_STORAGE_KEYS.nodes, nodes)

@@ -11,6 +11,8 @@ export function AppLayout() {
     ? '/manager'
     : location.pathname.startsWith('/store')
       ? '/store/profile'
+      : location.pathname.startsWith('/guest')
+        ? '/guest'
       : '/owner/buildings'
 
   return (
@@ -30,7 +32,9 @@ export function AppLayout() {
                 ? 'building_manager'
                 : nextPath === '/store/profile'
                   ? 'store_owner'
-                  : 'building_owner',
+                  : nextPath === '/guest'
+                    ? 'guest'
+                    : 'building_owner',
             )
             navigate(nextPath)
           }}
@@ -38,6 +42,7 @@ export function AppLayout() {
             { label: 'Building Owner', value: '/owner/buildings' },
             { label: 'Building Manager', value: '/manager' },
             { label: 'Store Owner', value: '/store/profile' },
+            { label: 'Guest', value: '/guest' },
           ]}
         />
       </Header>
