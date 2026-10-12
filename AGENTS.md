@@ -328,6 +328,8 @@ Nếu cả 2 phần (POI của Kiệt, Node/Edge của KDuy) đều cần `pixel
 ## Toạ độ 3D
 Các dữ liệu dựng 3D/top-down như `Room.polygon`, `RouteSegment.points`, Node, Edge và POI vẫn dùng chung `x`/`y` phần trăm 0-100 theo mặt phẳng ảnh sơ đồ. Nếu cần chiều cao/tường, lưu bằng field riêng như `wallHeight` hoặc mét thực tế, không đổi ý nghĩa của `x`/`y`.
 
+Khi render 3D, chỉ chuyển `x`/`y` sang toạ độ thế giới tại runtime qua `src/utils/worldCoordinates.ts`. Không lưu toạ độ thế giới vào Zustand, localStorage mock, API payload hoặc type contract. Quy ước hiện tại: đơn vị thế giới là mét, gốc ở giữa sàn, trục `x` ảnh ánh xạ sang world `x`, trục `y` ảnh ánh xạ sang world `z`, còn world `y` là chiều cao.
+
 ---
 
 <!-- ===== SKILL: git-commit-convention ===== -->

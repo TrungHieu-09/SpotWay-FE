@@ -1,0 +1,578 @@
+/* oxlint-disable react/set-state-in-effect react-hooks/exhaustive-deps */
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Alert, Button, Empty, Segmented, Space, Spin, Switch, Typography } from 'antd'
+import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
+import { Html, Line, OrbitControls, Text } from '@react-three/drei'
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
+import * as THREE from 'three'
+import type { Floor } from '../../types/floor'
+import type { FloorGeometry, Point, Room, RoomType } from '../../types/geometry'
+import type { Node } from '../../types/node'
+import type { Poi, PoiType } from '../../types/poi'
+import type { RouteResult } from '../../types/route'
+import { toWorld, type WorldCoordinate } from '../../utils/worldCoordinates'
+
+const { Text: AntText } = Typography
+
+type FocusTarget = {
+  floorId: string
+  x: number
+  y: number
+  nonce: number
+}
+
+export type Map3DViewerProps = {
+  floors: Floor[]
+  geometriesByFloorId: Record<string, FloorGeometry>
+  nodesByFloorId?: Record<string, Node[]>
+  selectedFloorId?: string
+  route: RouteResult | null
+  focusTarget?: FocusTarget
+  onSelectFloor?: (floorId: string) => void
+}
+
+type SceneProps = Map3DViewerProps & {
+  stacked: boolean
+  onDefaultCamera: (callback: () => void) => void
+}
+
+type FloorSceneProps = {
+  floor: Floor
+  geometry: FloorGeometry
+  nodes: Node[]
+  route: RouteResult | null
+  elevation: number
+  isSelected: boolean
+  stacked: boolean
+  onSelectFloor?: (floorId: string) => void
+}
+
+const roomColorByType: Record<RoomType, string> = {
+  store: '#38bdf8',
+  corridor: '#e2e8f0',
+  atrium: '#facc15',
+  office: '#67e8f9',
+  toilet: '#a78bfa',
+  service: '#86efac',
+  other: '#cbd5e1',
+}
+
+const poiColorByType: Record<PoiType, string> = {
+  entrance: '#2563eb',
+  shop: '#0ea5e9',
+  store: '#0ea5e9',
+  service: '#16a34a',
+  elevator: '#f97316',
+  toilet: '#7c3aed',
+  exit: '#dc2626',
+  custom: '#64748b',
+}
+
+function hasWebGL() {
+  try {
+    const canvas = document.createElement('canvas')
+    return Boolean(
+      canvas.getContext('webgl2') ?? canvas.getContext('webgl'),
+    )
+  } catch {
+    return false
+  }
+}
+
+function roomCenter(room: Room) {
+  const total = room.polygon.reduce(
+    (accumulator, point) => ({
+      x: accumulator.x + point.x,
+      y: accumulator.y + point.y,
+    }),
+    { x: 0, y: 0 },
+  )
+
+  return {
+    x: total.x / room.polygon.length,
+    y: total.y / room.polygon.length,
+  }
+}
+
+function makeShape(room: Room, geometry: FloorGeometry) {
+  const shape = new THREE.Shape()
+  room.polygon.forEach((point, index) => {
+    const worldPoint = toWorld(point.x, point.y, geometry)
+    if (index === 0) {
+      shape.moveTo(worldPoint.x, worldPoint.z)
+    } else {
+      shape.lineTo(worldPoint.x, worldPoint.z)
+    }
+  })
+  shape.closePath()
+  return shape
+}
+
+function makeWallTransform(
+  start: Point,
+  end: Point,
+  geometry: FloorGeometry,
+  elevation: number,
+) {
+  const startWorld = toWorld(start.x, start.y, geometry, elevation)
+  const endWorld = toWorld(end.x, end.y, geometry, elevation)
+  const center = {
+    x: (startWorld.x + endWorld.x) / 2,
+    z: (startWorld.z + endWorld.z) / 2,
+  }
+  const length = Math.hypot(endWorld.x - startWorld.x, endWorld.z - startWorld.z)
+  const angle = Math.atan2(endWorld.z - startWorld.z, endWorld.x - startWorld.x)
+
+  return { center, length, angle }
+}
+
+function shouldShowPoi(type: PoiType, camera: THREE.Camera, position: WorldCoordinate) {
+  if (['entrance', 'elevator', 'exit'].includes(type)) {
+    return true
+  }
+
+  return camera.position.distanceTo(new THREE.Vector3(position.x, position.y, position.z)) < 32
+}
+
+function FloorTextureMesh({ src, geometry, elevation }: {
+  src: string
+  geometry: FloorGeometry
+  elevation: number
+}) {
+  const texture = useLoader(THREE.TextureLoader, src)
+
+  return (
+    <mesh position={[0, elevation - 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <planeGeometry args={[geometry.realWidthM, geometry.realHeightM]} />
+      <meshBasicMaterial map={texture} transparent opacity={0.92} />
+    </mesh>
+  )
+}
+
+function FloorTexturePlane({ floor, geometry, elevation }: {
+  floor: Floor
+  geometry: FloorGeometry
+  elevation: number
+}) {
+  const mapImageUrl = floor.mapImageUrl?.trim()
+
+  return (
+    <>
+      <mesh position={[0, elevation - 0.018, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[geometry.realWidthM, geometry.realHeightM]} />
+        <meshStandardMaterial color="#f8fafc" roughness={0.9} />
+      </mesh>
+      {mapImageUrl ? (
+        <FloorTextureMesh
+          src={mapImageUrl}
+          geometry={geometry}
+          elevation={elevation}
+        />
+      ) : null}
+    </>
+  )
+}
+
+function RoomMesh({ room, geometry, elevation }: {
+  room: Room
+  geometry: FloorGeometry
+  elevation: number
+}) {
+  const shape = useMemo(() => makeShape(room, geometry), [geometry, room])
+  const center = useMemo(() => roomCenter(room), [room])
+  const centerWorld = toWorld(center.x, center.y, geometry, elevation + 0.08)
+
+  return (
+    <group>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, elevation + 0.005, 0]}
+      >
+        <shapeGeometry args={[shape]} />
+        <meshStandardMaterial
+          color={roomColorByType[room.type]}
+          transparent
+          opacity={0.28}
+          roughness={0.86}
+        />
+      </mesh>
+      {room.polygon.map((point, index) => {
+        const nextPoint = room.polygon[(index + 1) % room.polygon.length]
+        const wall = makeWallTransform(point, nextPoint, geometry, elevation)
+        return (
+          <mesh
+            key={`${room.id}-wall-${index}`}
+            position={[
+              wall.center.x,
+              elevation + geometry.wallHeight / 2,
+              wall.center.z,
+            ]}
+            rotation={[0, -wall.angle, 0]}
+          >
+            <boxGeometry args={[wall.length, geometry.wallHeight, 0.18]} />
+            <meshStandardMaterial color="#334155" transparent opacity={0.54} />
+          </mesh>
+        )
+      })}
+      <Text
+        position={[centerWorld.x, centerWorld.y + 0.04, centerWorld.z]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={0.9}
+        color="#111827"
+        anchorX="center"
+        anchorY="middle"
+      >
+        {room.name}
+      </Text>
+    </group>
+  )
+}
+
+function PoiPin({ poi, geometry, elevation }: {
+  poi: Poi
+  geometry: FloorGeometry
+  elevation: number
+}) {
+  const { camera } = useThree()
+  const [visible, setVisible] = useState(true)
+  const world = toWorld(poi.x, poi.y, geometry, elevation + 0.22)
+
+  useFrame(() => {
+    setVisible(shouldShowPoi(poi.type, camera, world))
+  })
+
+  if (!visible) {
+    return null
+  }
+
+  return (
+    <group position={[world.x, world.y, world.z]}>
+      <mesh position={[0, 0.85, 0]} rotation={[Math.PI, 0, 0]}>
+        <coneGeometry args={[0.24, 0.78, 18]} />
+        <meshStandardMaterial color={poiColorByType[poi.type]} />
+      </mesh>
+      <mesh position={[0, 1.32, 0]}>
+        <sphereGeometry args={[0.32, 24, 16]} />
+        <meshStandardMaterial color={poiColorByType[poi.type]} />
+      </mesh>
+      <Html center distanceFactor={18} position={[0, 1.9, 0]}>
+        <span className="map3d-label">{poi.name}</span>
+      </Html>
+    </group>
+  )
+}
+
+function NodeMarker({ node, geometry, elevation }: {
+  node: Node
+  geometry: FloorGeometry
+  elevation: number
+}) {
+  const world = toWorld(node.x, node.y, geometry, elevation + 0.08)
+  return (
+    <mesh position={[world.x, world.y, world.z]}>
+      <sphereGeometry args={[node.isElevatorLink ? 0.2 : 0.12, 16, 10]} />
+      <meshStandardMaterial color={node.isElevatorLink ? '#f97316' : '#475569'} />
+    </mesh>
+  )
+}
+
+function RouteLine({ route, geometry, floorId, elevation, muted }: {
+  route: RouteResult
+  geometry: FloorGeometry
+  floorId: string
+  elevation: number
+  muted: boolean
+}) {
+  const [dashOffset, setDashOffset] = useState(0)
+  const segment = route.segments.find((item) => item.floorId === floorId)
+  const points = useMemo(
+    () =>
+      segment?.points.map((point) => {
+        const world = toWorld(point.x, point.y, geometry, elevation + 0.16)
+        return new THREE.Vector3(world.x, world.y, world.z)
+      }) ?? [],
+    [elevation, geometry, segment],
+  )
+
+  useFrame(() => {
+    setDashOffset((value) => (value + 0.015) % 1)
+  })
+
+  if (!segment || points.length < 2) {
+    return null
+  }
+
+  return (
+    <group>
+      <Line
+        points={points}
+        color={muted ? '#94a3b8' : '#2563eb'}
+        lineWidth={muted ? 2 : 5}
+        dashed
+        dashScale={8}
+        dashSize={0.35}
+        gapSize={0.22}
+        dashOffset={dashOffset}
+        transparent
+        opacity={muted ? 0.34 : 1}
+      />
+      {[points[0], points[points.length - 1]].map((point, index) => (
+        <mesh key={`${floorId}-route-marker-${index}`} position={point}>
+          <sphereGeometry args={[index === 0 ? 0.28 : 0.36, 24, 16]} />
+          <meshStandardMaterial color={index === 0 ? '#16a34a' : '#dc2626'} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+function FloorScene({
+  floor,
+  geometry,
+  nodes,
+  route,
+  elevation,
+  isSelected,
+  stacked,
+  onSelectFloor,
+}: FloorSceneProps) {
+  return (
+    <group
+      onClick={(event) => {
+        event.stopPropagation()
+        if (stacked && !isSelected) {
+          onSelectFloor?.(floor.id)
+        }
+      }}
+    >
+      <FloorTexturePlane floor={floor} geometry={geometry} elevation={elevation} />
+      {geometry.rooms.map((room) => (
+        <RoomMesh
+          key={room.id}
+          room={room}
+          geometry={geometry}
+          elevation={elevation}
+        />
+      ))}
+      {floor.pois.map((poi) => (
+        <PoiPin key={poi.id} poi={poi} geometry={geometry} elevation={elevation} />
+      ))}
+      {nodes.map((node) => (
+        <NodeMarker key={node.id} node={node} geometry={geometry} elevation={elevation} />
+      ))}
+      {route ? (
+        <RouteLine
+          route={route}
+          geometry={geometry}
+          floorId={floor.id}
+          elevation={elevation}
+          muted={!isSelected}
+        />
+      ) : null}
+    </group>
+  )
+}
+
+function CameraRig({
+  selectedGeometry,
+  focusTarget,
+  onDefaultCamera,
+}: {
+  selectedGeometry?: FloorGeometry
+  focusTarget?: FocusTarget
+  onDefaultCamera: (callback: () => void) => void
+}) {
+  const controlsRef = useRef<OrbitControlsImpl | null>(null)
+  const { camera } = useThree()
+
+  function resetCamera() {
+    const width = selectedGeometry?.realWidthM ?? 60
+    const height = selectedGeometry?.realHeightM ?? 38
+    camera.position.set(0, Math.max(width, height) * 0.74, height * 0.72)
+    controlsRef.current?.target.set(0, 0, 0)
+    controlsRef.current?.update()
+  }
+
+  useEffect(() => {
+    onDefaultCamera(resetCamera)
+    resetCamera()
+  }, [selectedGeometry?.floorId])
+
+  useEffect(() => {
+    if (!selectedGeometry || !focusTarget) {
+      return
+    }
+
+    const world = toWorld(focusTarget.x, focusTarget.y, selectedGeometry, 0)
+    controlsRef.current?.target.set(world.x, 0.4, world.z)
+    camera.position.set(world.x + 12, 18, world.z + 14)
+    controlsRef.current?.update()
+  }, [focusTarget?.nonce])
+
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      enableDamping
+      dampingFactor={0.08}
+      maxPolarAngle={Math.PI * 0.48}
+      minPolarAngle={Math.PI * 0.12}
+      minDistance={8}
+      maxDistance={95}
+      mouseButtons={{
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.PAN,
+      }}
+    />
+  )
+}
+
+function Map3DScene({
+  floors,
+  geometriesByFloorId,
+  nodesByFloorId,
+  selectedFloorId,
+  route,
+  focusTarget,
+  onSelectFloor,
+  stacked,
+  onDefaultCamera,
+}: SceneProps) {
+  const selectedGeometry = selectedFloorId
+    ? geometriesByFloorId[selectedFloorId]
+    : undefined
+  const visibleFloors = stacked
+    ? floors
+    : floors.filter((floor) => floor.id === selectedFloorId)
+  const selectedIndex = Math.max(
+    0,
+    floors.findIndex((floor) => floor.id === selectedFloorId),
+  )
+
+  return (
+    <>
+      <ambientLight intensity={0.62} />
+      <directionalLight position={[18, 28, 16]} intensity={1.08} castShadow />
+      <gridHelper args={[90, 30, '#cbd5e1', '#e2e8f0']} position={[0, -0.03, 0]} />
+      <CameraRig
+        selectedGeometry={selectedGeometry}
+        focusTarget={focusTarget}
+        onDefaultCamera={onDefaultCamera}
+      />
+      {visibleFloors.map((floor) => {
+        const geometry = geometriesByFloorId[floor.id]
+        if (!geometry) {
+          return null
+        }
+
+        const floorIndex = floors.findIndex((item) => item.id === floor.id)
+        return (
+          <FloorScene
+            key={floor.id}
+            floor={floor}
+            geometry={geometry}
+            nodes={nodesByFloorId?.[floor.id] ?? []}
+            route={route}
+            elevation={stacked ? (floorIndex - selectedIndex) * 5.8 : 0}
+            isSelected={floor.id === selectedFloorId}
+            stacked={stacked}
+            onSelectFloor={onSelectFloor}
+          />
+        )
+      })}
+    </>
+  )
+}
+
+export default function Map3DViewer({
+  floors,
+  geometriesByFloorId,
+  nodesByFloorId,
+  selectedFloorId,
+  route,
+  focusTarget,
+  onSelectFloor,
+}: Map3DViewerProps) {
+  const [webglSupported, setWebglSupported] = useState<boolean | null>(null)
+  const [stacked, setStacked] = useState(false)
+  const resetCameraRef = useRef<() => void>(() => undefined)
+
+  useEffect(() => {
+    setWebglSupported(hasWebGL())
+  }, [])
+
+  const selectedFloor = floors.find((floor) => floor.id === selectedFloorId)
+  const selectedGeometry = selectedFloorId
+    ? geometriesByFloorId[selectedFloorId]
+    : undefined
+
+  if (webglSupported === null) {
+    return (
+      <div className="map3d-host map3d-empty">
+        <Spin />
+      </div>
+    )
+  }
+
+  if (!webglSupported) {
+    return (
+      <div className="map3d-host map3d-empty">
+        <Alert
+          type="warning"
+          showIcon
+          message="Trình duyệt hiện tại không hỗ trợ WebGL nên chưa thể xem 3D."
+        />
+      </div>
+    )
+  }
+
+  if (!selectedFloor || !selectedGeometry) {
+    return (
+      <div className="map3d-host map3d-empty">
+        <Empty description="Chọn tầng có dữ liệu geometry để xem 3D" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="map3d-shell">
+      <div className="map3d-toolbar">
+        <Space>
+          <Segmented
+            value={selectedFloorId}
+            onChange={(floorId) => onSelectFloor?.(String(floorId))}
+            options={floors.map((floor) => ({
+              value: floor.id,
+              label: floor.name,
+            }))}
+          />
+        </Space>
+        <Space>
+          <AntText type="secondary">Xếp chồng tầng</AntText>
+          <Switch checked={stacked} onChange={setStacked} />
+          <Button onClick={() => resetCameraRef.current()}>
+            Về camera mặc định
+          </Button>
+        </Space>
+      </div>
+      <div className="map3d-host">
+        <Canvas camera={{ position: [0, 42, 32], fov: 48 }} shadows>
+          <color attach="background" args={['#f8fafc']} />
+          <Map3DScene
+            floors={floors}
+            geometriesByFloorId={geometriesByFloorId}
+            nodesByFloorId={nodesByFloorId}
+            selectedFloorId={selectedFloorId}
+            route={route}
+            focusTarget={focusTarget}
+            onSelectFloor={onSelectFloor}
+            stacked={stacked}
+            onDefaultCamera={(callback) => {
+              resetCameraRef.current = callback
+            }}
+          />
+        </Canvas>
+      </div>
+    </div>
+  )
+}

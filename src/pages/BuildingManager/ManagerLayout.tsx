@@ -3,6 +3,7 @@ import { App as AntApp, Layout, Select, Tabs, Typography } from 'antd'
 import { FloorSelector } from './FloorSelector'
 import { CanvasBoard } from './CanvasBoard'
 import { ElevatorLinkPanel } from './ElevatorLinkPanel'
+import { Manager3DPanel } from './Manager3DPanel'
 import { StoreListPanel } from './StoreListPanel'
 import { useBuildingStore } from '../../store/useBuildingStore'
 import { useFloorStore } from '../../store/useFloorStore'
@@ -65,6 +66,11 @@ export function ManagerLayout() {
               key: 'stores',
               label: 'Danh sách store',
               children: <StoreListPanel />,
+            },
+            {
+              key: 'map-3d',
+              label: 'Xem 3D',
+              children: <Manager3DPanel />,
             },
             {
               key: 'elevator-links',
