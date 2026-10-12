@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   Badge,
@@ -23,6 +23,7 @@ import { useGuestMapStore } from '../../store/useGuestMapStore'
 import type { RouteStep } from '../../types/route'
 
 const { Text, Title } = Typography
+const Map3DViewer = lazy(() => import('../../components/map3d/Map3DViewer'))
 
 function formatSeconds(seconds: number) {
   const minutes = Math.floor(seconds / 60)
@@ -45,9 +46,11 @@ function stepIcon(type: RouteStep['type']) {
 export function GuestMapPage() {
   const [activeStepIndex, setActiveStepIndex] = useState(0)
   const [focusNonce, setFocusNonce] = useState(0)
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d')
   const buildings = useGuestMapStore((state) => state.buildings)
   const floors = useGuestMapStore((state) => state.floors)
   const geometriesByFloorId = useGuestMapStore((state) => state.geometriesByFloorId)
+  const nodesByFloorId = useGuestMapStore((state) => state.nodesByFloorId)
   const storesByFloorId = useGuestMapStore((state) => state.storesByFloorId)
   const destinations = useGuestMapStore((state) => state.destinations)
   const selectedBuildingId = useGuestMapStore((state) => state.selectedBuildingId)
@@ -179,37 +182,67 @@ export function GuestMapPage() {
             </Card>
 
             <Card className="tool-card guest-map-card">
-              <Segmented
-                className="guest-floor-tabs"
-                value={selectedFloorId}
-                onChange={(floorId) => selectFloor(String(floorId))}
-                options={floors.map((floor) => ({
-                  value: floor.id,
-                  label: (
-                    <Badge count={routeFloorStepCounts.get(floor.id) ?? 0} size="small">
-                      <span>{floor.name}</span>
-                    </Badge>
-                  ),
-                }))}
-              />
-              <MapViewer2D
-                floor={selectedFloor}
-                geometry={
-                  selectedFloorId ? geometriesByFloorId[selectedFloorId] : undefined
-                }
-                stores={selectedFloorId ? (storesByFloorId[selectedFloorId] ?? []) : []}
-                destinations={destinations}
-                route={route}
-                focusTarget={focusTarget}
-                onSelectDestination={(nodeId) => {
-                  const destination = destinations.find(
-                    (item) => item.nodeId === nodeId,
-                  )
-                  if (destination) {
-                    setToNodeId(destination.nodeId)
+              <div className="guest-map-mode-row">
+                <Segmented
+                  value={viewMode}
+                  onChange={(mode) => setViewMode(mode as '2d' | '3d')}
+                  options={[
+                    { label: '2D', value: '2d' },
+                    { label: '3D', value: '3d' },
+                  ]}
+                />
+                <Segmented
+                  className="guest-floor-tabs"
+                  value={selectedFloorId}
+                  onChange={(floorId) => selectFloor(String(floorId))}
+                  options={floors.map((floor) => ({
+                    value: floor.id,
+                    label: (
+                      <Badge count={routeFloorStepCounts.get(floor.id) ?? 0} size="small">
+                        <span>{floor.name}</span>
+                      </Badge>
+                    ),
+                  }))}
+                />
+              </div>
+              {viewMode === '2d' ? (
+                <MapViewer2D
+                  floor={selectedFloor}
+                  geometry={
+                    selectedFloorId ? geometriesByFloorId[selectedFloorId] : undefined
                   }
-                }}
-              />
+                  stores={selectedFloorId ? (storesByFloorId[selectedFloorId] ?? []) : []}
+                  destinations={destinations}
+                  route={route}
+                  focusTarget={focusTarget}
+                  onSelectDestination={(nodeId) => {
+                    const destination = destinations.find(
+                      (item) => item.nodeId === nodeId,
+                    )
+                    if (destination) {
+                      setToNodeId(destination.nodeId)
+                    }
+                  }}
+                />
+              ) : (
+                <Suspense
+                  fallback={
+                    <div className="map3d-host map3d-empty">
+                      <Spin />
+                    </div>
+                  }
+                >
+                  <Map3DViewer
+                    floors={floors}
+                    geometriesByFloorId={geometriesByFloorId}
+                    nodesByFloorId={nodesByFloorId}
+                    selectedFloorId={selectedFloorId}
+                    route={route}
+                    focusTarget={focusTarget}
+                    onSelectFloor={(floorId) => selectFloor(floorId)}
+                  />
+                </Suspense>
+              )}
             </Card>
 
             <Card className="tool-card guest-directions-card" title="Chỉ dẫn">

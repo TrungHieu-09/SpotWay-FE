@@ -6,10 +6,12 @@ import {
   getFloorGeometry,
   getRoute,
 } from '../api/geometry'
+import { getNodesByFloor } from '../api/nodes'
 import { getStoresByFloor } from '../api/stores'
 import type { Building } from '../types/building'
 import type { Floor } from '../types/floor'
 import type { FloorGeometry } from '../types/geometry'
+import type { Node } from '../types/node'
 import type { Destination, RouteResult } from '../types/route'
 import type { Store } from '../types/store'
 
@@ -17,6 +19,7 @@ type GuestMapState = {
   buildings: Building[]
   floors: Floor[]
   geometriesByFloorId: Record<string, FloorGeometry>
+  nodesByFloorId: Record<string, Node[]>
   storesByFloorId: Record<string, Store[]>
   destinations: Destination[]
   selectedBuildingId?: string
@@ -56,6 +59,9 @@ async function loadBuildingBundle(buildingId: string) {
   const stores = await Promise.all(
     floors.map((floor) => getStoresByFloor(floor.id).catch(() => [])),
   )
+  const nodes = await Promise.all(
+    floors.map((floor) => getNodesByFloor(floor.id).catch(() => [])),
+  )
   const geometriesByFloorId = Object.fromEntries(
     geometries
       .filter((geometry): geometry is FloorGeometry => Boolean(geometry))
@@ -64,14 +70,24 @@ async function loadBuildingBundle(buildingId: string) {
   const storesByFloorId = Object.fromEntries(
     floors.map((floor, index) => [floor.id, stores[index]]),
   )
+  const nodesByFloorId = Object.fromEntries(
+    floors.map((floor, index) => [floor.id, nodes[index]]),
+  )
 
-  return { floors, destinations, geometriesByFloorId, storesByFloorId }
+  return {
+    floors,
+    destinations,
+    geometriesByFloorId,
+    storesByFloorId,
+    nodesByFloorId,
+  }
 }
 
 export const useGuestMapStore = create<GuestMapState>((set, get) => ({
   buildings: [],
   floors: [],
   geometriesByFloorId: {},
+  nodesByFloorId: {},
   storesByFloorId: {},
   destinations: [],
   route: null,
