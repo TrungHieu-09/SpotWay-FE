@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   Button,
@@ -65,24 +65,35 @@ function useImage(src?: string | null) {
 }
 
 function useElementSize<T extends HTMLElement>() {
-  const ref = useRef<T | null>(null)
+  const [element, setElement] = useState<T | null>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
+  const ref = useCallback((node: T | null) => {
+    setElement(node)
+  }, [])
 
   useEffect(() => {
-    if (!ref.current) {
+    if (!element) {
+      setSize({ width: 0, height: 0 })
       return
     }
 
-    const observer = new ResizeObserver(([entry]) => {
+    function updateSize(width: number, height: number) {
       setSize({
-        width: Math.floor(entry.contentRect.width),
-        height: Math.floor(entry.contentRect.height),
+        width: Math.floor(width),
+        height: Math.floor(height),
       })
+    }
+
+    const rect = element.getBoundingClientRect()
+    updateSize(rect.width, rect.height)
+
+    const observer = new ResizeObserver(([entry]) => {
+      updateSize(entry.contentRect.width, entry.contentRect.height)
     })
-    observer.observe(ref.current)
+    observer.observe(element)
 
     return () => observer.disconnect()
-  }, [])
+  }, [element])
 
   return [ref, size] as const
 }
@@ -104,15 +115,17 @@ export function CanvasBoard() {
       return { width: 0, height: 0 }
     }
 
+    const mapWidth = selectedFloor.mapWidth || 1200
+    const mapHeight = selectedFloor.mapHeight || 760
     const scale = Math.min(
-      stageHostSize.width / selectedFloor.mapWidth,
-      stageHostSize.height / selectedFloor.mapHeight,
+      stageHostSize.width / mapWidth,
+      stageHostSize.height / mapHeight,
       1,
     )
 
     return {
-      width: Math.round(selectedFloor.mapWidth * scale),
-      height: Math.round(selectedFloor.mapHeight * scale),
+      width: Math.round(mapWidth * scale),
+      height: Math.round(mapHeight * scale),
     }
   }, [selectedFloor, stageHostSize.height, stageHostSize.width])
 
