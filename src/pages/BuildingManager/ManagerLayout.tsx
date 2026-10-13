@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { App as AntApp, Layout, Select, Tabs, Typography } from 'antd'
+import { App as AntApp, Button, Layout, Select, Tabs, Typography } from 'antd'
+import { ExperimentOutlined } from '@ant-design/icons'
 import { FloorSelector } from './FloorSelector'
 import { CanvasBoard } from './CanvasBoard'
 import { ElevatorLinkPanel } from './ElevatorLinkPanel'
@@ -16,10 +17,12 @@ export function ManagerLayout() {
   const [buildingId, setBuildingId] = useState<string>()
   const [activeTab, setActiveTab] = useState('canvas')
   const [isRecognitionDirty, setIsRecognitionDirty] = useState(false)
+  const [autoRecognizeRequestId, setAutoRecognizeRequestId] = useState(0)
   const buildings = useBuildingStore((state) => state.buildings)
   const isBuildingLoading = useBuildingStore((state) => state.isLoading)
   const loadBuildings = useBuildingStore((state) => state.loadBuildings)
   const loadFloors = useFloorStore((state) => state.loadFloors)
+  const selectedFloor = useFloorStore((state) => state.selectedFloor)
   const { message, modal } = AntApp.useApp()
 
   useEffect(() => {
@@ -58,6 +61,19 @@ export function ManagerLayout() {
       </Sider>
 
       <Content className="manager-content">
+        <div className="manager-content-actions">
+          <Button
+            type="primary"
+            icon={<ExperimentOutlined />}
+            disabled={!selectedFloor}
+            onClick={() => {
+              setActiveTab('recognition')
+              setAutoRecognizeRequestId((requestId) => requestId + 1)
+            }}
+          >
+            Tạo mô hình 3D
+          </Button>
+        </div>
         <Tabs
           activeKey={activeTab}
           onChange={(nextTab) => {
@@ -89,7 +105,11 @@ export function ManagerLayout() {
               key: 'recognition',
               label: 'Nhận diện sơ đồ',
               children: (
-                <FloorRecognitionPanel onDirtyChange={setIsRecognitionDirty} />
+                <FloorRecognitionPanel
+                  autoRecognizeRequestId={autoRecognizeRequestId}
+                  onDirtyChange={setIsRecognitionDirty}
+                  onView3D={() => setActiveTab('map-3d')}
+                />
               ),
             },
             {

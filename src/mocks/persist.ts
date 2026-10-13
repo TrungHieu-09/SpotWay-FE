@@ -39,16 +39,18 @@ export function loadFromStorage<T>(key: string, fallback: T): T {
   }
 }
 
-export function saveToStorage<T>(key: string, data: T): void {
+export function saveToStorage<T>(key: string, data: T): boolean {
   const storage = getStorage()
   if (!storage) {
-    return
+    return false
   }
 
   try {
     storage.setItem(key, JSON.stringify(data))
+    return true
   } catch (error) {
     console.warn(`Failed to save ${key} to mock storage`, error)
+    return false
   }
 }
 

@@ -1,4 +1,4 @@
-/* oxlint-disable react/set-state-in-effect */
+/* oxlint-disable react/set-state-in-effect react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Alert,
@@ -8,17 +8,23 @@ import {
   Empty,
   Form,
   Input,
+  InputNumber,
   Select,
+  Segmented,
+  Slider,
   Space,
   Spin,
+  Switch,
   Tag,
   Typography,
+  Upload,
 } from 'antd'
 import {
   CheckCircleOutlined,
   DeleteOutlined,
   PlusOutlined,
   UndoOutlined,
+  UploadOutlined,
 } from '@ant-design/icons'
 import type Konva from 'konva'
 import {
@@ -38,15 +44,31 @@ import {
   percentToPixel,
   pixelToPercent,
 } from '../../utils/canvasCoordinates'
+import {
+  calculateRealHeightM,
+  compressPlanImageFile,
+  recognizePlanInWorker,
+  runSyntheticPlanRecognitionCheck,
+  type PlanRecognitionParams,
+} from '../../utils/planRecognition'
 
 const { Text: AntText } = Typography
 
 type FloorRecognitionPanelProps = {
   onDirtyChange?: (isDirty: boolean) => void
+  autoRecognizeRequestId?: number
+  onView3D?: () => void
 }
 
 type ImageStatus = 'idle' | 'loading' | 'loaded' | 'failed'
 type SelectedVertex = { roomId: string; pointIndex: number }
+type RecognitionMode = 'auto' | 'sample'
+
+const DEFAULT_RECOGNITION_PARAMS: PlanRecognitionParams = {
+  thresholdOffset: 0,
+  minRoomArea: 1600,
+  simplifyTolerance: 1.2,
+}
 
 const roomTypeOptions: { value: RoomType; label: string }[] = [
   { value: 'store', label: 'Gian hàng' },
@@ -181,11 +203,43 @@ function updateRoom(
   }
 }
 
+function makeGeometryDraft(
+  floorId: string,
+  rooms: Room[],
+  realWidthM: number,
+  imageWidth: number,
+  imageHeight: number,
+  wallHeight = 3.2,
+): FloorGeometry {
+  return {
+    floorId,
+    rooms,
+    wallHeight,
+    status: 'draft',
+    updatedAt: new Date().toISOString(),
+    realWidthM,
+    realHeightM: calculateRealHeightM(realWidthM, imageWidth, imageHeight),
+  }
+}
+
 export function FloorRecognitionPanel({
   onDirtyChange,
+  autoRecognizeRequestId = 0,
+  onView3D,
 }: FloorRecognitionPanelProps) {
   const [stageHostRef, stageHostSize] = useElementSize<HTMLDivElement>()
   const [draftGeometry, setDraftGeometry] = useState<FloorGeometry | null>(null)
+  const [recognitionMode, setRecognitionMode] =
+    useState<RecognitionMode>('auto')
+  const [recognitionParams, setRecognitionParams] = useState(
+    DEFAULT_RECOGNITION_PARAMS,
+  )
+  const [realWidthM, setRealWidthM] = useState(20)
+  const [wallMaskDataUrl, setWallMaskDataUrl] = useState<string | null>(null)
+  const [showWallMask, setShowWallMask] = useState(false)
+  const [hasAutoRecognized, setHasAutoRecognized] = useState(false)
+  const [isAutoRecognizing, setIsAutoRecognizing] = useState(false)
+  const [lastAutoRequestId, setLastAutoRequestId] = useState(0)
   const [selectedRoomId, setSelectedRoomId] = useState<string>()
   const [selectedVertex, setSelectedVertex] = useState<SelectedVertex | null>(null)
   const [undoStack, setUndoStack] = useState<FloorGeometry[]>([])
@@ -205,7 +259,9 @@ export function FloorRecognitionPanel({
   )
   const recognizeGeometry = useGeometryStore((state) => state.recognizeGeometry)
   const saveGeometry = useGeometryStore((state) => state.saveGeometry)
+  const updateFloorPlan = useFloorStore((state) => state.updateFloorPlan)
   const mapImage = useImage(selectedFloor?.mapImageUrl ?? null)
+  const wallMaskImage = useImage(wallMaskDataUrl)
   const { message } = AntApp.useApp()
 
   const selectedRoom = useMemo(
@@ -247,6 +303,7 @@ export function FloorRecognitionPanel({
     if (geometry) {
       setDraftGeometry(cloneGeometry(geometry))
       setSelectedRoomId(geometry.rooms[0]?.id)
+      setRealWidthM(Number((geometry.realWidthM || 20).toFixed(2)))
       setSelectedVertex(null)
       setUndoStack([])
       setIsDirty(false)
@@ -254,6 +311,43 @@ export function FloorRecognitionPanel({
       setNewRoomPoints([])
     }
   }, [geometry])
+
+  useEffect(() => {
+    runSyntheticPlanRecognitionCheck()
+  }, [])
+
+  useEffect(() => {
+    if (
+      autoRecognizeRequestId <= 0 ||
+      autoRecognizeRequestId === lastAutoRequestId
+    ) {
+      return
+    }
+
+    setRecognitionMode('auto')
+    setLastAutoRequestId(autoRecognizeRequestId)
+    handleAutoRecognize(false)
+  }, [autoRecognizeRequestId, lastAutoRequestId])
+
+  useEffect(() => {
+    if (!hasAutoRecognized || recognitionMode !== 'auto') {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      handleAutoRecognize(true)
+    }, 450)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [
+    hasAutoRecognized,
+    recognitionMode,
+    recognitionParams.thresholdOffset,
+    recognitionParams.minRoomArea,
+    recognitionParams.simplifyTolerance,
+    realWidthM,
+    selectedFloor?.mapImageUrl,
+  ])
 
   useEffect(() => {
     onDirtyChange?.(isDirty)
@@ -301,7 +395,7 @@ export function FloorRecognitionPanel({
     })
   }
 
-  async function handleRecognize() {
+  async function handleSampleRecognize() {
     if (!selectedFloor) {
       return
     }
@@ -312,11 +406,107 @@ export function FloorRecognitionPanel({
       setSelectedRoomId(recognizedGeometry.rooms[0]?.id)
       setSelectedVertex(null)
       setUndoStack([])
+      setWallMaskDataUrl(null)
+      setHasAutoRecognized(false)
       setIsDirty(true)
       message.success('Đã tạo bản nháp nhận diện sơ đồ')
     } catch (recognizeError) {
       message.error((recognizeError as Error).message)
     }
+  }
+
+  async function handleAutoRecognize(silent: boolean) {
+    if (!selectedFloor?.mapImageUrl) {
+      if (!silent) {
+        message.warning('Hãy tải ảnh sơ đồ cho tầng trước khi tự tách phòng')
+      }
+      return
+    }
+
+    setIsAutoRecognizing(true)
+    try {
+      const result = await recognizePlanInWorker(
+        selectedFloor.mapImageUrl,
+        selectedFloor.id,
+        recognitionParams,
+      )
+      const geometryDraft = makeGeometryDraft(
+        selectedFloor.id,
+        result.rooms,
+        realWidthM,
+        selectedFloor.mapWidth || result.imageWidth,
+        selectedFloor.mapHeight || result.imageHeight,
+        geometry?.wallHeight,
+      )
+      setDraftGeometry(geometryDraft)
+      setSelectedRoomId(geometryDraft.rooms[0]?.id)
+      setSelectedVertex(null)
+      setUndoStack([])
+      setWallMaskDataUrl(result.wallMaskDataUrl)
+      setHasAutoRecognized(true)
+      setIsDirty(true)
+
+      if (!silent) {
+        message.success(
+          `Đã tách ${result.rooms.length} phòng từ ảnh sơ đồ (ngưỡng ${result.threshold})`,
+        )
+      }
+    } catch (recognizeError) {
+      if (!silent) {
+        message.error((recognizeError as Error).message)
+      }
+    } finally {
+      setIsAutoRecognizing(false)
+    }
+  }
+
+  async function handleRecognize() {
+    if (recognitionMode === 'sample') {
+      await handleSampleRecognize()
+      return
+    }
+
+    await handleAutoRecognize(false)
+  }
+
+  async function handleFloorPlanUpload(file: File) {
+    if (!selectedFloor) {
+      return
+    }
+
+    try {
+      const compressedImage = await compressPlanImageFile(file)
+      await updateFloorPlan(selectedFloor.id, {
+        mapImageUrl: compressedImage.dataUrl,
+        mapWidth: compressedImage.width,
+        mapHeight: compressedImage.height,
+      })
+      setWallMaskDataUrl(null)
+      setHasAutoRecognized(false)
+      message.success('Đã nén và lưu ảnh sơ đồ cho tầng')
+    } catch (uploadError) {
+      message.error((uploadError as Error).message)
+    }
+  }
+
+  function handleRealWidthChange(value: number | null) {
+    const nextRealWidth = value ?? 20
+    setRealWidthM(nextRealWidth)
+    if (!draftGeometry || !selectedFloor) {
+      return
+    }
+
+    setDraftGeometry({
+      ...draftGeometry,
+      realWidthM: nextRealWidth,
+      realHeightM: calculateRealHeightM(
+        nextRealWidth,
+        selectedFloor.mapWidth,
+        selectedFloor.mapHeight,
+      ),
+      status: 'draft',
+    })
+    setIsDirty(true)
   }
 
   async function handleSave() {
@@ -475,14 +665,34 @@ export function FloorRecognitionPanel({
       <Card className="tool-card recognition-canvas-card">
         <div className="recognition-toolbar">
           <Space wrap>
+            <Segmented
+              value={recognitionMode}
+              onChange={(value) => setRecognitionMode(value as RecognitionMode)}
+              options={[
+                { label: 'Tự tách từ ảnh', value: 'auto' },
+                { label: 'Dữ liệu mẫu', value: 'sample' },
+              ]}
+            />
             <Button
               type="primary"
               icon={<CheckCircleOutlined />}
-              loading={isRecognizing}
+              loading={isRecognizing || isAutoRecognizing}
               onClick={handleRecognize}
             >
-              Chạy nhận diện (mô phỏng)
+              {recognitionMode === 'auto'
+                ? 'Chạy nhận diện'
+                : 'Chạy nhận diện mẫu'}
             </Button>
+            <Upload
+              accept="image/*"
+              showUploadList={false}
+              beforeUpload={(file) => {
+                void handleFloorPlanUpload(file)
+                return Upload.LIST_IGNORE
+              }}
+            >
+              <Button icon={<UploadOutlined />}>Tải ảnh sơ đồ</Button>
+            </Upload>
             <Button
               icon={<PlusOutlined />}
               type={isAddingRoom ? 'default' : 'dashed'}
@@ -508,6 +718,9 @@ export function FloorRecognitionPanel({
             >
               Xác nhận và lưu
             </Button>
+            {draftGeometry && !isDirty && draftGeometry.status === 'confirmed' ? (
+              <Button onClick={onView3D}>Xem 3D</Button>
+            ) : null}
           </Space>
           <Space>
             <Tag color={isDirty || draftGeometry?.status === 'draft' ? 'gold' : 'green'}>
@@ -531,7 +744,92 @@ export function FloorRecognitionPanel({
           />
         ) : null}
 
-        <Spin spinning={isLoading || isRecognizing}>
+        <div className="recognition-control-panel">
+          <div>
+            <AntText strong>Ngưỡng tách tường</AntText>
+            <Slider
+              min={-60}
+              max={60}
+              value={recognitionParams.thresholdOffset}
+              onChange={(thresholdOffset) =>
+                setRecognitionParams((currentParams) => ({
+                  ...currentParams,
+                  thresholdOffset,
+                }))
+              }
+            />
+          </div>
+          <div>
+            <AntText strong>Diện tích phòng tối thiểu</AntText>
+            <Slider
+              min={200}
+              max={12000}
+              step={100}
+              value={recognitionParams.minRoomArea}
+              onChange={(minRoomArea) =>
+                setRecognitionParams((currentParams) => ({
+                  ...currentParams,
+                  minRoomArea,
+                }))
+              }
+            />
+          </div>
+          <div>
+            <AntText strong>Độ đơn giản hoá</AntText>
+            <Slider
+              min={0.2}
+              max={5}
+              step={0.2}
+              value={recognitionParams.simplifyTolerance}
+              onChange={(simplifyTolerance) =>
+                setRecognitionParams((currentParams) => ({
+                  ...currentParams,
+                  simplifyTolerance,
+                }))
+              }
+            />
+          </div>
+          <div>
+            <AntText strong>Chiều rộng thực (m)</AntText>
+            <InputNumber
+              className="full-width"
+              min={1}
+              precision={2}
+              value={realWidthM}
+              onChange={handleRealWidthChange}
+            />
+            <AntText type="secondary">
+              Cao khoảng{' '}
+              {selectedFloor
+                ? calculateRealHeightM(
+                    realWidthM,
+                    selectedFloor.mapWidth,
+                    selectedFloor.mapHeight,
+                  )
+                : 0}{' '}
+              m
+            </AntText>
+          </div>
+          <div className="recognition-mask-switch">
+            <AntText strong>Hiện mặt nạ tường</AntText>
+            <Switch
+              checked={showWallMask}
+              disabled={!wallMaskDataUrl}
+              onChange={setShowWallMask}
+            />
+          </div>
+        </div>
+
+        {!selectedFloor.mapImageUrl ? (
+          <Alert
+            className="canvas-alert"
+            type="info"
+            showIcon
+            message="Tầng này chưa có ảnh sơ đồ. Hãy tải ảnh sơ đồ nét tối trên nền sáng để tự tách phòng."
+          />
+        ) : null}
+
+        <Spin spinning={isLoading || isRecognizing || isAutoRecognizing}>
           <div className="recognition-stage-host" ref={stageHostRef}>
             {canRenderStage && draftGeometry ? (
               <div
@@ -580,6 +878,15 @@ export function FloorRecognitionPanel({
                         />
                       </>
                     )}
+                    {showWallMask && wallMaskImage.image ? (
+                      <KonvaImage
+                        image={wallMaskImage.image}
+                        width={stageSize.width}
+                        height={stageSize.height}
+                        opacity={0.42}
+                        listening={false}
+                      />
+                    ) : null}
                     {draftGeometry.rooms.map((room) => {
                       const isSelected = selectedRoomId === room.id
 

@@ -627,7 +627,17 @@ export const handlers = [
     floor.mapHeight = payload.mapHeight ?? floor.mapHeight
     floor.nextPoiNumber = payload.nextPoiNumber ?? floor.nextPoiNumber
 
-    saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
+    const didPersistFloors = saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
+    if (!didPersistFloors && payload.mapImageUrl !== undefined) {
+      return HttpResponse.json(
+        {
+          message:
+            'Không thể lưu ảnh sơ đồ vào localStorage. Hãy dùng ảnh nhỏ hơn hoặc bấm Đặt lại dữ liệu demo.',
+        },
+        { status: 413 },
+      )
+    }
+
     return HttpResponse.json(floor)
   }),
 
