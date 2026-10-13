@@ -4,12 +4,16 @@ import { ProtectedRoute } from '../components/layout/ProtectedRoute'
 import { BuildingDetailPage } from '../pages/BuildingOwner/BuildingDetailPage'
 import { BuildingListPage } from '../pages/BuildingOwner/BuildingListPage'
 import { ManagerLayout } from '../pages/BuildingManager/ManagerLayout'
+import { LandingPage } from '../pages/Landing/LandingPage'
 
 export const router = createBrowserRouter([
+  // ── Landing page (no layout wrapper) ──
+  { path: '/', element: <LandingPage /> },
+
+  // ── App shell with sticky header & role switcher ──
   {
     element: <AppLayout />,
     children: [
-      { index: true, element: <Navigate to="/owner/buildings" replace /> },
       {
         element: (
           <ProtectedRoute allowedRoles={['building_owner', 'admin']} />
@@ -30,6 +34,6 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: '*', element: <Navigate to="/owner/buildings" replace /> },
-])
 
+  { path: '*', element: <Navigate to="/" replace /> },
+])

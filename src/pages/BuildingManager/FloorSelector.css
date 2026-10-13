@@ -1,0 +1,97 @@
+/* ============================================================
+   FloorSelector — Scoped Styles
+   ============================================================ */
+
+.floor-selector {
+  display: grid;
+  gap: 10px;
+}
+
+.floor-selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.floor-selector-header .ant-typography {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.07em !important;
+  color: var(--sw-text-secondary) !important;
+}
+
+/* ── Floor list items ── */
+.floor-list-item {
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center !important;
+  padding: 12px 14px !important;
+  border: 1px solid var(--sw-border) !important;
+  border-radius: var(--sw-radius-md);
+  margin-bottom: 6px;
+  background: var(--sw-surface-2);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.18s ease;
+  overflow: hidden;
+}
+
+.floor-list-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 15%;
+  height: 70%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--sw-violet), var(--sw-cyan));
+  opacity: 0;
+  transform: scaleY(0.5);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.floor-list-item:hover {
+  border-color: rgba(139, 92, 246, 0.35) !important;
+  background: rgba(139, 92, 246, 0.06);
+  box-shadow: inset 0 0 16px 0 rgba(139, 92, 246, 0.05);
+  transform: translateX(3px);
+}
+
+.floor-list-item-active {
+  border-color: rgba(139, 92, 246, 0.5) !important;
+  background: rgba(139, 92, 246, 0.10) !important;
+  box-shadow:
+    inset 0 0 20px 0 rgba(139, 92, 246, 0.08),
+    0 0 12px rgba(139, 92, 246, 0.12);
+}
+
+.floor-list-item-active::before,
+.floor-list-item:hover::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.floor-list-main {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.floor-list-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.floor-list-main .ant-typography {
+  color: var(--sw-text-primary) !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+}

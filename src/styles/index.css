@@ -1,0 +1,11 @@
+/* ============================================================
+   SpotWay — Style Barrel
+   Import order matters: tokens → base → animations → layout → components → overrides
+   ============================================================ */
+
+@import './tokens.css';
+@import './base.css';
+@import './animations.css';
+@import './layout.css';
+@import './components.css';
+@import './antd-dark.css';

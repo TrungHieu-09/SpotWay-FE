@@ -1,0 +1,68 @@
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: capitalize;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.status-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: dotPulse 2s ease-in-out infinite;
+}
+
+/* ---- Variants ---- */
+.status-pill--cyan {
+  background: rgba(34, 211, 238, 0.10);
+  color: var(--sw-cyan);
+  border-color: rgba(34, 211, 238, 0.25);
+}
+
+.status-pill--cyan .status-pill__dot {
+  background: var(--sw-cyan);
+  box-shadow: 0 0 6px var(--sw-cyan);
+}
+
+.status-pill--fuchsia {
+  background: rgba(232, 121, 249, 0.10);
+  color: var(--sw-fuchsia);
+  border-color: rgba(232, 121, 249, 0.25);
+}
+
+.status-pill--fuchsia .status-pill__dot {
+  background: var(--sw-fuchsia);
+  box-shadow: 0 0 6px var(--sw-fuchsia);
+  animation-delay: 0.5s;
+}
+
+.status-pill--green {
+  background: rgba(52, 211, 153, 0.10);
+  color: var(--sw-green);
+  border-color: rgba(52, 211, 153, 0.25);
+}
+
+.status-pill--green .status-pill__dot {
+  background: var(--sw-green);
+  box-shadow: 0 0 6px var(--sw-green);
+}
+
+.status-pill--muted {
+  background: var(--sw-surface-3);
+  color: var(--sw-text-secondary);
+  border-color: var(--sw-border);
+}
+
+.status-pill--muted .status-pill__dot {
+  background: var(--sw-text-muted);
+  animation: none;
+}

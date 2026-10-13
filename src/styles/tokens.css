@@ -1,0 +1,62 @@
+/* ============================================================
+   SpotWay — Design Tokens
+   Dark Glassmorphism with Aurora Violet / Cyan / Fuchsia
+   ============================================================ */
+
+:root {
+  /* ---- Canvas & Surface Hierarchy ---- */
+  --sw-canvas: #0B0B1A;
+  --sw-surface-1: rgba(18, 18, 42, 0.65);
+  --sw-surface-2: rgba(28, 27, 59, 0.75);
+  --sw-surface-3: rgba(45, 42, 86, 0.82);
+
+  /* ---- Accent Palette ---- */
+  --sw-violet: #8B5CF6;
+  --sw-violet-light: #9D6FFF;
+  --sw-violet-dim: rgba(139, 92, 246, 0.15);
+  --sw-cyan: #22D3EE;
+  --sw-cyan-dim: rgba(34, 211, 238, 0.12);
+  --sw-fuchsia: #E879F9;
+  --sw-fuchsia-dim: rgba(232, 121, 249, 0.08);
+  --sw-green: #34D399;
+  --sw-red: #FF6464;
+
+  /* ---- Text ---- */
+  --sw-text-primary: #E3E0F6;
+  --sw-text-secondary: #958EA0;
+  --sw-text-muted: #64748B;
+
+  /* ---- Borders ---- */
+  --sw-border: rgba(255, 255, 255, 0.10);
+  --sw-border-hover: rgba(255, 255, 255, 0.20);
+  --sw-border-active: rgba(139, 92, 246, 0.5);
+  --sw-border-subtle: rgba(255, 255, 255, 0.06);
+
+  /* ---- Shadows & Glows ---- */
+  --sw-shadow-1: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --sw-shadow-2: 0 12px 40px -4px rgba(0, 0, 0, 0.5);
+  --sw-shadow-3: 0 0 30px -5px rgba(139, 92, 246, 0.25), 0 20px 48px -8px rgba(0, 0, 0, 0.7);
+  --sw-glow-violet: 0 0 20px rgba(139, 92, 246, 0.4);
+  --sw-glow-cyan: 0 0 20px rgba(34, 211, 238, 0.3);
+  --sw-glow-fuchsia: 0 0 20px rgba(232, 121, 249, 0.3);
+  --sw-glow-inner: inset 0 0 16px 0 rgba(34, 211, 238, 0.15);
+
+  /* ---- Spacing ---- */
+  --sw-space-xs: 0.25rem;
+  --sw-space-sm: 0.5rem;
+  --sw-space-md: 1rem;
+  --sw-space-lg: 1.5rem;
+  --sw-space-xl: 2.5rem;
+
+  /* ---- Radii ---- */
+  --sw-radius-sm: 8px;
+  --sw-radius-md: 12px;
+  --sw-radius-lg: 16px;
+  --sw-radius-xl: 24px;
+  --sw-radius-pill: 999px;
+
+  /* ---- Transitions ---- */
+  --sw-transition-fast: 0.15s ease;
+  --sw-transition-normal: 0.25s ease;
+  --sw-transition-slow: 0.4s ease;
+}

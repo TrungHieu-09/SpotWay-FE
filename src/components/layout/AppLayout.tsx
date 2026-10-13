@@ -1,6 +1,7 @@
 import { Layout, Segmented } from 'antd'
-import { ApartmentOutlined } from '@ant-design/icons'
+import { CompassOutlined } from '@ant-design/icons'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import './AppLayout.css'
 
 const { Content, Header } = Layout
 
@@ -14,10 +15,18 @@ export function AppLayout() {
   return (
     <Layout className="app-layout">
       <Header className="app-header">
+        {/* Brand */}
         <div className="brand">
-          <ApartmentOutlined />
-          <span>Indoor Spatial</span>
+          <div className="brand-logo">
+            <CompassOutlined />
+          </div>
+          <div className="brand-text">
+            <span className="brand-name">SpotWay</span>
+            <span className="brand-tagline">Indoor Spatial</span>
+          </div>
         </div>
+
+        {/* Nav switcher */}
         <Segmented
           value={activePath}
           onChange={(value) => {
@@ -33,6 +42,12 @@ export function AppLayout() {
             { label: 'Building Manager', value: '/manager' },
           ]}
         />
+
+        {/* Header right: decorative indicator */}
+        <div className="header-status">
+          <span className="header-status__dot" />
+          <span className="header-status__text">Live</span>
+        </div>
       </Header>
 
       <Content>
@@ -41,4 +56,3 @@ export function AppLayout() {
     </Layout>
   )
 }
-

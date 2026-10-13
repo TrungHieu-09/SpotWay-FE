@@ -1,0 +1,282 @@
+/* ============================================================
+   BuildingListPage — Scoped Styles
+   ============================================================ */
+
+/* ── Workspace override ── */
+.blp-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ── Page header ── */
+.blp-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  animation: fadeInDown 0.5s ease-out;
+}
+
+.blp-header__eyebrow {
+  display: block;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--sw-violet);
+  margin-bottom: 6px;
+}
+
+.blp-header__title {
+  margin: 0 0 6px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #ffffff 0%, var(--sw-violet) 55%, var(--sw-cyan) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.blp-header__sub {
+  margin: 0;
+  color: var(--sw-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.blp-header__actions {
+  flex-shrink: 0;
+}
+
+/* ── Stats row ── */
+.blp-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  animation: fadeInUp 0.5s ease-out 0.1s both;
+}
+
+/* ── Building card grid ── */
+.blp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  animation: fadeInUp 0.5s ease-out 0.18s both;
+}
+
+/* ── Skeleton loaders ── */
+.blp-loading {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.blp-skeleton {
+  height: 340px;
+  border-radius: var(--sw-radius-xl);
+  background: linear-gradient(
+    90deg,
+    var(--sw-surface-1) 25%,
+    rgba(139, 92, 246, 0.07) 50%,
+    var(--sw-surface-1) 75%
+  );
+  background-size: 400% 100%;
+  animation: shimmerGradient 1.8s ease-in-out infinite;
+}
+
+/* ── Individual Building Card ── */
+.blp-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--sw-border);
+  border-radius: var(--sw-radius-xl);
+  background: var(--sw-surface-1);
+  backdrop-filter: blur(20px);
+  overflow: hidden;
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.3s ease,
+    transform 0.25s ease;
+  animation: fadeInUp 0.45s ease-out both;
+}
+
+.blp-card:hover {
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 16px 48px rgba(139, 92, 246, 0.12), 0 4px 16px rgba(0,0,0,0.4);
+  transform: translateY(-5px);
+}
+
+/* Hero image area */
+.blp-card__hero {
+  position: relative;
+  height: 160px;
+  overflow: hidden;
+  background: var(--sw-surface-2);
+  flex-shrink: 0;
+}
+
+.blp-card__hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.blp-card:hover .blp-card__hero-img {
+  transform: scale(1.05);
+}
+
+.blp-card__hero-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(34, 211, 238, 0.05));
+}
+
+.blp-card__hero-placeholder span {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 40px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--sw-violet), var(--sw-cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  opacity: 0.5;
+  letter-spacing: -0.05em;
+}
+
+.blp-card__hero-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(to top, var(--sw-surface-1), transparent);
+  pointer-events: none;
+}
+
+.blp-card__status-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+/* Card body */
+.blp-card__body {
+  flex: 1;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.blp-card__name {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--sw-text-primary);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.blp-card__address {
+  margin: 0;
+  font-size: 13px;
+  color: var(--sw-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.blp-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  gap: 8px;
+}
+
+.blp-card__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--sw-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Card actions */
+.blp-card__actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px 20px;
+  border-top: 1px solid var(--sw-border-subtle);
+}
+
+.blp-card__action-btn {
+  border-radius: var(--sw-radius-sm) !important;
+}
+
+/* "Add new" placeholder card */
+.blp-add-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 340px;
+  border: 2px dashed var(--sw-border);
+  border-radius: var(--sw-radius-xl);
+  background: transparent;
+  color: var(--sw-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 0.25s ease,
+    color 0.25s ease,
+    background 0.25s ease;
+  animation: fadeInUp 0.45s ease-out both;
+}
+
+.blp-add-card:hover {
+  border-color: rgba(139, 92, 246, 0.4);
+  color: var(--sw-violet);
+  background: rgba(139, 92, 246, 0.04);
+}
+
+.blp-add-card__icon {
+  font-size: 28px;
+  transition: transform 0.3s ease;
+}
+
+.blp-add-card:hover .blp-add-card__icon {
+  transform: scale(1.2);
+}
+
+/* ── Responsive ── */
+@media (max-width: 760px) {
+  .blp-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .blp-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .blp-header__title {
+    font-size: 26px;
+  }
+}

@@ -2,23 +2,28 @@ import { useEffect, useState } from 'react'
 import {
   App as AntApp,
   Button,
-  Card,
   Descriptions,
   Empty,
   Image,
-  Space,
   Spin,
-  Table,
   Tag,
   Typography,
 } from 'antd'
-import { ArrowLeftOutlined } from '@ant-design/icons'
+import {
+  ArrowLeftOutlined,
+  AppstoreOutlined,
+  EnvironmentOutlined,
+  CalendarOutlined,
+  CheckCircleOutlined,
+} from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getFloors } from '../../api/floors'
 import { useBuildingStore } from '../../store/useBuildingStore'
 import type { Floor } from '../../types/floor'
+import { GlassCard, StatusPill } from '../../components/ui'
+import './BuildingDetailPage.css'
 
-const { Text, Title } = Typography
+const { Text } = Typography
 
 export function BuildingDetailPage() {
   const { buildingId } = useParams<{ buildingId: string }>()
@@ -40,11 +45,7 @@ export function BuildingDetailPage() {
   }, [loadBuildings, message])
 
   useEffect(() => {
-    if (!buildingId) {
-      setFloors([])
-      return
-    }
-
+    if (!buildingId) { setFloors([]); return }
     setIsFloorLoading(true)
     getFloors(buildingId)
       .then(setFloors)
@@ -55,101 +56,131 @@ export function BuildingDetailPage() {
   if (!building && hasLoadedBuildings && !isBuildingLoading) {
     return (
       <main className="workspace">
-        <Card className="tool-card">
+        <GlassCard>
           <Empty description="Không tìm thấy building">
             <Button onClick={() => navigate('/owner/buildings')}>
               Quay lại danh sách
             </Button>
           </Empty>
-        </Card>
+        </GlassCard>
       </main>
     )
   }
 
   return (
-    <main className="workspace">
-      <section className="page-heading">
-        <div>
-          <Text type="secondary">Building Owner</Text>
-          <Title level={1}>{building?.name ?? 'Building detail'}</Title>
-        </div>
+    <main className="workspace bdp-workspace">
+      {/* ── Header ── */}
+      <section className="bdp-header">
         <Button
           icon={<ArrowLeftOutlined />}
           onClick={() => navigate('/owner/buildings')}
+          className="bdp-back-btn"
         >
-          Quay lại danh sách
+          Danh sách
         </Button>
+        <div className="bdp-header__text">
+          <span className="bdp-header__eyebrow">Building Owner</span>
+          <h1 className="bdp-header__title">
+            {building?.name ?? 'Building detail'}
+          </h1>
+        </div>
+        {building && <StatusPill status={building.status} />}
       </section>
 
       <Spin spinning={isBuildingLoading}>
-        {building ? (
-          <div className="building-detail-grid">
-            <Card title="Thông tin building" className="tool-card">
-              <Descriptions column={1} bordered size="middle">
-                <Descriptions.Item label="Tên">
-                  {building.name}
-                </Descriptions.Item>
-                <Descriptions.Item label="Địa chỉ">
-                  {building.address}
-                </Descriptions.Item>
-                <Descriptions.Item label="Trạng thái">
-                  <Tag color={building.status === 'active' ? 'green' : 'gold'}>
-                    {building.status}
-                  </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="Ngày tạo">
-                  {new Intl.DateTimeFormat('vi-VN').format(
-                    new Date(building.createdAt),
-                  )}
-                </Descriptions.Item>
-              </Descriptions>
-            </Card>
+        {building && (
+          <>
+            {/* ── Top grid: info + plan image ── */}
+            <div className="bdp-top-grid">
+              {/* Info card */}
+              <GlassCard title="Thông tin tòa nhà" accent>
+                <div className="bdp-info-list">
+                  <div className="bdp-info-row">
+                    <span className="bdp-info-row__icon"><EnvironmentOutlined /></span>
+                    <div>
+                      <span className="bdp-info-row__label">Địa chỉ</span>
+                      <span className="bdp-info-row__value">{building.address}</span>
+                    </div>
+                  </div>
+                  <div className="bdp-info-row">
+                    <span className="bdp-info-row__icon"><AppstoreOutlined /></span>
+                    <div>
+                      <span className="bdp-info-row__label">Số tầng</span>
+                      <span className="bdp-info-row__value">{building.floorCount}</span>
+                    </div>
+                  </div>
+                  <div className="bdp-info-row">
+                    <span className="bdp-info-row__icon"><CheckCircleOutlined /></span>
+                    <div>
+                      <span className="bdp-info-row__label">Trạng thái</span>
+                      <StatusPill status={building.status} />
+                    </div>
+                  </div>
+                  <div className="bdp-info-row">
+                    <span className="bdp-info-row__icon"><CalendarOutlined /></span>
+                    <div>
+                      <span className="bdp-info-row__label">Ngày tạo</span>
+                      <span className="bdp-info-row__value">
+                        {new Intl.DateTimeFormat('vi-VN').format(new Date(building.createdAt))}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </GlassCard>
 
-            <Card title="Ảnh sơ đồ" className="tool-card">
-              {building.planImageUrl ? (
-                <Image
-                  className="building-plan-image"
-                  src={building.planImageUrl}
-                  alt={`Sơ đồ ${building.name}`}
-                />
-              ) : (
-                <Empty description="Chưa có ảnh sơ đồ" />
-              )}
-            </Card>
-          </div>
-        ) : null}
+              {/* Floor plan image */}
+              <GlassCard title="Sơ đồ mặt bằng">
+                {building.planImageUrl ? (
+                  <Image
+                    className="building-plan-image"
+                    src={building.planImageUrl}
+                    alt={`Sơ đồ ${building.name}`}
+                  />
+                ) : (
+                  <div className="bdp-no-plan">
+                    <AppstoreOutlined className="bdp-no-plan__icon" />
+                    <span>Chưa có ảnh sơ đồ</span>
+                  </div>
+                )}
+              </GlassCard>
+            </div>
 
-        <Card title="Danh sách tầng" className="tool-card floor-detail-card">
-          <Table<Floor>
-            rowKey="id"
-            loading={isFloorLoading}
-            dataSource={floors}
-            pagination={false}
-            locale={{ emptyText: 'Chưa có tầng' }}
-            columns={[
-              { title: 'Tên tầng', dataIndex: 'name' },
-              { title: 'Level', dataIndex: 'level', width: 120 },
-              {
-                title: 'Publish status',
-                dataIndex: 'publishStatus',
-                width: 160,
-                render: (status: Floor['publishStatus']) => (
-                  <Tag color={status === 'published' ? 'green' : 'gold'}>
-                    {status}
-                  </Tag>
-                ),
-              },
-            ]}
-          />
-          {building ? (
-            <Space className="floor-count-note">
-              <Text type="secondary">
-                Số tầng trong bảng: {floors.length} / cột Số tầng:{' '}
-                {building.floorCount}
-              </Text>
-            </Space>
-          ) : null}
-        </Card>
+            {/* ── Floors list ── */}
+            <GlassCard
+              title="Danh sách tầng"
+              extra={
+                <span className="bdp-floor-count">
+                  {floors.length}/{building.floorCount} tầng
+                </span>
+              }
+            >
+              <Spin spinning={isFloorLoading}>
+                {floors.length === 0 && !isFloorLoading ? (
+                  <Empty description="Chưa có tầng" />
+                ) : (
+                  <div className="bdp-floor-list">
+                    {floors.map((floor, idx) => (
+                      <div
+                        key={floor.id}
+                        className="bdp-floor-item"
+                        style={{ animationDelay: `${idx * 0.05}s` }}
+                      >
+                        <div className="bdp-floor-item__level">
+                          <span>{floor.level}</span>
+                        </div>
+                        <div className="bdp-floor-item__info">
+                          <span className="bdp-floor-item__name">{floor.name}</span>
+                          <span className="bdp-floor-item__label">Level {floor.level}</span>
+                        </div>
+                        <StatusPill status={floor.publishStatus} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Spin>
+            </GlassCard>
+          </>
+        )}
       </Spin>
     </main>
   )

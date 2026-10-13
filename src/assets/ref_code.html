@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SpaceLumi — Next-Gen Multi-Tenant Indoor 3D Navigation &amp; Telemetry</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-tertiary-fixed": "#350040",
+            "background": "#121221",
+            "on-surface-variant": "#cbc3d7",
+            "error": "#ffb4ab",
+            "on-secondary": "#00363e",
+            "inverse-primary": "#6d3bd7",
+            "primary-fixed-dim": "#d0bcff",
+            "tertiary-fixed": "#ffd6ff",
+            "surface-container-lowest": "#0d0d1c",
+            "surface-tint": "#d0bcff",
+            "on-primary-fixed": "#23005c",
+            "outline-variant": "#494454",
+            "on-secondary-fixed": "#001f25",
+            "inverse-on-surface": "#2f2f3f",
+            "on-primary-container": "#340080",
+            "primary-container": "#a078ff",
+            "secondary-fixed": "#a2eeff",
+            "tertiary-fixed-dim": "#f8acff",
+            "surface": "#121221",
+            "on-secondary-container": "#00515d",
+            "on-surface": "#e3e0f6",
+            "tertiary-container": "#d164e2",
+            "error-container": "#93000a",
+            "secondary-fixed-dim": "#2fd9f4",
+            "on-error": "#690005",
+            "surface-container-highest": "#343344",
+            "secondary-container": "#00cbe6",
+            "surface-container": "#1e1e2e",
+            "on-primary": "#3c0091",
+            "outline": "#958ea0",
+            "surface-container-low": "#1a1a2a",
+            "on-tertiary-container": "#4c005a",
+            "on-error-container": "#ffdad6",
+            "primary": "#d0bcff",
+            "primary-fixed": "#e9ddff",
+            "on-primary-fixed-variant": "#5516be",
+            "tertiary": "#f8acff",
+            "on-background": "#e3e0f6",
+            "surface-bright": "#383849",
+            "inverse-surface": "#e3e0f6",
+            "secondary": "#5de6ff",
+            "on-secondary-fixed-variant": "#004e5a",
+            "on-tertiary-fixed-variant": "#7b0190",
+            "on-tertiary": "#570067",
+            "surface-variant": "#343344",
+            "surface-dim": "#121221",
+            "surface-container-high": "#292839"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "gutter": "1.5rem",
+            "space-lg": "1.5rem",
+            "margin-mobile": "1rem",
+            "gutter-sm": "1rem",
+            "space-xl": "2.5rem",
+            "margin": "2rem",
+            "gutter-lg": "2rem",
+            "space-sm": "0.5rem",
+            "space-md": "1rem",
+            "margin-desktop": "2.5rem",
+            "space-xs": "0.25rem"
+          },
+          "fontFamily": {
+            "headline-lg": ["Space Grotesk"],
+            "label-sm": ["Space Grotesk"],
+            "headline-sm": ["Space Grotesk"],
+            "display-hero": ["Space Grotesk"],
+            "label-lg": ["Space Grotesk"],
+            "display-hero-mobile": ["Space Grotesk"],
+            "headline-md": ["Space Grotesk"],
+            "label-md": ["Space Grotesk"],
+            "body-md": ["Inter"],
+            "body-sm": ["Inter"],
+            "body-lg": ["Inter"],
+            "headline-lg-mobile": ["Space Grotesk"],
+            "title-lg": ["Space Grotesk"],
+            "title-md": ["Space Grotesk"]
+          },
+          "fontSize": {
+            "headline-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.025em", "fontWeight": "600"}],
+            "label-sm": ["10px", {"lineHeight": "14px", "letterSpacing": "0.06em", "fontWeight": "600"}],
+            "headline-sm": ["22px", {"lineHeight": "30px", "letterSpacing": "-0.015em", "fontWeight": "500"}],
+            "display-hero": ["56px", {"lineHeight": "64px", "letterSpacing": "-0.03em", "fontWeight": "700"}],
+            "label-lg": ["14px", {"lineHeight": "18px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+            "display-hero-mobile": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+            "headline-md": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+            "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "500"}],
+            "body-md": ["14px", {"lineHeight": "22px", "letterSpacing": "-0.005em", "fontWeight": "400"}],
+            "body-sm": ["12px", {"lineHeight": "18px", "letterSpacing": "0em", "fontWeight": "400"}],
+            "body-lg": ["16px", {"lineHeight": "26px", "letterSpacing": "-0.01em", "fontWeight": "400"}],
+            "headline-lg-mobile": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+            "title-lg": ["18px", {"lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+            "title-md": ["16px", {"lineHeight": "22px", "letterSpacing": "0em", "fontWeight": "500"}]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    /* Atmospheric glowing gradients & custom subtle grid overlay */
+    .bg-spatial-grid {
+      background-size: 40px 40px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    }
+    
+    .aurora-blur-violet {
+      background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.18), transparent 70%);
+    }
+    
+    .aurora-blur-cyan {
+      background: radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.15), transparent 70%);
+    }
+
+    .aurora-blur-fuchsia {
+      background: radial-gradient(circle at 50% 50%, rgba(232, 121, 249, 0.15), transparent 70%);
+    }
+
+    /* 3D perspective floor container */
+    .perspective-floor {
+      perspective: 1200px;
+    }
+    
+    .transform-iso {
+      transform: rotateX(58deg) rotateZ(-36deg) skewX(2deg);
+      transform-style: preserve-3d;
+      transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .transform-iso:hover {
+      transform: rotateX(54deg) rotateZ(-34deg) skewX(1deg) translateY(-8px);
+    }
+
+    @keyframes pulse-slow {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 0.9; transform: scale(1.04); }
+    }
+
+    .animate-pulse-slow {
+      animation: pulse-slow 4s ease-in-out infinite;
+    }
+
+    @keyframes beam-flow {
+      0% { stroke-dashoffset: 100; }
+      100% { stroke-dashoffset: 0; }
+    }
+
+    .path-dash-animate {
+      stroke-dasharray: 6 6;
+      animation: beam-flow 2s linear infinite;
+    }
+  </style>
+</head>
+<body class="bg-surface-container-lowest text-on-surface font-body-md antialiased relative overflow-x-hidden selection:bg-secondary-container selection:text-on-secondary-container min-h-screen">
+<!-- Ambient Radiant Mesh Layers -->
+<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+<div class="absolute -top-[20%] -left-[10%] w-[60vw] h-[60vw] aurora-blur-violet filter blur-[100px] rounded-full"></div>
+<div class="absolute top-[25%] -right-[15%] w-[55vw] h-[55vw] aurora-blur-cyan filter blur-[120px] rounded-full"></div>
+<div class="absolute bottom-[10%] left-[20%] w-[50vw] h-[50vw] aurora-blur-fuchsia filter blur-[110px] rounded-full opacity-60"></div>
+<div class="absolute inset-0 bg-spatial-grid opacity-70"></div>
+</div>
+<!-- 1. STICKY GLASS NAVBAR -->
+<header class="sticky top-0 w-full z-50 rounded-none border-b border-outline-variant/20 dark:border-outline-variant/20 backdrop-blur-xl shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] bg-surface-container/60 dark:bg-surface-container/60">
+<div class="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop py-space-sm max-w-7xl mx-auto">
+<!-- Brand & Isometric Logo Anchor -->
+<a class="flex items-center gap-3 group" href="#">
+<div class="relative w-9 h-9 rounded-xl bg-gradient-to-tr from-primary via-secondary to-tertiary p-[1px] shadow-[0_0_15px_rgba(139,92,246,0.5)]">
+<div class="w-full h-full bg-surface-container-lowest rounded-xl flex items-center justify-center backdrop-blur-md">
+<span class="material-symbols-outlined text-secondary text-[20px]" style="font-variation-settings: 'FILL' 1;">view_in_ar</span>
+</div>
+</div>
+<span class="text-title-lg font-headline-lg font-bold text-on-surface dark:text-on-surface tracking-tight">SpaceLumi</span>
+</a>
+<!-- Desktop Navigation Links -->
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-secondary dark:text-secondary font-semibold transition-colors duration-200 font-label-md text-label-md" href="#features">Platform</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-colors duration-200 font-label-md text-label-md" href="#features">Features</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-colors duration-200 font-label-md text-label-md" href="#roles">Solutions</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-colors duration-200 font-label-md text-label-md" href="#telemetry">Analytics</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-colors duration-200 font-label-md text-label-md" href="#pricing">Pricing</a>
+</nav>
+<!-- Right Actions -->
+<div class="flex items-center gap-3">
+<button class="p-2 text-on-surface-variant hover:text-on-surface transition-colors rounded-lg flex items-center" title="Change Language">
+<span class="material-symbols-outlined text-[20px]">language</span>
+</button>
+<button class="hidden sm:inline-flex items-center px-4 py-2 rounded-xl text-label-md font-label-md text-on-surface hover:text-secondary bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 transition-all duration-200">
+          Sign In
+        </button>
+<a class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-label-md font-label-md font-semibold text-on-primary bg-gradient-to-r from-primary-container via-primary to-secondary shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:shadow-[0_0_25px_rgba(34,211,238,0.6)] hover:scale-[1.02] active:scale-95 transition-all duration-200" href="#demo">
+<span>Launch Spatial HUD</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+</div>
+</div>
+</header>
+<!-- 2. HERO SECTION -->
+<section class="relative z-10 pt-12 pb-20 md:pt-20 md:pb-32 px-margin-mobile md:px-margin-desktop max-w-7xl mx-auto">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+<!-- Left Column: Copy & Actions -->
+<div class="lg:col-span-6 flex flex-col items-start gap-6">
+<!-- Spatial Version Pill -->
+<div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface-container/70 border border-secondary/30 shadow-[inset_0_0_12px_rgba(34,211,238,0.15)]">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+</span>
+<span class="text-label-sm font-label-sm uppercase tracking-wider text-secondary">v2.4 Spatial Intelligence Live</span>
+</div>
+<!-- Hero Headline -->
+<h1 class="text-display-hero-mobile md:text-display-hero font-display-hero tracking-tight text-on-surface">
+          Navigate every floor. <br/>
+<span class="bg-gradient-to-r from-primary via-secondary to-tertiary bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(139,92,246,0.3)]">
+            Manage every space.
+          </span>
+</h1>
+<!-- High-Clarity Subheadline -->
+<p class="text-body-lg font-body-lg text-on-surface-variant max-w-xl leading-relaxed">
+          Next-gen multi-tenant indoor 3D mapping, live pedestrian telemetry, and autonomous spatial graph recognition for mega-complexes, transit hubs, and campus facilities.
+        </p>
+<!-- CTAs -->
+<div class="flex flex-wrap items-center gap-4 w-full pt-2">
+<a class="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-gradient-to-r from-primary-container to-secondary text-on-primary font-headline-sm text-label-lg font-semibold shadow-[0_0_25px_rgba(139,92,246,0.45)] hover:shadow-[0_0_35px_rgba(93,230,255,0.7)] hover:-translate-y-0.5 transition-all duration-200" href="#pricing">
+<span>Start Free Trial</span>
+<span class="material-symbols-outlined text-[18px]">rocket_launch</span>
+</a>
+<button class="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-white/[0.04] backdrop-blur-xl border border-white/15 hover:border-secondary/50 text-on-surface hover:text-secondary font-headline-sm text-label-lg font-medium transition-all duration-200 hover:bg-white/[0.08]">
+<span class="material-symbols-outlined text-secondary text-[20px]" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+<span>Book Live 3D Demo</span>
+</button>
+</div>
+<!-- Social Validation Micro-Metric -->
+<div class="flex items-center gap-4 pt-4 border-t border-white/10 w-full mt-2">
+<div class="flex -space-x-2 overflow-hidden">
+<div class="inline-block h-8 w-8 rounded-full ring-2 ring-background bg-surface-container-high flex items-center justify-center text-xs font-headline-sm text-primary">T5</div>
+<div class="inline-block h-8 w-8 rounded-full ring-2 ring-background bg-surface-container-high flex items-center justify-center text-xs font-headline-sm text-secondary">SIN</div>
+<div class="inline-block h-8 w-8 rounded-full ring-2 ring-background bg-surface-container-high flex items-center justify-center text-xs font-headline-sm text-tertiary">WF</div>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1 text-label-md font-label-md text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[16px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span>Active in 500+ global facilities</span>
+</div>
+<span class="text-body-sm font-body-sm text-on-surface-variant">Over 12M monthly indoor travelers navigated</span>
+</div>
+</div>
+</div>
+<!-- Right Column: Interactive Isometric 3D Multi-Floor Building Canvas -->
+<div class="lg:col-span-6 relative w-full h-[520px] md:h-[580px] flex items-center justify-center">
+<!-- Floor Selector Glass HUD (Floating Left) -->
+<div class="absolute left-0 top-6 z-30 flex flex-col gap-1.5 p-2 rounded-2xl bg-surface-container/75 backdrop-blur-2xl border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
+<div class="text-[9px] font-label-sm uppercase tracking-wider text-outline px-2 py-1">Levels</div>
+<button class="px-3 py-2 rounded-xl text-label-md font-label-md flex items-center justify-between gap-3 bg-primary/20 border border-primary/40 text-secondary shadow-[inset_0_0_10px_rgba(139,92,246,0.3)]">
+<span class="font-bold">L3</span>
+<span class="text-[10px] text-primary">Exec Suites</span>
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+</button>
+<button class="px-3 py-2 rounded-xl text-label-md font-label-md flex items-center justify-between gap-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all">
+<span class="font-bold">L2</span>
+<span class="text-[10px]">Retail Hub</span>
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+</button>
+<button class="px-3 py-2 rounded-xl text-label-md font-label-md flex items-center justify-between gap-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all">
+<span class="font-bold">L1</span>
+<span class="text-[10px]">Concourse</span>
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+</button>
+</div>
+<!-- 3D Waypoint Callout Tooltip (Floating Top Right) -->
+<div class="absolute right-2 top-4 z-30 p-3.5 rounded-2xl bg-surface-container-high/85 backdrop-blur-2xl border border-secondary/40 shadow-[0_0_25px_rgba(34,211,238,0.25)] flex items-center gap-3">
+<div class="w-8 h-8 rounded-xl bg-secondary-container/20 flex items-center justify-center text-secondary border border-secondary/30">
+<span class="material-symbols-outlined text-[18px]">near_me</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-label-lg text-on-surface">Room 3.12 · 2 min walk</span>
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+</span>
+</div>
+<div class="text-[11px] font-body-sm text-on-surface-variant">Optimal elevator route via Core North</div>
+</div>
+</div>
+<!-- QR Beacon Floating Badge (Bottom Right) -->
+<div class="absolute right-4 bottom-8 z-30 p-3 rounded-2xl bg-surface-container/85 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary text-[22px]">sensors</span>
+<div class="text-left">
+<div class="text-label-sm font-label-sm uppercase tracking-wider text-tertiary">Gate B14 Beacon Synced</div>
+<div class="text-body-sm font-body-sm text-on-surface font-mono">±0.4m precision · UWB Channel 5</div>
+</div>
+</div>
+<!-- 3D Isometric Stacking Simulation -->
+<div class="perspective-floor w-full h-full flex items-center justify-center">
+<div class="transform-iso relative w-[360px] h-[360px] sm:w-[420px] sm:h-[420px]">
+<!-- FLOOR 1 (Concourse) -->
+<div class="absolute inset-0 rounded-3xl bg-surface-container-high/50 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-md transform translate-z-0 p-4 transition-all duration-300">
+<div class="w-full h-full border border-dashed border-white/15 rounded-2xl relative overflow-hidden bg-gradient-to-br from-white/[0.02] to-transparent">
+<!-- Grid partition lines -->
+<div class="absolute top-1/2 left-0 w-full h-[1px] bg-white/10"></div>
+<div class="absolute top-0 left-1/2 w-[1px] h-full bg-white/10"></div>
+<div class="absolute bottom-4 left-4 text-[10px] font-mono text-outline uppercase tracking-wider">L1 Concourse (Arrivals / Metro Link)</div>
+<!-- Heat zone circle -->
+<div class="absolute top-6 left-8 w-20 h-20 rounded-full bg-cyan-500/20 filter blur-md"></div>
+</div>
+</div>
+<!-- Vertical Pillar / Elevator Core -->
+<div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 border-2 border-primary/40 bg-primary/10 rounded-lg transform -translate-y-16 pointer-events-none"></div>
+<!-- FLOOR 2 (Retail Hub) -->
+<div class="absolute inset-0 rounded-3xl bg-surface-container-high/60 border border-secondary/30 shadow-[0_25px_60px_rgba(0,0,0,0.8)] backdrop-blur-md transform -translate-y-16 -translate-x-4 p-4 transition-all duration-300">
+<div class="w-full h-full border border-dashed border-secondary/20 rounded-2xl relative overflow-hidden bg-gradient-to-br from-secondary/5 to-transparent">
+<div class="absolute top-1/3 left-0 w-full h-[1px] bg-white/10"></div>
+<div class="absolute top-0 left-2/3 w-[1px] h-full bg-white/10"></div>
+<div class="absolute bottom-4 left-4 text-[10px] font-mono text-secondary uppercase tracking-wider">L2 Retail Hub (Duty Free &amp; Lounges)</div>
+<!-- Heat zone circle -->
+<div class="absolute bottom-8 right-12 w-28 h-28 rounded-full bg-fuchsia-500/25 filter blur-lg"></div>
+</div>
+</div>
+<!-- FLOOR 3 (Executive Suites - Active Highest Level) -->
+<div class="absolute inset-0 rounded-3xl bg-surface-container/80 border-2 border-primary shadow-[0_0_40px_rgba(139,92,246,0.35)] backdrop-blur-xl transform -translate-y-32 -translate-x-8 p-4 transition-all duration-300">
+<div class="w-full h-full border border-white/20 rounded-2xl relative overflow-hidden bg-gradient-to-tr from-primary/15 via-surface-container to-secondary/10">
+<!-- Floor plan architectural walls layout -->
+<div class="absolute inset-4 border border-white/10 rounded-xl">
+<div class="absolute top-8 left-8 right-8 h-[1px] bg-primary/30"></div>
+<div class="absolute top-8 bottom-8 left-20 w-[1px] bg-primary/30"></div>
+<!-- Waypoint Neon Path Vector -->
+<svg class="absolute inset-0 w-full h-full overflow-visible pointer-events-none">
+<defs>
+<lineargradient id="neonPathGrad" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#8B5CF6"></stop>
+<stop offset="100%" stop-color="#22D3EE"></stop>
+</lineargradient>
+</defs>
+<path class="path-dash-animate" d="M 60 220 L 140 180 L 140 90 L 260 70" fill="none" stroke="url(#neonPathGrad)" stroke-linecap="round" stroke-width="4"></path>
+<!-- Pin Pulse -->
+<circle class="shadow-[0_0_12px_#22D3EE]" cx="260" cy="70" fill="#22D3EE" r="7"></circle>
+<circle class="animate-ping" cx="260" cy="70" fill="none" r="14" stroke="#22D3EE" stroke-width="1.5"></circle>
+<circle cx="60" cy="220" fill="#8B5CF6" r="5"></circle>
+</svg>
+<!-- Room 3.12 marker card -->
+<div class="absolute top-4 right-6 px-2.5 py-1 rounded bg-secondary/20 border border-secondary text-secondary text-[10px] font-mono font-bold">
+                    SUITE 3.12 (ACTIVE)
+                  </div>
+</div>
+<div class="absolute bottom-4 left-4 text-[10px] font-mono text-primary font-bold uppercase tracking-wider flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary inline-block"></span>
+                  L3 Executive Suites &amp; Medical Center
+                </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 3. LOGO MARQUEE -->
+<section class="border-y border-outline-variant/20 bg-surface-container-lowest/80 py-10 relative z-10 backdrop-blur-md">
+<div class="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop">
+<p class="text-center text-label-sm font-label-sm uppercase tracking-widest text-outline mb-8">
+        Trusted by world-class transit airports, smart hospitals, and premier commercial towers
+      </p>
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 items-center justify-items-center opacity-70">
+<div class="flex items-center gap-2 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-outline">flight_takeoff</span>
+<span class="font-headline-sm text-title-md font-bold tracking-tight text-on-surface">HEATHROW T5</span>
+</div>
+<div class="flex items-center gap-2 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-outline">shopping_bag</span>
+<span class="font-headline-sm text-title-md font-bold tracking-tight text-on-surface">WESTFIELD</span>
+</div>
+<div class="flex items-center gap-2 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-outline">local_airport</span>
+<span class="font-headline-sm text-title-md font-bold tracking-tight text-on-surface">CHANGI SIN</span>
+</div>
+<div class="flex items-center gap-2 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-outline">emergency</span>
+<span class="font-headline-sm text-title-md font-bold tracking-tight text-on-surface">MAYO CLINIC</span>
+</div>
+<div class="flex items-center gap-2 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-outline">domain</span>
+<span class="font-headline-sm text-title-md font-bold tracking-tight text-on-surface">BROOKFIELD</span>
+</div>
+<div class="flex items-center gap-2 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-outline">apartment</span>
+<span class="font-headline-sm text-title-md font-bold tracking-tight text-on-surface">HUDSON YARDS</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. BENTO GRID OF CORE FEATURES -->
+<section class="py-24 md:py-32 relative z-10 max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop" id="features">
+<div class="flex flex-col items-center text-center mb-16">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-label-sm font-label-sm uppercase tracking-wider mb-4">
+        Spatial Engine Capabilities
+      </div>
+<h2 class="text-headline-md md:text-headline-lg font-headline-lg text-on-surface max-w-2xl">
+        Precision telemetry engineering for high-density physical assets
+      </h2>
+<p class="text-body-lg font-body-lg text-on-surface-variant max-w-xl mt-3">
+        Engineered specifically for mega-facilities where GPS fails. Sub-meter multi-floor localization and live routing.
+      </p>
+</div>
+<!-- Bento Grid Container -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Card 1: 3D Multi-Floor Digital Twin (2-col wide) -->
+<div class="lg:col-span-2 rounded-3xl bg-surface-container/60 backdrop-blur-2xl border border-white/10 p-8 shadow-[0_8px_32px_rgba(0,0,0,0.37)] hover:border-primary/40 transition-all duration-300 relative overflow-hidden group">
+<div class="absolute -right-12 -bottom-12 w-80 h-80 bg-primary/15 rounded-full filter blur-3xl pointer-events-none group-hover:bg-primary/25 transition-all"></div>
+<div class="flex flex-col h-full justify-between relative z-10">
+<div>
+<div class="w-12 h-12 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary mb-6">
+<span class="material-symbols-outlined text-[24px]">layers</span>
+</div>
+<span class="text-label-sm font-label-sm uppercase tracking-wider text-secondary">Volumetric Modeling</span>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mt-1 mb-3">3D Multi-Floor Digital Twin</h3>
+<p class="text-body-md font-body-md text-on-surface-variant max-w-lg">
+              Interactive structural layer toggling with real-time CAD sync, volumetric mesh slicing, and sub-meter indoor elevation mapping across high-rise campuses.
+            </p>
+</div>
+<!-- Feature Visualization Mockup -->
+<div class="mt-8 pt-6 border-t border-white/10 grid grid-cols-3 gap-4">
+<div class="p-4 rounded-2xl bg-surface-container-high/60 border border-white/5">
+<div class="text-[11px] font-mono text-outline">ELEVATION Z-INDEX</div>
+<div class="text-title-lg font-headline-sm text-secondary mt-1">±0.25 m</div>
+<div class="text-[11px] text-on-surface-variant mt-0.5">Barometric altitude auto-lock</div>
+</div>
+<div class="p-4 rounded-2xl bg-surface-container-high/60 border border-white/5">
+<div class="text-[11px] font-mono text-outline">RENDER ENGINE</div>
+<div class="text-title-lg font-headline-sm text-primary mt-1">WebGL 2.0</div>
+<div class="text-[11px] text-on-surface-variant mt-0.5">60 FPS on low-power devices</div>
+</div>
+<div class="p-4 rounded-2xl bg-surface-container-high/60 border border-white/5">
+<div class="text-[11px] font-mono text-outline">CROSS-CAMPUS</div>
+<div class="text-title-lg font-headline-sm text-tertiary mt-1">Unlimited</div>
+<div class="text-[11px] text-on-surface-variant mt-0.5">Multi-building skybridge sync</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2: Instant QR & Beacon Positioning -->
+<div class="rounded-3xl bg-surface-container/60 backdrop-blur-2xl border border-white/10 p-8 shadow-[0_8px_32px_rgba(0,0,0,0.37)] hover:border-secondary/40 transition-all duration-300 relative overflow-hidden group">
+<div class="w-12 h-12 rounded-2xl bg-secondary/15 border border-secondary/30 flex items-center justify-center text-secondary mb-6">
+<span class="material-symbols-outlined text-[24px]">qr_code_scanner</span>
+</div>
+<span class="text-label-sm font-label-sm uppercase tracking-wider text-secondary">Zero Friction</span>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mt-1 mb-3">Instant QR &amp; Beacon Positioning</h3>
+<p class="text-body-md font-body-md text-on-surface-variant mb-6">
+          Zero app download required. Visitors scan physical signage QR codes or walk within Bluetooth Low Energy / UWB zones to get instant browser orientation.
+        </p>
+<div class="p-4 rounded-xl bg-surface-container-lowest/80 border border-white/10 font-mono text-xs flex items-center justify-between">
+<span class="text-on-surface-variant">App install required:</span>
+<span class="text-secondary font-bold">0 MB (Web-First)</span>
+</div>
+</div>
+<!-- Card 3: Turn-by-Turn Accessible Wayfinding -->
+<div class="rounded-3xl bg-surface-container/60 backdrop-blur-2xl border border-white/10 p-8 shadow-[0_8px_32px_rgba(0,0,0,0.37)] hover:border-tertiary/40 transition-all duration-300 relative overflow-hidden group">
+<div class="w-12 h-12 rounded-2xl bg-tertiary/15 border border-tertiary/30 flex items-center justify-center text-tertiary mb-6">
+<span class="material-symbols-outlined text-[24px]">accessible_forward</span>
+</div>
+<span class="text-label-sm font-label-sm uppercase tracking-wider text-tertiary">Inclusive Spatial Mobility</span>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mt-1 mb-3">Turn-by-Turn Wayfinding</h3>
+<p class="text-body-md font-body-md text-on-surface-variant mb-4">
+          ADA-compliant route calculation. Automatically prioritizes elevators and low-slope ramps over escalators and stairs when requested.
+        </p>
+<div class="flex items-center gap-2 text-label-sm font-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-secondary text-[16px]">check_circle</span>
+<span>Audio guidance &amp; high-contrast mode</span>
+</div>
+</div>
+<!-- Card 4: AI Floor-Plan Vectorization (2-col wide) -->
+<div class="lg:col-span-2 rounded-3xl bg-surface-container/60 backdrop-blur-2xl border border-white/10 p-8 shadow-[0_8px_32px_rgba(0,0,0,0.37)] hover:border-secondary/40 transition-all duration-300 relative overflow-hidden group">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+<div>
+<div class="w-12 h-12 rounded-2xl bg-secondary/15 border border-secondary/30 flex items-center justify-center text-secondary mb-4">
+<span class="material-symbols-outlined text-[24px]">auto_fix_high</span>
+</div>
+<span class="text-label-sm font-label-sm uppercase tracking-wider text-secondary">Neural Vector Pipeline</span>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mt-1">AI Floor-Plan Vectorization</h3>
+</div>
+<span class="px-3 py-1 rounded-full bg-secondary/10 border border-secondary/30 text-secondary text-xs font-mono">
+            Auto-Detect: DWG, DXF, PDF, BIM
+          </span>
+</div>
+<p class="text-body-md font-body-md text-on-surface-variant max-w-2xl mb-6">
+          Transform legacy blueprints and 2D architectural schematics into fully traversable 3D graph nodes, convex room meshes, and obstacle boundaries in under 90 seconds.
+        </p>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+<div class="p-3 rounded-xl bg-surface-container-high/40 border border-white/5 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]">door_open</span>
+<span class="text-body-sm font-body-sm">Doors &amp; Portals Extraction</span>
+</div>
+<div class="p-3 rounded-xl bg-surface-container-high/40 border border-white/5 flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary text-[20px]">stairs</span>
+<span class="text-body-sm font-body-sm">Stairs &amp; Shaft Identification</span>
+</div>
+<div class="p-3 rounded-xl bg-surface-container-high/40 border border-white/5 flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary text-[20px]">hub</span>
+<span class="text-body-sm font-body-sm">NavGraph Topology Synth</span>
+</div>
+</div>
+</div>
+<!-- Card 5: Heatmap & Footfall Analytics -->
+<div class="rounded-3xl bg-surface-container/60 backdrop-blur-2xl border border-white/10 p-8 shadow-[0_8px_32px_rgba(0,0,0,0.37)] hover:border-primary/40 transition-all duration-300 relative overflow-hidden group">
+<div class="w-12 h-12 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary mb-6">
+<span class="material-symbols-outlined text-[24px]">thermostat</span>
+</div>
+<span class="text-label-sm font-label-sm uppercase tracking-wider text-primary">Pedestrian Telemetry</span>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mt-1 mb-3">Heatmap &amp; Density Analytics</h3>
+<p class="text-body-md font-body-md text-on-surface-variant mb-6">
+          Live pedestrian velocity vectors, dwell-time distributions, and bottleneck detection across corridors and security checkpoints.
+        </p>
+<div class="w-full h-2 rounded-full bg-surface-container-highest overflow-hidden flex">
+<div class="h-full bg-cyan-400 w-1/4"></div>
+<div class="h-full bg-primary w-1/2"></div>
+<div class="h-full bg-tertiary w-1/4"></div>
+</div>
+<div class="flex justify-between text-[10px] font-mono text-outline mt-2">
+<span>Low Density</span>
+<span>Moderate</span>
+<span>Peak Surge</span>
+</div>
+</div>
+<!-- Card 6: Dynamic POI & Tenant Zone Management -->
+<div class="lg:col-span-3 rounded-3xl bg-surface-container/60 backdrop-blur-2xl border border-white/10 p-8 shadow-[0_8px_32px_rgba(0,0,0,0.37)] hover:border-white/20 transition-all duration-300">
+<div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+<div class="max-w-2xl">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-secondary">store</span>
+<span class="text-label-sm font-label-sm uppercase tracking-wider text-secondary">Dynamic Floor Management</span>
+</div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface">Dynamic POI &amp; Multi-Tenant Zone Management</h3>
+<p class="text-body-md font-body-md text-on-surface-variant mt-2">
+              Update tenant directories, trigger seasonal kiosk relocations, configure emergency barricade detours, and publish temporary corridor rerouting instantly without re-rendering maps.
+            </p>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-secondary/40 text-on-surface text-label-md font-label-md flex items-center gap-2 transition-all">
+<span class="material-symbols-outlined text-[18px]">publish</span>
+<span>1-Click Sync to Kiosks</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 5. 'BUILT FOR 5 ROLES' SHOWCASE -->
+<section class="py-24 bg-surface-container-lowest/70 border-t border-outline-variant/20 relative z-10" id="roles">
+<div class="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop">
+<div class="text-center max-w-2xl mx-auto mb-16">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 border border-secondary/20 text-secondary text-label-sm font-label-sm uppercase tracking-wider mb-4">
+          Multi-Stakeholder Architecture
+        </div>
+<h2 class="text-headline-md md:text-headline-lg font-headline-lg text-on-surface">
+          Engineered for every lens of the building ecosystem
+        </h2>
+<p class="text-body-lg font-body-lg text-on-surface-variant mt-3">
+          One continuous spatial graph powering personalized views for passengers, tenants, operators, and executives.
+        </p>
+</div>
+<!-- 5 Role Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+<!-- Role 1: Guest (Cyan) -->
+<div class="rounded-3xl bg-surface-container/60 backdrop-blur-xl border border-white/10 p-6 flex flex-col justify-between hover:border-cyan-400/50 hover:shadow-[0_0_25px_rgba(34,211,238,0.2)] transition-all duration-300 group">
+<div>
+<div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-cyan-400/10 border border-cyan-400/30 text-cyan-400 text-label-sm font-label-sm font-semibold mb-6">
+<span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+              Guest / Visitor
+            </div>
+<h4 class="text-title-lg font-headline-sm text-on-surface mb-2">Zero-App Guest</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant">
+              Frictionless browser-based wayfinding, blue-dot navigation, and search for shops, gates, or restrooms with high-clarity walking cues.
+            </p>
+</div>
+<div class="mt-8 pt-4 border-t border-white/5 flex items-center gap-2 text-cyan-400 text-label-sm font-label-sm">
+<span class="material-symbols-outlined text-[16px]">qr_code</span>
+<span>Scan &amp; Walk in 2s</span>
+</div>
+</div>
+<!-- Role 2: Store Owner / Tenant (Orange) -->
+<div class="rounded-3xl bg-surface-container/60 backdrop-blur-xl border border-white/10 p-6 flex flex-col justify-between hover:border-amber-400/50 hover:shadow-[0_0_25px_rgba(251,146,60,0.2)] transition-all duration-300 group">
+<div>
+<div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-400 text-label-sm font-label-sm font-semibold mb-6">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+              Tenant / Merchant
+            </div>
+<h4 class="text-title-lg font-headline-sm text-on-surface mb-2">Store Owner</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant">
+              Storefront foot-traffic telemetry, targeted beacon promotional triggers, and real-time storefront profile updates.
+            </p>
+</div>
+<div class="mt-8 pt-4 border-t border-white/5 flex items-center gap-2 text-amber-400 text-label-sm font-label-sm">
+<span class="material-symbols-outlined text-[16px]">campaign</span>
+<span>Promotional Beacon Ping</span>
+</div>
+</div>
+<!-- Role 3: Building Manager (Violet) -->
+<div class="rounded-3xl bg-surface-container/60 backdrop-blur-xl border border-white/10 p-6 flex flex-col justify-between hover:border-primary/50 hover:shadow-[0_0_25px_rgba(139,92,246,0.2)] transition-all duration-300 group">
+<div>
+<div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/20 border border-primary/40 text-primary text-label-sm font-label-sm font-semibold mb-6">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+              Operations
+            </div>
+<h4 class="text-title-lg font-headline-sm text-on-surface mb-2">Building Manager</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant">
+              Live corridor congestion alerts, maintenance dispatch routing, and emergency protocol zone clearance verification.
+            </p>
+</div>
+<div class="mt-8 pt-4 border-t border-white/5 flex items-center gap-2 text-primary text-label-sm font-label-sm">
+<span class="material-symbols-outlined text-[16px]">traffic</span>
+<span>Real-time Density Alerts</span>
+</div>
+</div>
+<!-- Role 4: Building Owner / Asset Exec (Emerald) -->
+<div class="rounded-3xl bg-surface-container/60 backdrop-blur-xl border border-white/10 p-6 flex flex-col justify-between hover:border-emerald-400/50 hover:shadow-[0_0_25px_rgba(52,211,153,0.2)] transition-all duration-300 group">
+<div>
+<div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-400/10 border border-emerald-400/30 text-emerald-400 text-label-sm font-label-sm font-semibold mb-6">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              Executive / REIT
+            </div>
+<h4 class="text-title-lg font-headline-sm text-on-surface mb-2">Asset Owner</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant">
+              Lease valuation heatmaps, space utilization KPIs, and peak-hour pedestrian exposure value reports for commercial tenant leasing.
+            </p>
+</div>
+<div class="mt-8 pt-4 border-t border-white/5 flex items-center gap-2 text-emerald-400 text-label-sm font-label-sm">
+<span class="material-symbols-outlined text-[16px]">payments</span>
+<span>Sq Ft Yield Heatmap</span>
+</div>
+</div>
+<!-- Role 5: System Admin (Fuchsia) -->
+<div class="rounded-3xl bg-surface-container/60 backdrop-blur-xl border border-white/10 p-6 flex flex-col justify-between hover:border-tertiary/50 hover:shadow-[0_0_25px_rgba(232,121,249,0.2)] transition-all duration-300 group">
+<div>
+<div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-tertiary/20 border border-tertiary/40 text-tertiary text-label-sm font-label-sm font-semibold mb-6">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+              Engineering
+            </div>
+<h4 class="text-title-lg font-headline-sm text-on-surface mb-2">System Admin</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant">
+              Multi-tenant RBAC, REST/GraphQL spatial APIs, CAD sync webhooks, and 99.99% SLA mission-critical infrastructure control.
+            </p>
+</div>
+<div class="mt-8 pt-4 border-t border-white/5 flex items-center gap-2 text-tertiary text-label-sm font-label-sm">
+<span class="material-symbols-outlined text-[16px]">terminal</span>
+<span>Webhooks &amp; Open SDK</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 6. 'HOW IT WORKS' 3-STEP HORIZONTAL TIMELINE -->
+<section class="py-24 md:py-32 relative z-10 max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop">
+<div class="text-center max-w-2xl mx-auto mb-20">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-label-sm font-label-sm uppercase tracking-wider mb-4">
+        Deployment In Three Steps
+      </div>
+<h2 class="text-headline-md md:text-headline-lg font-headline-lg text-on-surface">
+        From blueprint CAD to live 3D wayfinding in hours
+      </h2>
+<p class="text-body-lg font-body-lg text-on-surface-variant mt-3">
+        No costly physical surveyor teams or prolonged LiDAR scanning needed.
+      </p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+<!-- Step 1 -->
+<div class="rounded-3xl bg-surface-container/60 backdrop-blur-xl border border-white/10 p-8 relative flex flex-col justify-between">
+<div class="text-display-hero font-headline-lg font-bold text-white/[0.07] absolute right-6 top-4 select-none">01</div>
+<div>
+<div class="w-10 h-10 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary mb-6">
+<span class="material-symbols-outlined text-[20px]">cloud_upload</span>
+</div>
+<div class="text-label-sm font-label-sm text-secondary uppercase tracking-wider font-semibold">Step 01</div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mt-1 mb-3">Upload 2D CAD or PDF</h3>
+<p class="text-body-md font-body-md text-on-surface-variant">
+            Drag and drop architectural floor plans. Our semantic vector parser auto-detects structural walls, escalators, elevators, and egress routes.
+          </p>
+</div>
+<div class="mt-8 pt-4 border-t border-white/10 flex items-center gap-2 text-outline text-body-sm font-mono">
+<span>Auto-OCR + Layer Filtering</span>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="rounded-3xl bg-surface-container/60 backdrop-blur-xl border border-primary/30 shadow-[0_0_30px_rgba(139,92,246,0.15)] p-8 relative flex flex-col justify-between">
+<div class="text-display-hero font-headline-lg font-bold text-primary/[0.12] absolute right-6 top-4 select-none">02</div>
+<div>
+<div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-on-primary mb-6 shadow-[0_0_15px_rgba(34,211,238,0.4)]">
+<span class="material-symbols-outlined text-[20px]">psychology</span>
+</div>
+<div class="text-label-sm font-label-sm text-primary uppercase tracking-wider font-semibold">Step 02</div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mt-1 mb-3">AI Generates 3D Navmesh</h3>
+<p class="text-body-md font-body-md text-on-surface-variant">
+            Neural spatial engine establishes traversable graph nodes, vertical multi-floor connectivity shafts, and assigns beacon triangulation points.
+          </p>
+</div>
+<div class="mt-8 pt-4 border-t border-white/10 flex items-center gap-2 text-secondary text-body-sm font-mono">
+<span>A* Graph Network Compiled</span>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="rounded-3xl bg-surface-container/60 backdrop-blur-xl border border-white/10 p-8 relative flex flex-col justify-between">
+<div class="text-display-hero font-headline-lg font-bold text-white/[0.07] absolute right-6 top-4 select-none">03</div>
+<div>
+<div class="w-10 h-10 rounded-xl bg-tertiary/20 border border-tertiary/40 flex items-center justify-center text-tertiary mb-6">
+<span class="material-symbols-outlined text-[20px]">devices</span>
+</div>
+<div class="text-label-sm font-label-sm text-tertiary uppercase tracking-wider font-semibold">Step 03</div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mt-1 mb-3">Publish &amp; Navigate</h3>
+<p class="text-body-md font-body-md text-on-surface-variant">
+            Deploy in minutes via QR signage, freestanding interactive touchscreen kiosks, or embed the responsive WebGL SDK directly into your mobile app.
+          </p>
+</div>
+<div class="mt-8 pt-4 border-t border-white/10 flex items-center gap-2 text-outline text-body-sm font-mono">
+<span>1-Line JS / React Native SDK</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 7. ANALYTICS & TELEMETRY PREVIEW -->
+<section class="py-24 bg-surface-container-low/80 border-t border-outline-variant/20 relative z-10" id="telemetry">
+<div class="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop">
+<div class="flex flex-col lg:flex-row lg:items-end justify-between mb-12 gap-6">
+<div>
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 border border-secondary/20 text-secondary text-label-sm font-label-sm uppercase tracking-wider mb-4">
+            Live Telemetry Console
+          </div>
+<h2 class="text-headline-md md:text-headline-lg font-headline-lg text-on-surface">
+            Command-level situational awareness
+          </h2>
+</div>
+<div class="flex items-center gap-3">
+<span class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface-container border border-white/10 text-xs font-mono text-secondary">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+            Telemetry Stream Live (240 Hz)
+          </span>
+</div>
+</div>
+<!-- KPI Metrics Strip -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+<div class="p-6 rounded-2xl bg-surface-container/60 backdrop-blur-xl border border-white/10">
+<div class="text-label-sm font-label-sm uppercase tracking-wider text-outline">Connected Hubs</div>
+<div class="text-headline-md font-headline-lg text-on-surface mt-1 font-bold">50+ Global</div>
+<div class="text-[11px] text-emerald-400 mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">trending_up</span> +12 this quarter
+          </div>
+</div>
+<div class="p-6 rounded-2xl bg-surface-container/60 backdrop-blur-xl border border-white/10">
+<div class="text-label-sm font-label-sm uppercase tracking-wider text-outline">Monthly Nav Sessions</div>
+<div class="text-headline-md font-headline-lg text-secondary mt-1 font-bold">1.4M+</div>
+<div class="text-[11px] text-secondary mt-1">Zero latency cloud routing</div>
+</div>
+<div class="p-6 rounded-2xl bg-surface-container/60 backdrop-blur-xl border border-white/10">
+<div class="text-label-sm font-label-sm uppercase tracking-wider text-outline">Indoor Accuracy</div>
+<div class="text-headline-md font-headline-lg text-primary mt-1 font-bold">±0.38 m</div>
+<div class="text-[11px] text-primary mt-1">Multi-beacon sensor fusion</div>
+</div>
+<div class="p-6 rounded-2xl bg-surface-container/60 backdrop-blur-xl border border-white/10">
+<div class="text-label-sm font-label-sm uppercase tracking-wider text-outline">Bottleneck Reduction</div>
+<div class="text-headline-md font-headline-lg text-tertiary mt-1 font-bold">42.4%</div>
+<div class="text-[11px] text-tertiary mt-1">Autonomous corridor load-balance</div>
+</div>
+</div>
+<!-- Cinematic Dark Glass Dashboard Window -->
+<div class="rounded-3xl bg-surface-container/70 backdrop-blur-2xl border border-white/15 p-6 md:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
+<!-- Window Title Bar -->
+<div class="flex items-center justify-between pb-6 border-b border-white/10">
+<div class="flex items-center gap-3">
+<div class="flex gap-2">
+<span class="w-3 h-3 rounded-full bg-error/60"></span>
+<span class="w-3 h-3 rounded-full bg-amber-400/60"></span>
+<span class="w-3 h-3 rounded-full bg-emerald-400/60"></span>
+</div>
+<span class="font-mono text-xs text-on-surface-variant font-medium ml-2">Terminal-West_Concourse_Heatmap.view</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-xs text-on-surface-variant font-mono">Floor 02 / Wing C</span>
+<span class="px-2.5 py-1 rounded bg-secondary/15 text-secondary border border-secondary/30 text-[11px] font-mono">LIVE DENSITY</span>
+</div>
+</div>
+<!-- Dashboard Body Mockup -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6 items-center">
+<!-- Heatmap Canvas Area -->
+<div class="lg:col-span-8 rounded-2xl bg-surface-container-lowest/90 border border-white/10 p-6 relative overflow-hidden h-[340px] flex flex-col justify-between">
+<div class="absolute inset-0 bg-spatial-grid opacity-30"></div>
+<!-- Heat Glow Spots -->
+<div class="absolute top-12 left-1/4 w-36 h-36 rounded-full bg-purple-600/30 filter blur-2xl"></div>
+<div class="absolute top-20 right-1/3 w-44 h-44 rounded-full bg-cyan-500/25 filter blur-3xl"></div>
+<div class="absolute bottom-10 left-1/3 w-28 h-28 rounded-full bg-fuchsia-500/35 filter blur-2xl"></div>
+<!-- Vector Blueprint Overlay -->
+<div class="relative z-10 flex justify-between items-start">
+<div class="font-mono text-xs text-secondary">Z-AXIS: 14.8M ELEVATION</div>
+<div class="flex gap-2">
+<span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-mono text-on-surface">GATE 18-24</span>
+<span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-mono text-on-surface">SECURITY CORRIDOR B</span>
+</div>
+</div>
+<!-- Path visualization -->
+<div class="relative z-10 w-full flex items-center justify-center">
+<div class="border border-white/10 rounded-xl p-4 bg-surface-container/60 backdrop-blur-md flex items-center gap-6">
+<div>
+<div class="text-[10px] font-mono text-outline">CURRENT CORRIDOR FLOW</div>
+<div class="text-title-lg font-headline-sm text-on-surface font-bold">1,840 pax / hr</div>
+</div>
+<div class="h-8 w-[1px] bg-white/10"></div>
+<div>
+<div class="text-[10px] font-mono text-outline">TRANSIT VELOCITY</div>
+<div class="text-title-lg font-headline-sm text-secondary font-bold">1.2 m/sec</div>
+</div>
+<div class="h-8 w-[1px] bg-white/10"></div>
+<div>
+<div class="text-[10px] font-mono text-outline">AVG QUEUE DWELL</div>
+<div class="text-title-lg font-headline-sm text-primary font-bold">3.4 min</div>
+</div>
+</div>
+</div>
+<div class="relative z-10 flex justify-between items-end font-mono text-[11px] text-outline">
+<span>SCAN FREQ: 100ms</span>
+<span class="text-emerald-400">OPTIMAL TRAFFIC BALANCE</span>
+</div>
+</div>
+<!-- Side Telemetry Analytics Bar -->
+<div class="lg:col-span-4 flex flex-col gap-4">
+<div class="p-4 rounded-xl bg-surface-container-high/60 border border-white/10">
+<div class="flex justify-between items-center mb-2">
+<span class="text-label-sm font-label-sm uppercase tracking-wider text-outline">Elevator Core Load</span>
+<span class="text-secondary font-mono text-xs font-bold">78%</span>
+</div>
+<div class="w-full bg-surface-container-highest h-2 rounded-full overflow-hidden">
+<div class="bg-gradient-to-r from-primary to-secondary h-full rounded-full" style="width: 78%"></div>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-surface-container-high/60 border border-white/10">
+<div class="flex justify-between items-center mb-2">
+<span class="text-label-sm font-label-sm uppercase tracking-wider text-outline">Retail Concourse Surge</span>
+<span class="text-tertiary font-mono text-xs font-bold">92% (High)</span>
+</div>
+<div class="w-full bg-surface-container-highest h-2 rounded-full overflow-hidden">
+<div class="bg-gradient-to-r from-secondary to-tertiary h-full rounded-full" style="width: 92%"></div>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-surface-container-high/60 border border-white/10">
+<div class="flex justify-between items-center mb-2">
+<span class="text-label-sm font-label-sm uppercase tracking-wider text-outline">Active Beacon Mesh Ping</span>
+<span class="text-emerald-400 font-mono text-xs font-bold">1,480 / 1,480 OK</span>
+</div>
+<div class="w-full bg-surface-container-highest h-2 rounded-full overflow-hidden">
+<div class="bg-emerald-400 h-full rounded-full" style="width: 100%"></div>
+</div>
+</div>
+<button class="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-on-surface font-label-md text-label-md flex items-center justify-center gap-2 transition-all">
+<span class="material-symbols-outlined text-[18px]">file_download</span>
+<span>Export Telemetry Dataset (.CSV / GeoJSON)</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 8. PRICING TIERS -->
+<section class="py-24 md:py-32 relative z-10 max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop" id="pricing">
+<div class="text-center max-w-2xl mx-auto mb-16">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-label-sm font-label-sm uppercase tracking-wider mb-4">
+        Predictable Enterprise Pricing
+      </div>
+<h2 class="text-headline-md md:text-headline-lg font-headline-lg text-on-surface">
+        Scale indoor spatial intelligence effortlessly
+      </h2>
+<p class="text-body-lg font-body-lg text-on-surface-variant mt-3">
+        Transparent tiers based on building footprint with no restrictive per-visitor charges.
+      </p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+<!-- Starter Plan -->
+<div class="rounded-3xl bg-surface-container/50 backdrop-blur-xl border border-white/10 p-8 flex flex-col justify-between hover:border-white/20 transition-all">
+<div>
+<span class="text-label-sm font-label-sm uppercase tracking-wider text-outline font-semibold">Starter</span>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mt-1 mb-2">Regional Facility</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant mb-6">Ideal for standalone malls, local medical clinics, and boutique commercial hubs.</p>
+<div class="flex items-baseline gap-2 mb-6">
+<span class="text-headline-lg font-headline-lg font-bold text-on-surface">$249</span>
+<span class="text-on-surface-variant text-body-sm">/ month billed annually</span>
+</div>
+<div class="space-y-3 pt-6 border-t border-white/10 text-body-sm">
+<div class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check</span>
+<span>Up to 2 Buildings (Max 8 Floors)</span>
+</div>
+<div class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check</span>
+<span>2D CAD &amp; PDF Vector Converter</span>
+</div>
+<div class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check</span>
+<span>Responsive Web Wayfinding</span>
+</div>
+<div class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check</span>
+<span>Standard QR Code Generator</span>
+</div>
+<div class="flex items-center gap-3 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-outline text-[18px]">close</span>
+<span>Live footfall heatmaps</span>
+</div>
+</div>
+</div>
+<button class="w-full mt-8 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-on-surface font-label-md text-label-md transition-all">
+          Select Starter Plan
+        </button>
+</div>
+<!-- Business Plan (POPULAR) -->
+<div class="rounded-3xl bg-surface-container/80 backdrop-blur-2xl border-2 border-primary shadow-[0_0_40px_rgba(139,92,246,0.35)] p-8 flex flex-col justify-between relative transform md:-translate-y-2">
+<div class="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-primary to-secondary text-on-primary text-label-sm font-label-sm font-bold uppercase tracking-wider shadow-[0_0_15px_rgba(93,230,255,0.5)]">
+          Most Popular
+        </div>
+<div>
+<span class="text-label-sm font-label-sm uppercase tracking-wider text-secondary font-semibold">Business</span>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mt-1 mb-2">Multi-Floor Campus</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant mb-6">For international transit terminals, mega-hospitals, and high-density towers.</p>
+<div class="flex items-baseline gap-2 mb-6">
+<span class="text-headline-lg font-headline-lg font-bold text-on-surface">$799</span>
+<span class="text-on-surface-variant text-body-sm">/ month billed annually</span>
+</div>
+<div class="space-y-3 pt-6 border-t border-white/10 text-body-sm">
+<div class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check</span>
+<span>Unlimited Floors &amp; Multi-Wing Complexes</span>
+</div>
+<div class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check</span>
+<span>Live Pedestrian Footfall Heatmaps</span>
+</div>
+<div class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check</span>
+<span>ADA Wheelchair &amp; Elevator Route Engine</span>
+</div>
+<div class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check</span>
+<span>Multi-Tenant Portal &amp; Tenant RBAC</span>
+</div>
+<div class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check</span>
+<span>REST &amp; Webhook Spatial API Access</span>
+</div>
+</div>
+</div>
+<button class="w-full mt-8 py-3.5 rounded-xl bg-gradient-to-r from-primary-container via-primary to-secondary text-on-primary font-label-lg font-semibold shadow-[0_0_20px_rgba(139,92,246,0.5)] hover:shadow-[0_0_30px_rgba(93,230,255,0.7)] transition-all">
+          Deploy Business Pilot
+        </button>
+</div>
+<!-- Enterprise Plan -->
+<div class="rounded-3xl bg-surface-container/50 backdrop-blur-xl border border-white/10 p-8 flex flex-col justify-between hover:border-white/20 transition-all">
+<div>
+<span class="text-label-sm font-label-sm uppercase tracking-wider text-outline font-semibold">Enterprise</span>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mt-1 mb-2">Global Infrastructure</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant mb-6">Transit authorities, hospital networks, and global REIT property portfolios.</p>
+<div class="flex items-baseline gap-2 mb-6">
+<span class="text-headline-lg font-headline-lg font-bold text-on-surface">Custom</span>
+<span class="text-on-surface-variant text-body-sm">tailored SLA</span>
+</div>
+<div class="space-y-3 pt-6 border-t border-white/10 text-body-sm">
+<div class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check</span>
+<span>Multi-Complex Global Campus Network</span>
+</div>
+<div class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check</span>
+<span>Private Cloud or On-Premises Air-Gapped</span>
+</div>
+<div class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check</span>
+<span>Custom BIM / Revit CAD Integration</span>
+</div>
+<div class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check</span>
+<span>24/7 Dedicated Spatial Engineer &amp; 99.99% SLA</span>
+</div>
+</div>
+</div>
+<button class="w-full mt-8 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-on-surface font-label-md text-label-md transition-all">
+          Contact Enterprise Sales
+        </button>
+</div>
+</div>
+</section>
+<!-- 9. AURORA FINAL CTA -->
+<section class="py-20 relative z-10 max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop" id="demo">
+<div class="rounded-3xl relative overflow-hidden p-8 md:p-16 border border-white/20 shadow-[0_20px_80px_rgba(139,92,246,0.35)] bg-gradient-to-r from-surface-container via-surface-container-high to-surface-container">
+<!-- Ambient Backglow -->
+<div class="absolute -top-32 -right-32 w-96 h-96 bg-primary/30 rounded-full filter blur-[80px]"></div>
+<div class="absolute -bottom-32 -left-32 w-96 h-96 bg-secondary/30 rounded-full filter blur-[80px]"></div>
+<div class="relative z-10 max-w-3xl">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-on-surface text-label-sm font-label-sm uppercase tracking-wider mb-6">
+          Ready in Under 48 Hours
+        </div>
+<h2 class="text-headline-md md:text-headline-lg font-headline-lg text-on-surface font-bold tracking-tight">
+          Ready to transform your physical space into an intelligent digital twin?
+        </h2>
+<p class="text-body-lg font-body-lg text-on-surface-variant mt-4 max-w-xl">
+          Bring navigation clarity to millions of visitors while gaining real-time operational density telemetry. Launch your proof of concept today.
+        </p>
+<div class="flex flex-wrap items-center gap-4 mt-8">
+<a class="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-primary to-secondary text-on-primary font-label-lg font-semibold shadow-[0_0_25px_rgba(93,230,255,0.5)] hover:scale-105 transition-all" href="#pricing">
+<span>Deploy Free Proof-of-Concept</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</a>
+<button class="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-on-surface font-label-lg font-medium hover:bg-white/15 transition-all">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+<span>Schedule 30-Min Walkthrough</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- 10. COMPREHENSIVE FOOTER -->
+<footer class="w-full border-t border-outline-variant/20 dark:border-outline-variant/20 bg-surface-container-lowest dark:bg-surface-container-lowest relative z-10">
+<div class="w-full max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop py-space-xl">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
+<!-- Brand Summary -->
+<div class="lg:col-span-2">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-secondary p-[1px]">
+<div class="w-full h-full bg-surface-container-lowest rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-[18px]" style="font-variation-settings: 'FILL' 1;">view_in_ar</span>
+</div>
+</div>
+<span class="text-title-lg font-headline-lg font-bold text-on-surface dark:text-on-surface">SpaceLumi</span>
+</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant max-w-sm">
+            Autonomous indoor spatial intelligence, multi-tenant digital twins, and low-latency pedestrian telemetry for global architectural complexes.
+          </p>
+<div class="flex items-center gap-4 mt-6 text-on-surface-variant">
+<span class="flex items-center gap-1.5 text-xs font-mono">
+<span class="w-2 h-2 rounded-full bg-emerald-400"></span> SOC2 Type II Certified
+            </span>
+<span class="flex items-center gap-1.5 text-xs font-mono">
+<span class="w-2 h-2 rounded-full bg-emerald-400"></span> GDPR / HIPAA Compliant
+            </span>
+</div>
+</div>
+<!-- Links Col 1 -->
+<div>
+<h4 class="text-label-sm font-label-sm uppercase tracking-wider text-outline mb-4">Spatial Engine</h4>
+<ul class="space-y-2.5">
+<li><a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface text-body-sm font-body-sm hover:translate-x-0.5 transition-all inline-block" href="#">3D Mapping Engine</a></li>
+<li><a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface text-body-sm font-body-sm hover:translate-x-0.5 transition-all inline-block" href="#">Indoor Telemetry</a></li>
+<li><a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface text-body-sm font-body-sm hover:translate-x-0.5 transition-all inline-block" href="#">Sensor Nodes</a></li>
+<li><a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface text-body-sm font-body-sm hover:translate-x-0.5 transition-all inline-block" href="#">Floorplan AI Parser</a></li>
+</ul>
+</div>
+<!-- Links Col 2 -->
+<div>
+<h4 class="text-label-sm font-label-sm uppercase tracking-wider text-outline mb-4">Developers &amp; API</h4>
+<ul class="space-y-2.5">
+<li><a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface text-body-sm font-body-sm hover:translate-x-0.5 transition-all inline-block" href="#">API Reference</a></li>
+<li><a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface text-body-sm font-body-sm hover:translate-x-0.5 transition-all inline-block" href="#">WebGL SDK Docs</a></li>
+<li><a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface text-body-sm font-body-sm hover:translate-x-0.5 transition-all inline-block" href="#">Security &amp; Compliance</a></li>
+<li><a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface text-body-sm font-body-sm hover:translate-x-0.5 transition-all inline-block" href="#">Status</a></li>
+</ul>
+</div>
+<!-- Links Col 3 -->
+<div>
+<h4 class="text-label-sm font-label-sm uppercase tracking-wider text-outline mb-4">Governance</h4>
+<ul class="space-y-2.5">
+<li><a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface text-body-sm font-body-sm hover:translate-x-0.5 transition-all inline-block" href="#">Privacy Policy</a></li>
+<li><a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface text-body-sm font-body-sm hover:translate-x-0.5 transition-all inline-block" href="#">Terms of Service</a></li>
+<li><a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface text-body-sm font-body-sm hover:translate-x-0.5 transition-all inline-block" href="#">Subprocessors</a></li>
+<li><a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface text-body-sm font-body-sm hover:translate-x-0.5 transition-all inline-block" href="#">Trust Center</a></li>
+</ul>
+</div>
+</div>
+<div class="pt-8 border-t border-outline-variant/20 flex flex-col sm:flex-row items-center justify-between gap-4 text-body-sm font-body-sm text-outline">
+<div>© 2025 SpaceLumi Spatial Intelligence Inc. All rights reserved.</div>
+<div class="flex items-center gap-6">
+<span class="hover:text-secondary cursor-pointer transition-colors">Global Core: us-east (Virginia)</span>
+<span class="hover:text-secondary cursor-pointer transition-colors">Cluster Uptime 99.998%</span>
+</div>
+</div>
+</div>
+</footer>
+</body></html>

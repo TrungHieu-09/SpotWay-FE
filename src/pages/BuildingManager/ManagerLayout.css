@@ -1,0 +1,163 @@
+/* ============================================================
+   ManagerLayout — Scoped Styles
+   ============================================================ */
+
+.ml-workspace {
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+
+/* ── Main two-column layout ── */
+.ml-layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+/* ── Sidebar ── */
+.ml-sidebar {
+  position: sticky;
+  top: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid var(--sw-border);
+  border-radius: var(--sw-radius-xl);
+  background: var(--sw-surface-1);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: var(--sw-shadow-1);
+  animation: slideInLeft 0.4s ease-out;
+  transition: border-color 0.25s ease;
+}
+
+.ml-sidebar:hover {
+  border-color: var(--sw-border-hover);
+}
+
+/* Sidebar header */
+.ml-sidebar__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--sw-border);
+}
+
+.ml-sidebar__icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(34, 211, 238, 0.1));
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  color: var(--sw-violet);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.ml-sidebar__eyebrow {
+  display: block !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  color: var(--sw-text-secondary) !important;
+  -webkit-text-fill-color: var(--sw-text-secondary) !important;
+  margin-bottom: 2px;
+}
+
+.ml-sidebar__title {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #ffffff, var(--sw-violet));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Section wrapper */
+.ml-sidebar__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ml-sidebar__section-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--sw-text-secondary);
+}
+
+/* Building meta info */
+.ml-sidebar__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--sw-surface-2);
+  border: 1px solid var(--sw-border);
+  border-radius: var(--sw-radius-md);
+  overflow: hidden;
+}
+
+.ml-sidebar__meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--sw-border-subtle);
+}
+
+.ml-sidebar__meta-row:last-child {
+  border-bottom: none;
+}
+
+.ml-sidebar__meta-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sw-text-secondary);
+}
+
+.ml-sidebar__meta-value {
+  font-size: 13px;
+  color: var(--sw-text-primary);
+  font-weight: 500;
+  text-align: right;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Canvas content area ── */
+.ml-content {
+  min-width: 0;
+  animation: fadeInUp 0.5s ease-out 0.1s both;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .ml-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ml-sidebar {
+    position: static;
+  }
+}

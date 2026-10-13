@@ -1,0 +1,279 @@
+/* ============================================================
+   SpotWay — Component Styles
+   Cards, Tables, Canvas, Floor Selector, Upload, POI
+   ============================================================ */
+
+/* ---- Glass Panel Card ---- */
+.tool-card {
+  border: 1px solid var(--sw-border) !important;
+  border-radius: var(--sw-radius-xl) !important;
+  background: var(--sw-surface-1) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: var(--sw-shadow-1);
+  transition:
+    border-color var(--sw-transition-normal),
+    box-shadow var(--sw-transition-normal),
+    transform var(--sw-transition-fast);
+  overflow: hidden;
+}
+
+.tool-card:hover {
+  border-color: var(--sw-border-hover) !important;
+  box-shadow: var(--sw-shadow-2);
+}
+
+.tool-card .ant-card-head {
+  background: transparent !important;
+  border-bottom: 1px solid var(--sw-border);
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  color: var(--sw-text-primary);
+  padding: 16px 24px;
+  min-height: auto;
+}
+
+.tool-card .ant-card-head-title {
+  color: var(--sw-text-primary) !important;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.tool-card .ant-card-body {
+  background: transparent !important;
+  color: var(--sw-text-primary);
+  padding: 24px;
+}
+
+/* ---- Upload ---- */
+.upload-icon {
+  margin: 0;
+  color: var(--sw-violet);
+  font-size: 28px;
+}
+
+.upload-card-trigger {
+  display: grid;
+  gap: 8px;
+  place-items: center;
+  color: var(--sw-violet);
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 500;
+}
+
+.plan-preview {
+  display: block;
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  margin: 0 0 16px;
+  border: 1px solid var(--sw-border);
+  border-radius: var(--sw-radius-md);
+  background: var(--sw-surface-2);
+}
+
+/* ---- Table Thumbnails ---- */
+.table-thumb {
+  width: 58px;
+  height: 42px;
+  object-fit: cover;
+  border: 1px solid var(--sw-border);
+  border-radius: 8px;
+  background: var(--sw-surface-2);
+  transition: border-color var(--sw-transition-fast);
+}
+
+.table-thumb:hover {
+  border-color: var(--sw-border-active);
+}
+
+.table-thumb-placeholder {
+  display: inline-block;
+  background: var(--sw-surface-2);
+}
+
+/* ---- Floor Selector ---- */
+.floor-selector {
+  display: grid;
+  gap: 12px;
+}
+
+.floor-selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.floor-list-item {
+  cursor: pointer;
+  align-items: center !important;
+  padding: 12px 14px !important;
+  border: 1px solid var(--sw-border) !important;
+  border-radius: var(--sw-radius-md);
+  margin-bottom: 8px;
+  background: var(--sw-surface-2);
+  transition:
+    border-color var(--sw-transition-normal),
+    background var(--sw-transition-normal),
+    box-shadow var(--sw-transition-normal),
+    transform var(--sw-transition-fast);
+}
+
+.floor-list-main {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.floor-list-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.floor-list-item:hover {
+  border-color: rgba(139, 92, 246, 0.4) !important;
+  background: rgba(139, 92, 246, 0.08);
+  box-shadow: var(--sw-glow-inner);
+  transform: translateX(4px);
+}
+
+.floor-list-item-active {
+  border-color: var(--sw-violet) !important;
+  background: rgba(139, 92, 246, 0.12) !important;
+  box-shadow:
+    inset 0 0 20px 0 rgba(139, 92, 246, 0.1),
+    0 0 16px rgba(139, 92, 246, 0.15);
+}
+
+.floor-list-item-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 25%;
+  height: 50%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--sw-violet), var(--sw-cyan));
+}
+
+/* ---- Canvas Area ---- */
+.canvas-card .ant-card-body {
+  padding: 16px;
+}
+
+.canvas-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 20px;
+  align-items: start;
+}
+
+.canvas-shell {
+  min-height: 520px;
+}
+
+.canvas-shell-empty {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--sw-border);
+  border-radius: var(--sw-radius-md);
+  background: var(--sw-surface-2);
+}
+
+.canvas-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: var(--sw-text-primary);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.canvas-toolbar div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.canvas-toolbar span {
+  color: var(--sw-text-secondary);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.canvas-alert {
+  margin-bottom: 12px;
+}
+
+.canvas-draft-note {
+  display: block;
+  margin-top: 10px;
+}
+
+.stage-host {
+  display: flex;
+  width: 100%;
+  min-height: 520px;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.stage-wrap {
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--sw-border);
+  border-radius: var(--sw-radius-md);
+  background:
+    linear-gradient(45deg, rgba(18, 18, 42, 0.5) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(18, 18, 42, 0.5) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(18, 18, 42, 0.5) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(18, 18, 42, 0.5) 75%);
+  background-color: var(--sw-canvas);
+  background-position:
+    0 0,
+    0 10px,
+    10px -10px,
+    -10px 0;
+  background-size: 20px 20px;
+  transition: border-color var(--sw-transition-normal);
+}
+
+.stage-wrap:hover {
+  border-color: var(--sw-border-hover);
+}
+
+.stage-empty {
+  display: grid;
+  width: 100%;
+  min-height: 520px;
+  place-items: center;
+  border: 1px dashed var(--sw-border);
+  border-radius: var(--sw-radius-md);
+  background: var(--sw-surface-2);
+}
+
+/* ---- POI Card ---- */
+.poi-card .ant-list-item {
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 760px) {
+  .canvas-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .canvas-toolbar,
+  .canvas-toolbar div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
