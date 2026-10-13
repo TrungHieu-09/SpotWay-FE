@@ -1,8 +1,8 @@
-/* oxlint-disable react/set-state-in-effect react-hooks/exhaustive-deps */
+/* oxlint-disable react/set-state-in-effect react-hooks/exhaustive-deps react/immutability */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Empty, Segmented, Space, Spin, Switch, Typography } from 'antd'
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
-import { Html, Line, OrbitControls, Text } from '@react-three/drei'
+import { Html, Line, OrbitControls } from '@react-three/drei'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import * as THREE from 'three'
 import type { Floor } from '../../types/floor'
@@ -10,7 +10,11 @@ import type { FloorGeometry, Point, Room, RoomType } from '../../types/geometry'
 import type { Node } from '../../types/node'
 import type { Poi, PoiType } from '../../types/poi'
 import type { RouteResult } from '../../types/route'
-import { toWorld, type WorldCoordinate } from '../../utils/worldCoordinates'
+import {
+  logWorldCoordinateCheck,
+  toWorld,
+  type WorldCoordinate,
+} from '../../utils/worldCoordinates'
 
 const { Text: AntText } = Typography
 
@@ -99,9 +103,9 @@ function makeShape(room: Room, geometry: FloorGeometry) {
   room.polygon.forEach((point, index) => {
     const worldPoint = toWorld(point.x, point.y, geometry)
     if (index === 0) {
-      shape.moveTo(worldPoint.x, worldPoint.z)
+      shape.moveTo(worldPoint.x, -worldPoint.z)
     } else {
-      shape.lineTo(worldPoint.x, worldPoint.z)
+      shape.lineTo(worldPoint.x, -worldPoint.z)
     }
   })
   shape.closePath()
@@ -140,12 +144,52 @@ function FloorTextureMesh({ src, geometry, elevation }: {
   elevation: number
 }) {
   const texture = useLoader(THREE.TextureLoader, src)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.flipY = true
+  texture.wrapS = THREE.ClampToEdgeWrapping
+  texture.wrapT = THREE.ClampToEdgeWrapping
 
   return (
     <mesh position={[0, elevation - 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
       <planeGeometry args={[geometry.realWidthM, geometry.realHeightM]} />
       <meshBasicMaterial map={texture} transparent opacity={0.92} />
     </mesh>
+  )
+}
+
+function RoomLabel({
+  room,
+  geometry,
+  elevation,
+}: {
+  room: Room
+  geometry: FloorGeometry
+  elevation: number
+}) {
+  const { camera } = useThree()
+  const [visible, setVisible] = useState(true)
+  const center = useMemo(() => roomCenter(room), [room])
+  const centerWorld = toWorld(center.x, center.y, geometry, elevation + 0.18)
+
+  useFrame(() => {
+    const distance = camera.position.distanceTo(
+      new THREE.Vector3(centerWorld.x, centerWorld.y, centerWorld.z),
+    )
+    setVisible(distance < 72)
+  })
+
+  if (!visible) {
+    return null
+  }
+
+  return (
+    <Html
+      center
+      distanceFactor={30}
+      position={[centerWorld.x, centerWorld.y + 0.34, centerWorld.z]}
+    >
+      <span className="map3d-label map3d-room-label">{room.name}</span>
+    </Html>
   )
 }
 
@@ -179,8 +223,6 @@ function RoomMesh({ room, geometry, elevation }: {
   elevation: number
 }) {
   const shape = useMemo(() => makeShape(room, geometry), [geometry, room])
-  const center = useMemo(() => roomCenter(room), [room])
-  const centerWorld = toWorld(center.x, center.y, geometry, elevation + 0.08)
 
   return (
     <group>
@@ -214,16 +256,7 @@ function RoomMesh({ room, geometry, elevation }: {
           </mesh>
         )
       })}
-      <Text
-        position={[centerWorld.x, centerWorld.y + 0.04, centerWorld.z]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        fontSize={0.9}
-        color="#111827"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {room.name}
-      </Text>
+      <RoomLabel room={room} geometry={geometry} elevation={elevation} />
     </group>
   )
 }
@@ -385,11 +418,37 @@ function CameraRig({
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
   const { camera } = useThree()
 
-  function resetCamera() {
+  function getDefaultCameraPose() {
     const width = selectedGeometry?.realWidthM ?? 60
     const height = selectedGeometry?.realHeightM ?? 38
-    camera.position.set(0, Math.max(width, height) * 0.74, height * 0.72)
-    controlsRef.current?.target.set(0, 0, 0)
+    const fov = THREE.MathUtils.degToRad(
+      'fov' in camera && typeof camera.fov === 'number' ? camera.fov : 48,
+    )
+    const radius = Math.hypot(width, height) / 2
+    const distance = (radius / Math.sin(fov / 2)) * 1.08
+    const tiltFromGround = THREE.MathUtils.degToRad(56)
+    const horizontalDistance = distance * Math.cos(tiltFromGround)
+
+    return {
+      distance,
+      position: new THREE.Vector3(
+        0,
+        distance * Math.sin(tiltFromGround),
+        horizontalDistance,
+      ),
+      target: new THREE.Vector3(0, 0, 0),
+    }
+  }
+
+  function resetCamera() {
+    const pose = getDefaultCameraPose()
+    camera.position.copy(pose.position)
+    if ('near' in camera && 'far' in camera) {
+      camera.near = Math.max(0.1, pose.distance / 200)
+      camera.far = Math.max(500, pose.distance * 5)
+      camera.updateProjectionMatrix()
+    }
+    controlsRef.current?.target.copy(pose.target)
     controlsRef.current?.update()
   }
 
@@ -417,7 +476,7 @@ function CameraRig({
       maxPolarAngle={Math.PI * 0.48}
       minPolarAngle={Math.PI * 0.12}
       minDistance={8}
-      maxDistance={95}
+      maxDistance={Math.max(95, getDefaultCameraPose().distance * 1.8)}
       mouseButtons={{
         LEFT: THREE.MOUSE.ROTATE,
         MIDDLE: THREE.MOUSE.DOLLY,
@@ -441,6 +500,7 @@ function Map3DScene({
   const selectedGeometry = selectedFloorId
     ? geometriesByFloorId[selectedFloorId]
     : undefined
+  const selectedFloor = floors.find((floor) => floor.id === selectedFloorId)
   const visibleFloors = stacked
     ? floors
     : floors.filter((floor) => floor.id === selectedFloorId)
@@ -448,6 +508,26 @@ function Map3DScene({
     0,
     floors.findIndex((floor) => floor.id === selectedFloorId),
   )
+
+  useEffect(() => {
+    if (!selectedGeometry || !selectedFloor) {
+      return
+    }
+
+    const samplePoi =
+      selectedFloor.pois.find((poi) => poi.name === 'Main Entrance') ??
+      selectedFloor.pois[0]
+    logWorldCoordinateCheck(
+      selectedGeometry,
+      samplePoi
+        ? {
+            label: samplePoi.name,
+            x: samplePoi.x,
+            y: samplePoi.y,
+          }
+        : undefined,
+    )
+  }, [selectedFloor?.id, selectedGeometry?.floorId])
 
   return (
     <>

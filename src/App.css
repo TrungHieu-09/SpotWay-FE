@@ -753,6 +753,10 @@
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
 }
 
+.map3d-room-label {
+  background: rgba(255, 255, 255, 0.78);
+}
+
 @media (max-width: 900px) {
   .home-role-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
