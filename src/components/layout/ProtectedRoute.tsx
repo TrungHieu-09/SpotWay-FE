@@ -8,19 +8,19 @@ export type AppRole =
   | 'admin'
 
 const defaultRouteByRole: Record<AppRole, string> = {
-  guest: '/owner/buildings',
-  store_owner: '/owner/buildings',
+  guest: '/login',
+  store_owner: '/login',
   building_manager: '/manager',
   building_owner: '/owner/buildings',
   admin: '/owner/buildings',
 }
 
 export function getDemoRole(): AppRole {
-  const storedRole = window.localStorage.getItem('demoRole') as AppRole | null
+  const storedRole = window.localStorage.getItem('spotway.role') as AppRole | null
   return (
     storedRole ??
     (import.meta.env.VITE_DEMO_ROLE as AppRole | undefined) ??
-    'building_owner'
+    'guest'
   )
 }
 

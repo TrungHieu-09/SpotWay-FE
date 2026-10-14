@@ -5,10 +5,12 @@ import { BuildingDetailPage } from '../pages/BuildingOwner/BuildingDetailPage'
 import { BuildingListPage } from '../pages/BuildingOwner/BuildingListPage'
 import { ManagerLayout } from '../pages/BuildingManager/ManagerLayout'
 import { LandingPage } from '../pages/Landing/LandingPage'
+import { LoginPage } from '../pages/Landing/LoginPage'
 
 export const router = createBrowserRouter([
   // ── Landing page (no layout wrapper) ──
   { path: '/', element: <LandingPage /> },
+  { path: '/login', element: <LoginPage /> },
 
   // ── App shell with sticky header & role switcher ──
   {
