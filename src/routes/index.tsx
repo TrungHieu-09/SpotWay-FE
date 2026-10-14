@@ -3,6 +3,7 @@ import { AppLayout } from '../components/layout/AppLayout'
 import { ProtectedRoute } from '../components/layout/ProtectedRoute'
 import { BuildingDetailPage } from '../pages/BuildingOwner/BuildingDetailPage'
 import { BuildingListPage } from '../pages/BuildingOwner/BuildingListPage'
+import { BuildingOverviewPage } from '../pages/BuildingOwner/BuildingOverviewPage'
 import { ManagerLayout } from '../pages/BuildingManager/ManagerLayout'
 import { LandingPage } from '../pages/Landing/LandingPage'
 import { LoginPage } from '../pages/Landing/LoginPage'
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
             path: 'owner/buildings/:buildingId',
             element: <BuildingDetailPage />,
           },
+          { path: 'owner/buildings/:buildingId/overview', element: <BuildingOverviewPage /> },
         ],
       },
       {

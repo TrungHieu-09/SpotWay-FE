@@ -12,6 +12,7 @@ import {
   EnvironmentOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
+  EyeOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getFloors } from '../../api/floors'
@@ -79,6 +80,7 @@ export function BuildingDetailPage() {
             {building?.name ?? 'Building detail'}
           </h1>
         </div>
+        {buildingId ? <Button icon={<EyeOutlined />} onClick={() => navigate(`/owner/buildings/${buildingId}/overview`)}>Tổng quan 2.5D</Button> : null}
         {building && <StatusPill status={building.status} />}
       </section>
 

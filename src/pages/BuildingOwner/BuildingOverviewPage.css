@@ -1,0 +1,3 @@
+.overview-workspace { min-height: 100vh; }
+.overview-card { margin-top: 16px; }
+.overview-scene { height: min(70vh, 720px); min-height: 480px; overflow: hidden; border-radius: 8px; }
