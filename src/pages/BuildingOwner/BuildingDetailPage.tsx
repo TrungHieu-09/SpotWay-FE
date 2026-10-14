@@ -2,12 +2,9 @@ import { useEffect, useState } from 'react'
 import {
   App as AntApp,
   Button,
-  Descriptions,
   Empty,
   Image,
   Spin,
-  Tag,
-  Typography,
 } from 'antd'
 import {
   ArrowLeftOutlined,
@@ -22,8 +19,6 @@ import { useBuildingStore } from '../../store/useBuildingStore'
 import type { Floor } from '../../types/floor'
 import { GlassCard, StatusPill } from '../../components/ui'
 import './BuildingDetailPage.css'
-
-const { Text } = Typography
 
 export function BuildingDetailPage() {
   const { buildingId } = useParams<{ buildingId: string }>()

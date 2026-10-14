@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { App as AntApp, Button, Space } from 'antd'
+import { App as AntApp, Button } from 'antd'
 import {
   ApartmentOutlined,
   EditOutlined,

@@ -18,7 +18,7 @@ async function enableMocking() {
   const { resetMockStorage } = await import('./mocks/persist')
   window.__resetMock = resetMockStorage
 
-  if (import.meta.env.VITE_ENABLE_MSW === 'false') {
+  if (import.meta.env.VITE_ENABLE_MSW !== 'true') {
     return
   }
 

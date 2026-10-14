@@ -2,6 +2,7 @@ export type PoiType = 'entrance' | 'shop' | 'service' | 'custom'
 
 export type Poi = {
   id: string
+  nodeId?: string
   floorId: string
   name: string
   type: PoiType
