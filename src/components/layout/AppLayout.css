@@ -146,6 +146,8 @@
   color: var(--sw-cyan);
 }
 
+.header-actions { display: inline-flex; align-items: center; gap: 10px; }
+
 @media (max-width: 600px) {
   .app-header {
     padding: 0 16px;
