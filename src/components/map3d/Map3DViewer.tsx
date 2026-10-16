@@ -6,7 +6,7 @@ import { Html, Line, OrbitControls } from '@react-three/drei'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import * as THREE from 'three'
 import type { Floor } from '../../types/floor'
-import type { FloorGeometry, Point, Room, RoomType } from '../../types/geometry'
+import type { FloorGeometry, Point, Room } from '../../types/geometry'
 import type { Node } from '../../types/node'
 import type { Poi, PoiType } from '../../types/poi'
 import type { RouteResult } from '../../types/route'
@@ -15,7 +15,7 @@ import {
   toWorld,
   type WorldCoordinate,
 } from '../../utils/worldCoordinates'
-import { designTokens } from '../../theme/theme'
+import { designTokens, mapTokens } from '../../theme/theme'
 
 const { Text: AntText } = Typography
 
@@ -50,27 +50,6 @@ type FloorSceneProps = {
   isSelected: boolean
   stacked: boolean
   onSelectFloor?: (floorId: string) => void
-}
-
-const roomColorByType: Record<RoomType, string> = {
-  store: designTokens.blue400,
-  corridor: designTokens.surfaceMuted,
-  atrium: designTokens.gold100,
-  office: designTokens.blue300,
-  toilet: designTokens.blue200,
-  service: designTokens.successBg,
-  other: designTokens.border,
-}
-
-const poiColorByType: Record<PoiType, string> = {
-  entrance: designTokens.blue600,
-  shop: designTokens.blue500,
-  store: designTokens.blue500,
-  service: designTokens.success,
-  elevator: designTokens.warning,
-  toilet: designTokens.blue700,
-  exit: designTokens.danger,
-  custom: designTokens.ink500,
 }
 
 function hasWebGL() {
@@ -258,7 +237,7 @@ function RoomMesh({ room, geometry, elevation }: {
       >
         <shapeGeometry args={[shape]} />
         <meshStandardMaterial
-          color={roomColorByType[room.type]}
+          color={mapTokens.roomStroke[room.type]}
           transparent
           opacity={0.34}
           roughness={0.72}
@@ -308,11 +287,11 @@ function PoiPin({ poi, geometry, elevation }: {
     <group position={[world.x, world.y, world.z]}>
       <mesh position={[0, 0.85, 0]} rotation={[Math.PI, 0, 0]}>
         <coneGeometry args={[0.24, 0.78, 18]} />
-        <meshStandardMaterial color={poiColorByType[poi.type]} />
+        <meshStandardMaterial color={mapTokens.poi[poi.type]} />
       </mesh>
       <mesh position={[0, 1.32, 0]}>
         <sphereGeometry args={[0.32, 24, 16]} />
-        <meshStandardMaterial color={poiColorByType[poi.type]} />
+        <meshStandardMaterial color={mapTokens.poi[poi.type]} />
       </mesh>
       <Html center distanceFactor={18} position={[0, 1.9, 0]}>
         <span className="map3d-label">{poi.name}</span>

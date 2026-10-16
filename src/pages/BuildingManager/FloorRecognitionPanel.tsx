@@ -51,7 +51,7 @@ import {
   runSyntheticPlanRecognitionCheck,
   type PlanRecognitionParams,
 } from '../../utils/planRecognition'
-import { designTokens } from '../../theme/theme'
+import { designTokens, mapTokens } from '../../theme/theme'
 
 const { Text: AntText } = Typography
 
@@ -82,26 +82,6 @@ const roomTypeOptions: { value: RoomType; label: string }[] = [
   { value: 'service', label: 'Dịch vụ' },
   { value: 'other', label: 'Khác' },
 ]
-
-const roomFillByType: Record<RoomType, string> = {
-  store: 'rgba(37, 99, 235, 0.18)',
-  corridor: 'rgba(148, 163, 184, 0.18)',
-  atrium: 'rgba(245, 158, 11, 0.2)',
-  office: 'rgba(14, 165, 233, 0.18)',
-  toilet: 'rgba(124, 58, 237, 0.18)',
-  service: 'rgba(22, 163, 74, 0.18)',
-  other: 'rgba(100, 116, 139, 0.16)',
-}
-
-const roomStrokeByType: Record<RoomType, string> = {
-  store: designTokens.blue600,
-  corridor: designTokens.ink500,
-  atrium: designTokens.warning,
-  office: designTokens.blue600,
-  toilet: designTokens.blue700,
-  service: designTokens.success,
-  other: designTokens.ink700,
-}
 
 function useImage(src?: string | null) {
   const [image, setImage] = useState<HTMLImageElement | null>(null)
@@ -938,8 +918,8 @@ export function FloorRecognitionPanel({
                             stageSize.width,
                             stageSize.height,
                           )}
-                          fill={roomFillByType[room.type]}
-                          stroke={isSelected ? designTokens.danger : roomStrokeByType[room.type]}
+                          fill={mapTokens.roomFill[room.type]}
+                          stroke={isSelected ? designTokens.danger : mapTokens.roomStroke[room.type]}
                           strokeWidth={isSelected ? 3 : 2}
                           onClick={() => {
                             setSelectedRoomId(room.id)

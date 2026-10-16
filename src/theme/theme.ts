@@ -57,3 +57,38 @@ export const appTheme: ThemeConfig = {
     Modal: { titleFontSize: 20 },
   },
 }
+
+export const mapTokens = {
+  background: designTokens.blue25,
+  floor: designTokens.blue100,
+  roomOverlay: 'rgba(255, 255, 255, 0.12)',
+  roomFill: {
+    store: 'rgba(227, 239, 250, 0.86)',
+    corridor: 'rgba(248, 251, 254, 0.92)',
+    atrium: 'rgba(230, 244, 239, 0.88)',
+    office: 'rgba(203, 224, 244, 0.72)',
+    toilet: 'rgba(238, 245, 251, 0.9)',
+    service: 'rgba(245, 239, 225, 0.88)',
+    other: 'rgba(220, 231, 241, 0.76)',
+  },
+  roomStroke: {
+    store: designTokens.blue600,
+    corridor: designTokens.blue300,
+    atrium: designTokens.success,
+    office: designTokens.blue500,
+    toilet: designTokens.blue700,
+    service: designTokens.gold500,
+    other: designTokens.ink500,
+  },
+  poi: {
+    entrance: designTokens.blue600,
+    shop: designTokens.blue500,
+    store: designTokens.blue500,
+    service: designTokens.success,
+    elevator: designTokens.warning,
+    toilet: designTokens.blue700,
+    exit: designTokens.danger,
+    custom: designTokens.ink500,
+  },
+  route: designTokens.blue800,
+} as const

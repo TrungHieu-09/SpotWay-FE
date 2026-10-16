@@ -19,7 +19,7 @@ import type { RouteResult } from '../../types/route'
 import type { Destination } from '../../types/route'
 import type { Store } from '../../types/store'
 import { percentToPixel } from '../../utils/canvasCoordinates'
-import { designTokens } from '../../theme/theme'
+import { designTokens, mapTokens } from '../../theme/theme'
 
 const { Text: AntText } = Typography
 
@@ -127,17 +127,7 @@ function roomCenter(room: Room): Point {
 }
 
 function poiColor(type: PoiType) {
-  const colorByType: Record<PoiType, string> = {
-    entrance: designTokens.blue600,
-    shop: designTokens.blue500,
-    store: designTokens.blue500,
-    service: designTokens.success,
-    elevator: designTokens.warning,
-    toilet: designTokens.blue700,
-    exit: designTokens.danger,
-    custom: designTokens.ink500,
-  }
-  return colorByType[type]
+  return mapTokens.poi[type]
 }
 
 function poiIcon(type: PoiType) {
@@ -408,7 +398,7 @@ export function MapViewer2D({
                       <Line
                         points={points}
                         closed
-                        fill="rgba(255,255,255,0.12)"
+                        fill={mapTokens.roomOverlay}
                         stroke={designTokens.ink700}
                         strokeWidth={1.5 / totalScale}
                       />
