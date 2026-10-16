@@ -46,7 +46,7 @@ export const initialStoresSeed: Store[] = [
   },
   {
     id: 'store-2',
-    ownerUserId: 'user-green',
+    ownerUserId: 'user-bep',
     buildingId: 'bldg-1',
     floorId: 'floor-1',
     name: 'Bep Saigon',
@@ -104,7 +104,7 @@ type StoredStore = Omit<Store, 'ownerUserId' | 'buildingId'> &
 
 const legacyOwnerByStoreId: Record<string, string | null> = {
   'store-1': 'user-lumi',
-  'store-2': 'user-green',
+  'store-2': 'user-bep',
   'store-3': null,
   'store-4': 'user-green',
   'store-5': 'user-lumi',

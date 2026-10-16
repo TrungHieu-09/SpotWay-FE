@@ -1,3 +1,5 @@
+import type { Area } from './area'
+
 export type Role = 'admin' | 'building_owner' | 'building_manager' | 'store_owner'
 
 export type UserStatus = 'active' | 'locked'
@@ -10,6 +12,9 @@ export type User = {
   role: Role
   name: string
   email: string
+  areaIds?: string[]
+  createdByUserId: string | null
+  mustChangePassword: boolean
   status: UserStatus
   createdAt: string
 }
@@ -28,7 +33,8 @@ export type Plan = {
   id: string
   name: string
   maxBuildings: number
-  maxStaff: number
+  maxManagers: number
+  maxStoreOwners: number
   priceVnd: number
   durationMonths: number
 }
@@ -46,6 +52,7 @@ export type Invoice = {
 export type AuthUser = Omit<User, 'status'> & {
   status: UserStatus
   tenant: Tenant | null
+  areas?: Area[]
 }
 
 export type LoginResponse = {
@@ -63,7 +70,9 @@ export type TenantOverview = {
   plan: Plan
   usage: {
     buildings: number
-    staff: number
+    areas: number
+    managers: number
+    storeOwners: number
     floors: number
     publishedFloors: number
     stores: number

@@ -11,6 +11,7 @@ import {
   tenants,
   users,
 } from './data/auth.mock'
+import { areas } from './data/areas.mock'
 import { MOCK_STORAGE_KEYS, saveToStorage } from './persist'
 import { buildRoute, getDestinations } from './routeEngine'
 import type { Building, CreateBuildingFloorPayload } from '../types/building'
@@ -34,15 +35,18 @@ import type {
 } from '../types/store'
 import type { FloorGeometry, Point, Room } from '../types/geometry'
 import type { Role, User } from '../types/auth'
+import type { Area } from '../types/area'
+import { PERMISSIONS } from '../auth/permissions'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api'
+const resetTokens = new Map<string, string>()
 
 function endpoint(path: string) {
   return `${API_BASE}${path}`
 }
 
 type AuthContext = {
-  user: User
+  user: (typeof users)[number]
   tenant: (typeof tenants)[number] | null
 }
 
@@ -82,20 +86,25 @@ function getAuth(request: Request): AuthContext | null {
   }
 }
 
-function publicUser(user: User) {
+function publicUser(user: (typeof users)[number]) {
   const { password: _password, ...safeUser } = user as User & { password?: string }
   return safeUser
 }
 
-function authUser(auth: AuthContext) {
-  return { ...publicUser(auth.user), tenant: auth.tenant }
+function isValidPassword(password: string | undefined) {
+  return typeof password === 'string' && /^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(password)
 }
 
-function makeToken(userId: string, role: Role, tenantId: string | null) {
+function authUser(auth: AuthContext) {
+  return { ...publicUser(auth.user), tenant: auth.tenant, areas: areas.filter((area) => auth.user.areaIds?.includes(area.id)) }
+}
+
+function makeToken(userId: string, role: Role, tenantId: string | null, areaIds: string[] = []) {
   return btoa(JSON.stringify({
     userId,
     role,
     tenantId,
+    areaIds,
     exp: Math.floor(Date.now() / 1000) + 8 * 60 * 60,
   }))
     .replace(/\+/g, '-')
@@ -178,9 +187,13 @@ function canManageTenantResource(request: Request, tenantId: string, roles: Role
 
 function canManageFloor(request: Request, floor: Floor) {
   const building = buildings.find((item) => item.id === floor.buildingId)
-  return building
-    ? canManageTenantResource(request, building.tenantId, ['building_owner', 'building_manager'])
-    : { response: apiError('NOT_FOUND', 'Không tìm thấy tòa nhà.', 404) }
+  if (!building) return { response: apiError('NOT_FOUND', 'Không tìm thấy tòa nhà.', 404) }
+  const access = canManageTenantResource(request, building.tenantId, ['building_owner', 'building_manager'])
+  if ('response' in access) return access
+  if (access.auth.user.role === 'building_manager' && (!floor.areaId || !access.auth.user.areaIds?.includes(floor.areaId))) {
+    return { response: apiError('FORBIDDEN', 'Bạn chỉ được chỉnh sửa tầng thuộc khu vực được gán.', 403) }
+  }
+  return access
 }
 
 function tenantOverview(tenantId: string) {
@@ -193,7 +206,9 @@ function tenantOverview(tenantId: string) {
     plan,
     usage: {
       buildings: tenantBuildings.length,
-      staff: users.filter((user) => user.tenantId === tenantId && user.role !== 'building_owner' && user.role !== 'admin').length,
+      areas: areas.filter((area) => area.tenantId === tenantId).length,
+      managers: users.filter((user) => user.tenantId === tenantId && user.role === 'building_manager').length,
+      storeOwners: users.filter((user) => user.tenantId === tenantId && user.role === 'store_owner').length,
       floors: tenantFloors.length,
       publishedFloors: tenantFloors.filter((floor) => floor.publishStatus === 'published').length,
       stores: stores.filter((store) => tenantBuildings.some((building) => building.id === store.buildingId)).length,
@@ -221,6 +236,7 @@ function makeFloor(payload: CreateFloorPayload): Floor {
   return {
     id: `floor-${crypto.randomUUID()}`,
     buildingId: payload.buildingId,
+    areaId: payload.areaId ?? null,
     name: payload.name,
     level: payload.level,
     publishStatus: payload.publishStatus ?? 'draft',
@@ -712,7 +728,7 @@ export const handlers = [
       return apiError('ACCOUNT_LOCKED', 'Tài khoản đang bị khóa.', 403)
     }
     return HttpResponse.json({
-      token: makeToken(user.id, user.role, user.tenantId),
+      token: makeToken(user.id, user.role, user.tenantId, user.areaIds ?? []),
       user: authUser({
         user,
         tenant: user.tenantId ? tenants.find((item) => item.id === user.tenantId) ?? null : null,
@@ -732,6 +748,42 @@ export const handlers = [
   http.post(endpoint('/auth/logout'), async () => {
     await delay(50)
     return HttpResponse.json({ ok: true })
+  }),
+
+  http.post(endpoint('/auth/change-password'), async ({ request }) => {
+    const access = requireAccess(request, ['admin', 'building_owner', 'building_manager', 'store_owner'])
+    if ('response' in access) return access.response
+    const payload = (await request.json()) as { currentPassword?: string; newPassword?: string }
+    const newPassword = payload.newPassword ?? ''
+    if (!isValidPassword(newPassword)) return apiError('INVALID_PASSWORD', 'Mật khẩu mới phải có tối thiểu 8 ký tự, gồm chữ và số.', 400)
+    if (!access.auth.user.mustChangePassword && payload.currentPassword !== access.auth.user.password) return apiError('INVALID_CREDENTIALS', 'Mật khẩu hiện tại không đúng.', 401)
+    access.auth.user.password = newPassword
+    access.auth.user.mustChangePassword = false
+    saveToStorage(MOCK_STORAGE_KEYS.users, users)
+    return HttpResponse.json(authUser(access.auth))
+  }),
+
+  http.post(endpoint('/auth/forgot-password'), async ({ request }) => {
+    const payload = (await request.json()) as { email?: string }
+    const user = users.find((item) => item.email.toLowerCase() === payload.email?.trim().toLowerCase())
+    if (!user) return HttpResponse.json({ message: 'Nếu email tồn tại, mã đặt lại đã được tạo.' })
+    const token = `reset-${crypto.randomUUID()}`
+    resetTokens.set(token, user.id)
+    return HttpResponse.json({ message: 'Mã đặt lại đã được tạo trong chế độ demo.', resetToken: token })
+  }),
+
+  http.post(endpoint('/auth/reset-password'), async ({ request }) => {
+    const payload = (await request.json()) as { token?: string; newPassword?: string }
+    const userId = payload.token ? resetTokens.get(payload.token) : undefined
+    const user = users.find((item) => item.id === userId)
+    if (!user) return apiError('INVALID_RESET_TOKEN', 'Mã đặt lại không hợp lệ hoặc đã hết hạn.', 400)
+    const newPassword = payload.newPassword ?? ''
+    if (!isValidPassword(newPassword)) return apiError('INVALID_PASSWORD', 'Mật khẩu mới phải có tối thiểu 8 ký tự, gồm chữ và số.', 400)
+    user.password = newPassword
+    user.mustChangePassword = false
+    resetTokens.delete(payload.token ?? '')
+    saveToStorage(MOCK_STORAGE_KEYS.users, users)
+    return HttpResponse.json({ message: 'Đặt lại mật khẩu thành công.' })
   }),
 
   http.get(endpoint('/admin/overview'), async ({ request }) => {
@@ -758,6 +810,46 @@ export const handlers = [
     return HttpResponse.json({ ...tenant, plan: plans.find((plan) => plan.id === tenant.planId), buildings: buildings.filter((building) => building.tenantId === tenant.id), users: safeUsersForTenant(tenant.id) })
   }),
 
+  http.post(endpoint('/admin/tenants/:tenantId/buildings'), async ({ params, request }) => {
+    const access = requireAccess(request, ['admin'])
+    if ('response' in access) return access.response
+    const tenant = tenants.find((item) => item.id === params.tenantId)
+    if (!tenant) return apiError('NOT_FOUND', 'Không tìm thấy doanh nghiệp.', 404)
+    const overview = tenantOverview(tenant.id)
+    if (overview.plan && overview.usage.buildings >= overview.plan.maxBuildings) return apiError('PLAN_LIMIT_BUILDINGS', 'Gói hiện tại đã đạt giới hạn tòa nhà.', 403)
+    const payload = (await request.json()) as { name?: string; address?: string }
+    if (!payload.name?.trim() || !payload.address?.trim()) return apiError('VALIDATION_ERROR', 'Tên và địa chỉ tòa nhà là bắt buộc.', 400)
+    const building: Building = { id: `bldg-${crypto.randomUUID()}`, tenantId: tenant.id, name: payload.name.trim(), address: payload.address.trim(), status: 'draft', floorCount: 0, planImageUrl: null, createdAt: new Date().toISOString() }
+    buildings.push(building)
+    saveToStorage(MOCK_STORAGE_KEYS.buildings, buildings)
+    return HttpResponse.json(building, { status: 201 })
+  }),
+
+  http.patch(endpoint('/admin/buildings/:buildingId'), async ({ params, request }) => {
+    const access = requireAccess(request, ['admin'])
+    if ('response' in access) return access.response
+    const building = buildings.find((item) => item.id === params.buildingId)
+    if (!building) return apiError('NOT_FOUND', 'Không tìm thấy tòa nhà.', 404)
+    Object.assign(building, (await request.json()) as Partial<Building>)
+    saveToStorage(MOCK_STORAGE_KEYS.buildings, buildings)
+    return HttpResponse.json(building)
+  }),
+
+  http.delete(endpoint('/admin/buildings/:buildingId'), async ({ params, request }) => {
+    const access = requireAccess(request, ['admin'])
+    if ('response' in access) return access.response
+    const index = buildings.findIndex((item) => item.id === params.buildingId)
+    if (index < 0) return apiError('NOT_FOUND', 'Không tìm thấy tòa nhà.', 404)
+    const floorIds = new Set(floors.filter((floor) => floor.buildingId === params.buildingId).map((floor) => floor.id))
+    buildings.splice(index, 1)
+    for (let item = floors.length - 1; item >= 0; item -= 1) if (floorIds.has(floors[item].id)) floors.splice(item, 1)
+    for (let item = floorGeometry.length - 1; item >= 0; item -= 1) if (floorIds.has(floorGeometry[item].floorId)) floorGeometry.splice(item, 1)
+    saveToStorage(MOCK_STORAGE_KEYS.buildings, buildings)
+    saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
+    saveToStorage(MOCK_STORAGE_KEYS.geometry, floorGeometry)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
   http.post(endpoint('/admin/tenants'), async ({ request }) => {
     const access = requireAccess(request, ['admin'])
     if ('response' in access) return access.response
@@ -767,7 +859,7 @@ export const handlers = [
     if (!plans.some((plan) => plan.id === payload.planId)) return apiError('NOT_FOUND', 'Không tìm thấy gói dịch vụ.', 404)
     if (users.some((user) => user.email.toLowerCase() === payload.ownerEmail.trim().toLowerCase())) return apiError('EMAIL_EXISTS', 'Email tài khoản đã tồn tại.', 409)
     const tenant = { id: `tenant-${crypto.randomUUID()}`, name: payload.name.trim(), subdomain, planId: payload.planId, status: 'active' as const, planExpiresAt: payload.planExpiresAt, createdAt: new Date().toISOString() }
-    const owner = { id: `user-${crypto.randomUUID()}`, tenantId: tenant.id, role: 'building_owner' as const, name: payload.ownerName.trim(), email: payload.ownerEmail.trim().toLowerCase(), password: 'Demo@123', status: 'active' as const, createdAt: new Date().toISOString() }
+    const owner = { id: `user-${crypto.randomUUID()}`, tenantId: tenant.id, role: 'building_owner' as const, name: payload.ownerName.trim(), email: payload.ownerEmail.trim().toLowerCase(), password: 'Demo@123', areaIds: [], createdByUserId: access.auth.user.id, mustChangePassword: true, status: 'active' as const, createdAt: new Date().toISOString() }
     tenants.push(tenant)
     users.push(owner)
     saveToStorage(MOCK_STORAGE_KEYS.tenants, tenants)
@@ -823,8 +915,11 @@ export const handlers = [
     if ('response' in access) return access.response
     const user = users.find((item) => item.id === params.userId)
     if (!user) return apiError('NOT_FOUND', 'Không tìm thấy tài khoản.', 404)
-    const payload = (await request.json()) as { status?: 'active' | 'locked'; resetPassword?: boolean }
+    const payload = (await request.json()) as { status?: 'active' | 'locked'; resetPassword?: boolean; areaIds?: string[] }
     if (payload.status) user.status = payload.status
+    if (user.role === 'building_manager' && payload.areaIds !== undefined) {
+      user.areaIds = payload.areaIds.filter((areaId) => areas.some((area) => area.id === areaId && area.tenantId === user.tenantId))
+    }
     saveToStorage(MOCK_STORAGE_KEYS.users, users)
     return HttpResponse.json({ ...publicUser(user), tenantName: tenants.find((tenant) => tenant.id === user.tenantId)?.name ?? null, ...(payload.resetPassword ? { temporaryPassword: 'Demo@123' } : {}) })
   }),
@@ -837,6 +932,17 @@ export const handlers = [
     users.splice(index, 1)
     saveToStorage(MOCK_STORAGE_KEYS.users, users)
     return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.post(endpoint('/admin/users/:userId/reset-password'), async ({ params, request }) => {
+    const access = requireAccess(request, ['admin'])
+    if ('response' in access) return access.response
+    const user = users.find((item) => item.id === params.userId)
+    if (!user) return apiError('NOT_FOUND', 'Không tìm thấy tài khoản.', 404)
+    user.password = 'Demo@123'
+    user.mustChangePassword = true
+    saveToStorage(MOCK_STORAGE_KEYS.users, users)
+    return HttpResponse.json({ ...publicUser(user), temporaryPassword: 'Demo@123' })
   }),
 
   http.get(endpoint('/tenant/overview'), async ({ request }) => {
@@ -857,15 +963,24 @@ export const handlers = [
     return HttpResponse.json(safeUsersForTenant(access.auth.user.tenantId ?? '').filter((user) => user.role !== 'building_owner'))
   }),
 
+  http.get(endpoint('/tenant/areas'), async ({ request }) => {
+    const access = requireAccess(request, ['building_owner'])
+    if ('response' in access) return access.response
+    return HttpResponse.json(areas.filter((area) => area.tenantId === access.auth.user.tenantId))
+  }),
+
   http.post(endpoint('/tenant/users'), async ({ request }) => {
     const access = requireAccess(request, ['building_owner'])
     if ('response' in access) return access.response
     const tenantId = access.auth.user.tenantId ?? ''
     const overview = tenantOverview(tenantId)
-    if (overview.plan && overview.usage.staff >= overview.plan.maxStaff) return apiError('PLAN_LIMIT_STAFF', 'Gói hiện tại đã đạt giới hạn số nhân viên.', 403)
-    const payload = (await request.json()) as { name: string; email: string; role: 'building_manager' | 'store_owner' }
+    const payload = (await request.json()) as { name: string; email: string; role: 'building_manager' | 'store_owner'; areaIds?: string[] }
+    const existingCount = users.filter((user) => user.tenantId === tenantId && user.role === payload.role).length
+    const limit = payload.role === 'building_manager' ? overview.plan?.maxManagers : overview.plan?.maxStoreOwners
+    if (limit !== undefined && existingCount >= limit) return apiError(payload.role === 'building_manager' ? 'PLAN_LIMIT_MANAGERS' : 'PLAN_LIMIT_STORE_OWNERS', 'Gói hiện tại đã đạt giới hạn tài khoản.', 403)
     if (users.some((user) => user.email.toLowerCase() === payload.email.trim().toLowerCase())) return apiError('EMAIL_EXISTS', 'Email tài khoản đã tồn tại.', 409)
-    const user = { id: `user-${crypto.randomUUID()}`, tenantId, role: payload.role, name: payload.name.trim(), email: payload.email.trim().toLowerCase(), password: 'Demo@123', status: 'active' as const, createdAt: new Date().toISOString() }
+    const validAreaIds = payload.role === 'building_manager' ? (payload.areaIds ?? []).filter((areaId) => areas.some((area) => area.id === areaId && area.tenantId === tenantId)) : []
+    const user = { id: `user-${crypto.randomUUID()}`, tenantId, role: payload.role, name: payload.name.trim(), email: payload.email.trim().toLowerCase(), password: 'Demo@123', areaIds: validAreaIds, createdByUserId: access.auth.user.id, mustChangePassword: true, status: 'active' as const, createdAt: new Date().toISOString() }
     users.push(user)
     saveToStorage(MOCK_STORAGE_KEYS.users, users)
     return HttpResponse.json({ ...publicUser(user), temporaryPassword: 'Demo@123' }, { status: 201 })
@@ -947,6 +1062,7 @@ export const handlers = [
     if ('response' in access) {
       return access.response
     }
+    if (!PERMISSIONS.ownerCanCreateBuilding) return apiError('FORBIDDEN', 'Chủ tòa nhà hiện chưa được phép tạo tòa nhà.', 403)
     const inactiveResponse = tenantWriteAccess(access.auth)
     if (inactiveResponse) {
       return inactiveResponse
@@ -1082,6 +1198,49 @@ export const handlers = [
     return HttpResponse.json(buildingFloors)
   }),
 
+  http.get(endpoint('/buildings/:buildingId/areas'), async ({ params, request }) => {
+    const building = buildings.find((item) => item.id === params.buildingId)
+    if (!building) return apiError('NOT_FOUND', 'Không tìm thấy tòa nhà.', 404)
+    const forbidden = canReadBuilding(request, building)
+    return forbidden ?? HttpResponse.json(areas.filter((area) => area.buildingId === building.id))
+  }),
+
+  http.post(endpoint('/buildings/:buildingId/areas'), async ({ params, request }) => {
+    const building = buildings.find((item) => item.id === params.buildingId)
+    if (!building) return apiError('NOT_FOUND', 'Không tìm thấy tòa nhà.', 404)
+    const access = canManageTenantResource(request, building.tenantId, ['building_owner'])
+    if ('response' in access) return access.response
+    const payload = (await request.json()) as Pick<Area, 'name' | 'description' | 'color'>
+    const area: Area = { id: `area-${crypto.randomUUID()}`, tenantId: building.tenantId, buildingId: building.id, name: payload.name.trim(), description: payload.description, color: payload.color, createdAt: new Date().toISOString() }
+    areas.push(area)
+    saveToStorage(MOCK_STORAGE_KEYS.areas, areas)
+    return HttpResponse.json(area, { status: 201 })
+  }),
+
+  http.patch(endpoint('/areas/:areaId'), async ({ params, request }) => {
+    const area = areas.find((item) => item.id === params.areaId)
+    if (!area) return apiError('NOT_FOUND', 'Không tìm thấy khu vực.', 404)
+    const access = canManageTenantResource(request, area.tenantId, ['building_owner'])
+    if ('response' in access) return access.response
+    Object.assign(area, (await request.json()) as Partial<Pick<Area, 'name' | 'description' | 'color'>>)
+    saveToStorage(MOCK_STORAGE_KEYS.areas, areas)
+    return HttpResponse.json(area)
+  }),
+
+  http.delete(endpoint('/areas/:areaId'), async ({ params, request }) => {
+    const areaIndex = areas.findIndex((item) => item.id === params.areaId)
+    if (areaIndex < 0) return apiError('NOT_FOUND', 'Không tìm thấy khu vực.', 404)
+    const area = areas[areaIndex]
+    const access = canManageTenantResource(request, area.tenantId, ['building_owner'])
+    if ('response' in access) return access.response
+    if (users.some((user) => user.areaIds?.includes(area.id))) return apiError('AREA_IN_USE', 'Không thể xóa khu vực đang có quản lý phụ trách.', 409)
+    areas.splice(areaIndex, 1)
+    floors.filter((floor) => floor.areaId === area.id).forEach((floor) => { floor.areaId = null })
+    saveToStorage(MOCK_STORAGE_KEYS.areas, areas)
+    saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
   http.get(endpoint('/buildings/:buildingId/destinations'), async ({ params, request }) => {
     await delay(160)
     const building = buildings.find((item) => item.id === params.buildingId)
@@ -1177,7 +1336,7 @@ export const handlers = [
     }
     const building = buildings.find((item) => item.id === floor.buildingId)
     const access = building
-      ? canManageTenantResource(request, building.tenantId, ['building_owner', 'building_manager'])
+      ? canManageFloor(request, floor)
       : { response: apiError('NOT_FOUND', 'Không tìm thấy tòa nhà.', 404) }
     if ('response' in access) {
       return access.response
@@ -1198,7 +1357,7 @@ export const handlers = [
     }
     const building = buildings.find((item) => item.id === floor.buildingId)
     const access = building
-      ? canManageTenantResource(request, building.tenantId, ['building_owner', 'building_manager'])
+      ? canManageFloor(request, floor)
       : { response: apiError('NOT_FOUND', 'Không tìm thấy tòa nhà.', 404) }
     if ('response' in access) {
       return access.response
@@ -1295,6 +1454,12 @@ export const handlers = [
         { message: 'Floor does not belong to selected building' },
         { status: 400 },
       )
+    }
+    const floorAccess = canManageFloor(request, floor)
+    if ('response' in floorAccess) return floorAccess.response
+    if (ownerUserId) {
+      const owner = users.find((user) => user.id === ownerUserId)
+      if (!owner || owner.role !== 'store_owner' || owner.tenantId !== access.auth.user.tenantId) return apiError('FORBIDDEN', 'Chủ gian hàng phải thuộc cùng doanh nghiệp.', 403)
     }
 
     const status = payload?.status ?? normalizeStoreStatus(formData?.get('status') ?? null)
@@ -1587,6 +1752,9 @@ export const handlers = [
       if (!building || building.tenantId !== access.auth.user.tenantId) {
         return apiError('FORBIDDEN', 'Gian hàng không thuộc doanh nghiệp của bạn.', 403)
       }
+      const floor = floors.find((item) => item.id === store.floorId)
+      const floorAccess = floor ? canManageFloor(request, floor) : { response: apiError('NOT_FOUND', 'Không tìm thấy tầng.', 404) }
+      if ('response' in floorAccess) return floorAccess.response
     }
     const inactiveResponse = tenantWriteAccess(access.auth)
     if (inactiveResponse) {
@@ -1652,7 +1820,7 @@ export const handlers = [
     if (!building) {
       return apiError('NOT_FOUND', 'Không tìm thấy tòa nhà.', 404)
     }
-    const access = canManageTenantResource(request, building.tenantId, ['building_owner', 'building_manager'])
+    const access = canManageTenantResource(request, building.tenantId, ['building_owner'])
     if ('response' in access) {
       return access.response
     }
@@ -1709,6 +1877,9 @@ export const handlers = [
       return access.response
     }
 
+    if (access.auth.user.role === 'building_manager' && payload.areaId !== undefined) {
+      return apiError('FORBIDDEN', 'Quản lý khu vực không được đổi phân khu vực của tầng.', 403)
+    }
     if (payload.level !== undefined) {
       const hasSameLevel = floors.some(
         (item) =>
@@ -1727,6 +1898,7 @@ export const handlers = [
 
     floor.name = payload.name ?? floor.name
     floor.level = payload.level ?? floor.level
+    floor.areaId = payload.areaId !== undefined ? payload.areaId : floor.areaId
     floor.publishStatus = payload.publishStatus ?? floor.publishStatus
     floor.mapImageUrl =
       payload.mapImageUrl !== undefined
@@ -1761,7 +1933,7 @@ export const handlers = [
     }
 
     const floor = floors[floorIndex]
-    const access = canManageFloor(request, floor)
+    const access = canManageTenantResource(request, buildings.find((item) => item.id === floor.buildingId)?.tenantId ?? '', ['building_owner'])
     if ('response' in access) {
       return access.response
     }
@@ -1782,6 +1954,15 @@ export const handlers = [
         nodes.splice(index, 1)
       }
     }
+    for (let index = edges.length - 1; index >= 0; index -= 1) {
+      if (edges[index].floorId === floor.id) edges.splice(index, 1)
+    }
+    for (let index = stores.length - 1; index >= 0; index -= 1) {
+      if (stores[index].floorId === floor.id) stores.splice(index, 1)
+    }
+    for (let index = floorGeometry.length - 1; index >= 0; index -= 1) {
+      if (floorGeometry[index].floorId === floor.id) floorGeometry.splice(index, 1)
+    }
 
     const building = buildings.find((item) => item.id === floor.buildingId)
     if (building) {
@@ -1793,6 +1974,9 @@ export const handlers = [
     saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
     saveToStorage(MOCK_STORAGE_KEYS.buildings, buildings)
     saveToStorage(MOCK_STORAGE_KEYS.nodes, nodes)
+    saveToStorage(MOCK_STORAGE_KEYS.edges, edges)
+    saveToStorage(MOCK_STORAGE_KEYS.stores, stores)
+    saveToStorage(MOCK_STORAGE_KEYS.geometry, floorGeometry)
 
     return new HttpResponse(null, { status: 204 })
   }),

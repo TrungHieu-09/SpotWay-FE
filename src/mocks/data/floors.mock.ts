@@ -15,9 +15,9 @@ type StoredPoi = Omit<Poi, 'x' | 'y'> &
 
 type StoredFloor = Omit<
   Floor,
-  'pois' | 'publishStatus' | 'mapImageUrl' | 'nextPoiNumber'
+  'pois' | 'publishStatus' | 'mapImageUrl' | 'nextPoiNumber' | 'areaId'
 > &
-  Partial<Pick<Floor, 'publishStatus' | 'mapImageUrl'>> & {
+  Partial<Pick<Floor, 'publishStatus' | 'mapImageUrl' | 'areaId'>> & {
     planImageUrl?: string | null
     pois?: StoredPoi[]
     nextPoiNumber?: number
@@ -26,6 +26,14 @@ type StoredFloor = Omit<
 function geometryPlan(floorId: string) {
   const geometry = initialFloorGeometrySeed.find((item) => item.floorId === floorId)
   return geometry ? buildPlanSvgDataUri(geometry) : null
+}
+
+const areaByBuildingLevel: Record<string, string | null> = {
+  'bldg-1:1': 'area-fashion',
+  'bldg-1:2': 'area-food',
+  'bldg-1:3': 'area-entertainment',
+  'bldg-2:5': 'area-office',
+  'bldg-3:1': 'area-retail-2',
 }
 
 export const mallPlan = geometryPlan('floor-1') ?? ''
@@ -48,7 +56,7 @@ export const officePlan =
   <text x="710" y="525" font-family="Arial" font-size="38" fill="#111827">Workspace</text>
 </svg>`)
 
-export const initialFloorsSeed: Floor[] = [
+export const initialFloorsSeed: StoredFloor[] = [
   {
     id: 'floor-1',
     buildingId: 'bldg-1',
@@ -338,6 +346,7 @@ function normalizeFloor(floor: StoredFloor): Floor {
 
   return {
     ...floor,
+    areaId: floor.areaId ?? areaByBuildingLevel[`${floor.buildingId}:${floor.level}`] ?? null,
     id,
     publishStatus: floor.publishStatus ?? 'draft',
     mapImageUrl: normalizeMapImageUrl(

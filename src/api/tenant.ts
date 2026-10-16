@@ -1,10 +1,12 @@
 import { apiClient } from './client'
 import type { TenantOverview, Invoice, User, Plan } from '../types/auth'
+import type { Area } from '../types/area'
 
 export type CreateStaffPayload = {
   name: string
   email: string
   role: 'building_manager' | 'store_owner'
+  areaIds?: string[]
 }
 
 export async function getTenantOverview() {
@@ -17,13 +19,18 @@ export async function getTenantUsers() {
   return data
 }
 
+export async function getTenantAreas() {
+  const { data } = await apiClient.get<Area[]>('/tenant/areas')
+  return data
+}
+
 export async function createTenantUser(payload: CreateStaffPayload) {
   const { data } = await apiClient.post<User & { temporaryPassword: string }>('/tenant/users', payload)
   return data
 }
 
-export async function updateTenantUser(userId: string, status: User['status'], resetPassword = false) {
-  const { data } = await apiClient.patch<User & { temporaryPassword?: string }>(`/tenant/users/${userId}`, { status, resetPassword })
+export async function updateTenantUser(userId: string, status: User['status'], resetPassword = false, areaIds?: string[]) {
+  const { data } = await apiClient.patch<User & { temporaryPassword?: string }>(`/tenant/users/${userId}`, { status, resetPassword, areaIds })
   return data
 }
 

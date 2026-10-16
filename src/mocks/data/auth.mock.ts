@@ -6,7 +6,8 @@ export const initialPlansSeed: Plan[] = [
     id: 'plan-basic',
     name: 'Cơ bản',
     maxBuildings: 2,
-    maxStaff: 5,
+    maxManagers: 3,
+    maxStoreOwners: 20,
     priceVnd: 1_990_000,
     durationMonths: 1,
   },
@@ -14,7 +15,8 @@ export const initialPlansSeed: Plan[] = [
     id: 'plan-pro',
     name: 'Chuyên nghiệp',
     maxBuildings: 5,
-    maxStaff: 20,
+    maxManagers: 6,
+    maxStoreOwners: 100,
     priceVnd: 4_990_000,
     durationMonths: 1,
   },
@@ -22,7 +24,8 @@ export const initialPlansSeed: Plan[] = [
     id: 'plan-enterprise',
     name: 'Doanh nghiệp',
     maxBuildings: 9999,
-    maxStaff: 9999,
+    maxManagers: 9999,
+    maxStoreOwners: 9999,
     priceVnd: 14_990_000,
     durationMonths: 1,
   },
@@ -50,13 +53,15 @@ export const initialTenantsSeed: Tenant[] = [
 ]
 
 export const initialUsersSeed: Array<User & { password: string }> = [
-  { id: 'user-admin', tenantId: null, role: 'admin', name: 'Quản trị viên', email: 'admin@demo.vn', password: 'Demo@123', status: 'active', createdAt: '2026-09-01T08:00:00.000Z' },
-  { id: 'user-owner-1', tenantId: 'tenant-1', role: 'building_owner', name: 'Chủ tòa nhà Saigon', email: 'owner1@demo.vn', password: 'Demo@123', status: 'active', createdAt: '2026-09-01T08:10:00.000Z' },
-  { id: 'user-manager-1', tenantId: 'tenant-1', role: 'building_manager', name: 'Quản lý Saigon', email: 'manager1@demo.vn', password: 'Demo@123', status: 'active', createdAt: '2026-09-01T08:20:00.000Z' },
-  { id: 'user-lumi', tenantId: 'tenant-1', role: 'store_owner', name: 'Lumi Fashion', email: 'lumi@demo.vn', password: 'Demo@123', status: 'active', createdAt: '2026-09-01T08:30:00.000Z' },
-  { id: 'user-green', tenantId: 'tenant-1', role: 'store_owner', name: 'Green Home', email: 'green@demo.vn', password: 'Demo@123', status: 'active', createdAt: '2026-09-01T08:40:00.000Z' },
-  { id: 'user-owner-2', tenantId: 'tenant-2', role: 'building_owner', name: 'Chủ tòa nhà Hà Nội', email: 'owner2@demo.vn', password: 'Demo@123', status: 'active', createdAt: '2026-09-01T08:50:00.000Z' },
-  { id: 'user-manager-2', tenantId: 'tenant-2', role: 'building_manager', name: 'Quản lý Hà Nội', email: 'manager2@demo.vn', password: 'Demo@123', status: 'active', createdAt: '2026-09-01T09:00:00.000Z' },
+  { id: 'user-admin', tenantId: null, role: 'admin', name: 'Quản trị viên', email: 'admin@demo.vn', password: 'Demo@123', createdByUserId: null, mustChangePassword: false, status: 'active', createdAt: '2026-09-01T08:00:00.000Z' },
+  { id: 'user-owner-1', tenantId: 'tenant-1', role: 'building_owner', name: 'Chủ tòa nhà Saigon', email: 'owner1@demo.vn', password: 'Demo@123', createdByUserId: 'user-admin', mustChangePassword: false, status: 'active', createdAt: '2026-09-01T08:10:00.000Z' },
+  { id: 'user-manager-1a', tenantId: 'tenant-1', role: 'building_manager', name: 'Quản lý Thời trang', email: 'manager1a@demo.vn', password: 'Demo@123', areaIds: ['area-fashion'], createdByUserId: 'user-owner-1', mustChangePassword: false, status: 'active', createdAt: '2026-09-01T08:20:00.000Z' },
+  { id: 'user-manager-1b', tenantId: 'tenant-1', role: 'building_manager', name: 'Quản lý Ẩm thực', email: 'manager1b@demo.vn', password: 'Demo@123', areaIds: ['area-food'], createdByUserId: 'user-owner-1', mustChangePassword: false, status: 'active', createdAt: '2026-09-01T08:21:00.000Z' },
+  { id: 'user-lumi', tenantId: 'tenant-1', role: 'store_owner', name: 'Lumi Fashion', email: 'lumi@demo.vn', password: 'Demo@123', createdByUserId: 'user-manager-1a', mustChangePassword: false, status: 'active', createdAt: '2026-09-01T08:30:00.000Z' },
+  { id: 'user-green', tenantId: 'tenant-1', role: 'store_owner', name: 'Green Home', email: 'green@demo.vn', password: 'Demo@123', createdByUserId: 'user-manager-1a', mustChangePassword: false, status: 'active', createdAt: '2026-09-01T08:40:00.000Z' },
+  { id: 'user-bep', tenantId: 'tenant-1', role: 'store_owner', name: 'Bếp Saigon', email: 'bep@demo.vn', password: 'Demo@123', createdByUserId: 'user-manager-1b', mustChangePassword: false, status: 'active', createdAt: '2026-09-01T08:41:00.000Z' },
+  { id: 'user-owner-2', tenantId: 'tenant-2', role: 'building_owner', name: 'Chủ tòa nhà Hà Nội', email: 'owner2@demo.vn', password: 'Demo@123', createdByUserId: 'user-admin', mustChangePassword: false, status: 'active', createdAt: '2026-09-01T08:50:00.000Z' },
+  { id: 'user-manager-2', tenantId: 'tenant-2', role: 'building_manager', name: 'Quản lý Hà Nội', email: 'manager2@demo.vn', password: 'Demo@123', areaIds: ['area-office'], createdByUserId: 'user-owner-2', mustChangePassword: false, status: 'active', createdAt: '2026-09-01T09:00:00.000Z' },
 ]
 
 export const initialInvoicesSeed: Invoice[] = [

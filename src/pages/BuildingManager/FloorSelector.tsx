@@ -14,10 +14,20 @@ import {
   Tag,
   Tooltip,
   Typography,
+  Upload,
 } from 'antd'
+import type {
+  RcFile,
+  UploadChangeParam,
+  UploadFile,
+} from 'antd/es/upload/interface'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { useFloorStore } from '../../store/useFloorStore'
 import type { FloorPublishStatus } from '../../types/floor'
+import { compressPlanImageFile } from '../../utils/planRecognition'
+import { usePermissions } from '../../auth/usePermissions'
+
+const MAX_PLAN_IMAGE_SIZE = 5 * 1024 * 1024
 
 const { Text } = Typography
 
@@ -28,6 +38,25 @@ type FloorSelectorProps = {
 type CreateFloorFormValues = {
   name: string
   level: number
+  upload?: UploadFile[]
+}
+
+function getUploadFileList(event: UploadChangeParam<UploadFile>) {
+  return event.fileList
+}
+
+function validatePlanFile(file: RcFile, showError: (content: string) => void) {
+  if (!file.type.startsWith('image/')) {
+    showError('File upload phải là ảnh')
+    return Upload.LIST_IGNORE
+  }
+
+  if (file.size > MAX_PLAN_IMAGE_SIZE) {
+    showError('Ảnh sơ đồ không được vượt quá 5MB')
+    return Upload.LIST_IGNORE
+  }
+
+  return false
 }
 
 function floorStatusColor(status: FloorPublishStatus) {
@@ -45,6 +74,8 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
   const deleteFloor = useFloorStore((state) => state.deleteFloor)
   const updateFloorStatus = useFloorStore((state) => state.updateFloorStatus)
   const { message } = AntApp.useApp()
+  const permissions = usePermissions()
+  const canManageFloorStructure = permissions.user?.role === 'building_owner'
   const canDeleteFloor = floors.length > 1
 
   function closeCreateModal() {
@@ -58,7 +89,18 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
     }
 
     try {
-      await addFloor(buildingId, values)
+      const uploadFile = values.upload?.[0]?.originFileObj
+      const compressedImage = uploadFile
+        ? await compressPlanImageFile(uploadFile)
+        : null
+
+      await addFloor(buildingId, {
+        name: values.name,
+        level: values.level,
+        mapImageUrl: compressedImage?.dataUrl ?? null,
+        mapWidth: compressedImage?.width,
+        mapHeight: compressedImage?.height,
+      })
       message.success('Thêm tầng thành công')
       closeCreateModal()
     } catch (error) {
@@ -98,7 +140,7 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
           size="small"
           type="primary"
           icon={<PlusOutlined />}
-          disabled={!buildingId}
+          disabled={!buildingId || !canManageFloorStructure}
           onClick={() => setIsCreateOpen(true)}
         />
       </div>
@@ -107,6 +149,9 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
         {floors.length > 0 ? (
           <div className="floor-list">
             {floors.map((floor) => (
+              (() => {
+                const canEdit = permissions.canEditFloor(floor)
+                return (
               <div
                 key={floor.id}
                 className={
@@ -133,10 +178,13 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
                   onClick={(event) => event.stopPropagation()}
                 >
                   <Tag>{floor.pois.length} POI</Tag>
+                  <Tag color={floor.mapImageUrl ? 'blue' : 'default'}>
+                    {floor.mapImageUrl ? 'Có sơ đồ' : 'Chưa ảnh'}
+                  </Tag>
                   <Switch
                     size="small"
                     checked={floor.publishStatus === 'published'}
-                    disabled={isFloorLoading}
+                    disabled={isFloorLoading || !canEdit}
                     onChange={(checked) => handleToggleStatus(floor.id, checked)}
                   />
                   <Tooltip
@@ -159,12 +207,14 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
                         danger
                         size="small"
                         icon={<DeleteOutlined />}
-                        disabled={!canDeleteFloor || isFloorLoading}
+                        disabled={!canDeleteFloor || isFloorLoading || !canManageFloorStructure}
                       />
                     </Popconfirm>
                   </Tooltip>
                 </div>
               </div>
+                )
+              })()
             ))}
           </div>
         ) : (
@@ -214,6 +264,25 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
             ]}
           >
             <InputNumber className="full-width" precision={0} />
+          </Form.Item>
+
+          <Form.Item
+            label="Ảnh sơ đồ tầng"
+            name="upload"
+            valuePropName="fileList"
+            getValueFromEvent={getUploadFileList}
+          >
+            <Upload
+              accept="image/*"
+              beforeUpload={(file) => validatePlanFile(file, message.error)}
+              maxCount={1}
+              listType="picture-card"
+            >
+              <div className="upload-card-trigger">
+                <PlusOutlined />
+                <span>Upload</span>
+              </div>
+            </Upload>
           </Form.Item>
         </Form>
       </Modal>

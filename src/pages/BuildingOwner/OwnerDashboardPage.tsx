@@ -34,13 +34,15 @@ export function OwnerDashboardPage() {
             <Col xs={24} sm={12} lg={8}><Card><Statistic title="Tổng số tầng" value={overview.usage.floors} /></Card></Col>
             <Col xs={24} sm={12} lg={8}><Card><Statistic title="Tầng đã xuất bản" value={overview.usage.publishedFloors} /></Card></Col>
             <Col xs={24} sm={12} lg={8}><Card><Statistic title="Gian hàng" value={overview.usage.stores} /></Card></Col>
-            <Col xs={24} sm={12} lg={8}><Card><Statistic title="Nhân viên" value={overview.usage.staff} suffix={`/ ${overview.plan.maxStaff}`} /></Card></Col>
+            <Col xs={24} sm={12} lg={8}><Card><Statistic title="Quản lý" value={overview.usage.managers} suffix={`/ ${overview.plan.maxManagers}`} /></Card></Col>
+            <Col xs={24} sm={12} lg={8}><Card><Statistic title="Chủ gian hàng" value={overview.usage.storeOwners} suffix={`/ ${overview.plan.maxStoreOwners}`} /></Card></Col>
             <Col xs={24} sm={12} lg={8}><Card><Statistic title="Khuyến mãi đang chạy" value={overview.usage.activePromotions} /></Card></Col>
           </Row>
           <Card title={`Gói ${overview.plan.name}`} className="tool-card">
             <p>Hết hạn: {new Intl.DateTimeFormat('vi-VN').format(new Date(overview.tenant.planExpiresAt))}</p>
             <Progress percent={Math.min(100, Math.round((overview.usage.buildings / overview.plan.maxBuildings) * 100))} format={() => `${overview.usage.buildings}/${overview.plan.maxBuildings} tòa nhà`} />
-            <Progress percent={Math.min(100, Math.round((overview.usage.staff / overview.plan.maxStaff) * 100))} format={() => `${overview.usage.staff}/${overview.plan.maxStaff} nhân viên`} />
+            <Progress percent={Math.min(100, Math.round((overview.usage.managers / overview.plan.maxManagers) * 100))} format={() => `${overview.usage.managers}/${overview.plan.maxManagers} quản lý`} />
+            <Progress percent={Math.min(100, Math.round((overview.usage.storeOwners / overview.plan.maxStoreOwners) * 100))} format={() => `${overview.usage.storeOwners}/${overview.plan.maxStoreOwners} chủ gian hàng`} />
           </Card>
           <Card title="Danh sách tòa nhà" className="tool-card">
             <Table<Building> rowKey="id" dataSource={buildings} pagination={false} locale={{ emptyText: <Empty description="Chưa có tòa nhà" /> }} columns={[{ title: 'Tên', dataIndex: 'name' }, { title: 'Địa chỉ', dataIndex: 'address' }, { title: 'Tầng', dataIndex: 'floorCount' }, { title: 'Trạng thái', dataIndex: 'status', render: (status: Building['status']) => <Tag color={status === 'active' ? 'green' : 'gold'}>{status === 'active' ? 'Hoạt động' : 'Bản nháp'}</Tag> }]} />

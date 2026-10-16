@@ -1,5 +1,5 @@
 const MOCK_STORAGE_PREFIX = 'mock:'
-export const MOCK_SEED_VERSION = '2026-10-15-auth-rbac-v1'
+export const MOCK_SEED_VERSION = '2026-10-16-auth-rbac-areas-v2'
 
 export const MOCK_STORAGE_KEYS = {
   seedVersion: `${MOCK_STORAGE_PREFIX}seedVersion`,
@@ -13,6 +13,7 @@ export const MOCK_STORAGE_KEYS = {
   plans: `${MOCK_STORAGE_PREFIX}plans`,
   users: `${MOCK_STORAGE_PREFIX}users`,
   invoices: `${MOCK_STORAGE_PREFIX}invoices`,
+  areas: `${MOCK_STORAGE_PREFIX}areas`,
 } as const
 
 function getStorage() {

@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom'
 import { CreateBuildingModal } from './CreateBuildingModal'
 import { useBuildingStore } from '../../store/useBuildingStore'
 import type { Building } from '../../types/building'
+import { usePermissions } from '../../auth/usePermissions'
 
 const { Text, Title } = Typography
 
@@ -33,6 +34,7 @@ export function BuildingListPage() {
   const updateBuilding = useBuildingStore((state) => state.updateBuilding)
   const deleteBuilding = useBuildingStore((state) => state.deleteBuilding)
   const { message } = AntApp.useApp()
+  const permissions = usePermissions()
 
   useEffect(() => {
     loadBuildings().catch((error: Error) => message.error(error.message))
@@ -69,16 +71,16 @@ export function BuildingListPage() {
           <Text type="secondary">Chủ tòa nhà</Text>
           <Title level={1}>Tòa nhà của bạn</Title>
         </div>
-        <Space size="large" wrap>
+          <Space size="large" wrap>
           <Statistic title="Tòa nhà" value={buildings.length} />
           <Statistic title="Tổng số tầng" value={totalFloors} />
-          <Button
+            {permissions.can('create', 'building') ? <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => setIsCreateOpen(true)}
           >
             Tạo tòa nhà mới
-          </Button>
+            </Button> : null}
         </Space>
       </section>
 
