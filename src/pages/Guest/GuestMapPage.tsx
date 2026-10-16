@@ -17,6 +17,8 @@ import {
   ArrowRightOutlined,
   ClearOutlined,
   CompassOutlined,
+  ReloadOutlined,
+  SearchOutlined,
 } from '@ant-design/icons'
 import { MapViewer2D } from './MapViewer2D'
 import { useGuestMapStore } from '../../store/useGuestMapStore'
@@ -62,6 +64,9 @@ export function GuestMapPage() {
   const isRouteLoading = useGuestMapStore((state) => state.isRouteLoading)
   const error = useGuestMapStore((state) => state.error)
   const loadInitialData = useGuestMapStore((state) => state.loadInitialData)
+  const refreshCurrentBuilding = useGuestMapStore(
+    (state) => state.refreshCurrentBuilding,
+  )
   const selectBuilding = useGuestMapStore((state) => state.selectBuilding)
   const selectFloor = useGuestMapStore((state) => state.selectFloor)
   const setFromNodeId = useGuestMapStore((state) => state.setFromNodeId)
@@ -104,22 +109,21 @@ export function GuestMapPage() {
   }
 
   return (
-    <div className="workspace guest-workspace">
+    <div className="workspace guest-workspace guest-experience">
       <div className="page-heading">
         <div>
           <Text type="secondary">Khách tham quan</Text>
           <Title level={1}>Bản đồ trong nhà</Title>
         </div>
-        <Select
-          className="guest-building-select"
-          value={selectedBuildingId}
-          loading={isLoading}
-          onChange={(buildingId) => selectBuilding(buildingId)}
-          options={buildings.map((building) => ({
-            value: building.id,
-            label: building.name,
-          }))}
-        />
+        <Space>
+          <Button
+            icon={<ReloadOutlined />}
+            loading={isLoading}
+            onClick={refreshCurrentBuilding}
+          >
+            Tải lại
+          </Button>
+        </Space>
       </div>
 
       {error ? (
@@ -182,6 +186,21 @@ export function GuestMapPage() {
             </Card>
 
             <Card className="tool-card guest-map-card">
+              <div className="guest-map-search">
+                <SearchOutlined />
+                <Select
+                  className="full-width"
+                  aria-label="Tìm tòa nhà"
+                  value={selectedBuildingId}
+                  loading={isLoading}
+                  onChange={(buildingId) => selectBuilding(buildingId)}
+                  options={buildings.map((building) => ({
+                    value: building.id,
+                    label: building.name,
+                  }))}
+                  placeholder="Tìm tòa nhà"
+                />
+              </div>
               <div className="guest-map-mode-row">
                 <Segmented
                   value={viewMode}
