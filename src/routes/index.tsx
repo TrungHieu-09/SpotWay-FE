@@ -7,6 +7,9 @@ import { ProtectedRoute } from '../components/layout/ProtectedRoute'
 import { LoginPage } from '../pages/Auth/LoginPage'
 import { ForbiddenPage } from '../pages/Auth/ForbiddenPage'
 import { NotFoundPage } from '../pages/Auth/NotFoundPage'
+import { ChangePasswordPage } from '../pages/Auth/ChangePasswordPage'
+import { ForgotPasswordPage } from '../pages/Auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '../pages/Auth/ResetPasswordPage'
 
 const HomePage = lazy(() =>
   import('../pages/Home/HomePage').then((module) => ({
@@ -97,13 +100,18 @@ export const router = createBrowserRouter([
         path: 'login',
         element: <LoginPage />,
       },
+      { path: 'forgot-password', element: <ForgotPasswordPage /> },
+      { path: 'reset-password', element: <ResetPasswordPage /> },
       { path: '403', element: <ForbiddenPage /> },
+      { element: <ProtectedRoute allowedRoles={['admin', 'building_owner', 'building_manager', 'store_owner']} />, children: [{ path: 'change-password', element: <ChangePasswordPage /> }] },
       {
         element: <ProtectedRoute allowedRoles={['building_owner']} />,
         children: [
           { path: 'owner/dashboard', element: lazyElement(<OwnerDashboardPage />) },
           { path: 'owner/buildings', element: lazyElement(<BuildingListPage />) },
           { path: 'owner/staff', element: lazyElement(<OwnerStaffPage />) },
+          { path: 'owner/managers', element: lazyElement(<OwnerStaffPage />) },
+          { path: 'owner/store-owners', element: lazyElement(<OwnerStaffPage />) },
           { path: 'owner/subscription', element: lazyElement(<OwnerSubscriptionPage />) },
           {
             path: 'owner/buildings/:buildingId',

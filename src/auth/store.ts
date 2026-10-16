@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { getCurrentUser, login as loginRequest, logout as logoutRequest } from './api'
+import { changePassword as changePasswordRequest, getCurrentUser, login as loginRequest, logout as logoutRequest } from './api'
 import type { AuthUser, Role } from '../types/auth'
 
 export const AUTH_TOKEN_KEY = 'auth:token'
@@ -13,6 +13,7 @@ type AuthState = {
   initialize: () => Promise<void>
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  changePassword: (currentPassword: string | undefined, newPassword: string) => Promise<void>
   clearSession: () => void
 }
 
@@ -80,6 +81,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       saveToken(null)
       set({ user: null, token: null, error: null })
     }
+  },
+
+  async changePassword(currentPassword, newPassword) {
+    const user = await changePasswordRequest({ currentPassword, newPassword })
+    set({ user })
   },
 
   clearSession() {

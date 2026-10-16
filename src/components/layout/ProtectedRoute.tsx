@@ -20,6 +20,10 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
     return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace />
   }
 
+  if (user.mustChangePassword && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />
+  }
+
   if (!allowedRoles.includes(user.role)) {
     return <Navigate to="/403" replace />
   }

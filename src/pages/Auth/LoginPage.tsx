@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { App as AntApp, Button, Card, Form, Input, Select, Space, Typography } from 'antd'
 import { LockOutlined, LoginOutlined, UserOutlined } from '@ant-design/icons'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { roleLabel, useAuthStore } from '../../auth/store'
 import type { Role } from '../../types/auth'
 
@@ -73,6 +73,7 @@ export function LoginPage() {
           <Button type="primary" htmlType="submit" block icon={<LoginOutlined />} loading={submitting}>
             Đăng nhập
           </Button>
+          <Link to="/forgot-password">Quên mật khẩu?</Link>
         </Form>
         {import.meta.env.DEV ? (
           <div className="demo-account-list">
