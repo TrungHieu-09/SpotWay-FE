@@ -40,12 +40,15 @@ import {
 import {
   createGraphEdge,
   createGraphNode,
+  analyzeNavigationDraft,
+  applyNavigationDraft,
   deleteGraphEdge,
   deleteGraphNode,
   getGraph,
   type GraphEdge,
   type GraphNode,
   type GraphNodeType,
+  type NavigationDraft,
 } from '../../api/graph'
 
 export interface WallSegment {
@@ -161,6 +164,7 @@ export function CanvasBoard() {
   const [isGraphSaving, setIsGraphSaving] = useState(false)
   const [isSavingWalls, setIsSavingWalls] = useState(false)
   const [graphError, setGraphError] = useState<string>()
+  const [navigationDraft, setNavigationDraft] = useState<NavigationDraft>()
   const mapImageUrl = selectedFloor?.mapImageUrl?.trim() || null
   const mapImage = useImage(mapImageUrl)
 
@@ -265,6 +269,25 @@ export function CanvasBoard() {
     } finally {
       setIsGraphSaving(false)
     }
+  }
+
+  async function handleAnalyzeNavigation() {
+    if (!selectedFloor) return
+    setIsGraphSaving(true); setGraphError(undefined)
+    try {
+      const draft = await analyzeNavigationDraft(selectedFloor.id)
+      setNavigationDraft(draft)
+      message.info(`Đã tạo ${draft.nodes.length} node và ${draft.edges.length} đường đi nháp. Hãy kiểm tra trước khi áp dụng.`)
+    } catch (reason) { setGraphError((reason as Error).message) } finally { setIsGraphSaving(false) }
+  }
+  async function handleApplyNavigationDraft() {
+    if (!selectedFloor || !navigationDraft) return
+    setIsGraphSaving(true)
+    try {
+      const result = await applyNavigationDraft(selectedFloor.id, navigationDraft)
+      const graph = await getGraph(selectedFloor.id); setNodes(graph.nodes); setEdges(graph.edges); setNavigationDraft(undefined)
+      message.success(`Đã áp dụng ${result.nodesCreated} Node và ${result.edgesCreated} đường đi.`)
+    } catch (reason) { setGraphError((reason as Error).message) } finally { setIsGraphSaving(false) }
   }
 
   async function handleSaveWallsDraft() {
@@ -536,6 +559,14 @@ export function CanvasBoard() {
                 <BuildOutlined /> Vẽ tường 3D
               </Radio.Button>
             </Radio.Group>
+            <Button icon={<ScanOutlined />} onClick={() => void handleAnalyzeNavigation()} loading={isGraphSaving} disabled={!selectedFloor.mapImageUrl}>
+              Analyze điều hướng
+            </Button>
+            {navigationDraft && <>
+              <Tag color="gold">Nháp: {navigationDraft.nodes.length} Node · {navigationDraft.edges.length} đường</Tag>
+              <Button type="primary" onClick={() => void handleApplyNavigationDraft()} loading={isGraphSaving}>Áp dụng nháp</Button>
+              <Button onClick={() => setNavigationDraft(undefined)}>Bỏ nháp</Button>
+            </>}
             {editorMode === 'node' && (
               <>
                 <Select
@@ -862,6 +893,11 @@ export function CanvasBoard() {
                           />
                         )
                       })}
+                      {navigationDraft?.edges.map((edge) => {
+                        const from = navigationDraft.nodes.find((node) => node.id === edge.fromNodeId); const to = navigationDraft.nodes.find((node) => node.id === edge.toNodeId)
+                        if (!from || !to) return null
+                        return <Line key={edge.id} points={[from.x / 100 * stageSize.width, from.y / 100 * stageSize.height, to.x / 100 * stageSize.width, to.y / 100 * stageSize.height]} stroke="#f59e0b" dash={[8, 6]} strokeWidth={3} listening={false} />
+                      })}
                       {nodes.map((node) => {
                         const x = (node.x / selectedFloor.mapWidth) * stageSize.width
                         const y = (node.y / selectedFloor.mapHeight) * stageSize.height
@@ -915,6 +951,7 @@ export function CanvasBoard() {
                           </React.Fragment>
                         )
                       })}
+                      {navigationDraft?.nodes.map((node) => <Circle key={node.id} x={node.x / 100 * stageSize.width} y={node.y / 100 * stageSize.height} radius={8} fill="#facc15" stroke="#854d0e" strokeWidth={2} />)}
                       {pois.map((poi) => {
                         const { pixelX, pixelY } = percentToPixel(
                           poi.x,
