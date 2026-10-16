@@ -5,6 +5,8 @@ import { useEffect } from 'react'
 import { useAuthStore } from './auth/store'
 import { router } from './routes'
 import './App.css'
+import { appTheme } from './theme/theme'
+import './styles/global.css'
 
 export default function App() {
   const initializeAuth = useAuthStore((state) => state.initialize)
@@ -14,17 +16,7 @@ export default function App() {
   }, [initializeAuth])
 
   return (
-    <ConfigProvider
-      locale={viVN}
-      theme={{
-        token: {
-          colorPrimary: '#2563eb',
-          borderRadius: 8,
-          fontFamily:
-            'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-        },
-      }}
-    >
+    <ConfigProvider locale={viVN} theme={appTheme}>
       <AntApp>
         <RouterProvider router={router} />
       </AntApp>

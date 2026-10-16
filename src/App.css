@@ -1,6 +1,6 @@
 .app-layout {
   min-height: 100svh;
-  background: #f5f7fb;
+  background: var(--page);
 }
 
 .app-header {
@@ -14,7 +14,7 @@
   gap: 16px;
   padding: 0 28px;
   background: rgba(255, 255, 255, 0.92);
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border);
   backdrop-filter: blur(16px);
 }
 
@@ -24,14 +24,14 @@
   gap: 10px;
   padding: 0;
   border: 0;
-  color: #111827;
+  color: var(--ink-900);
   font-weight: 700;
   white-space: nowrap;
   background: transparent;
 }
 
 .brand .anticon {
-  color: #2563eb;
+  color: var(--blue-600);
   font-size: 22px;
 }
 
@@ -68,13 +68,13 @@
 
 .page-heading h1.ant-typography {
   margin: 4px 0 0;
-  color: #111827;
+  color: var(--ink-900);
   font-size: 32px;
   line-height: 1.2;
 }
 
 .tool-card {
-  border-color: #e5e7eb;
+  border-color: var(--border);
   border-radius: 8px;
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
 }
@@ -85,7 +85,7 @@
 
 .upload-icon {
   margin: 0;
-  color: #2563eb;
+  color: var(--blue-600);
   font-size: 28px;
 }
 
@@ -93,7 +93,7 @@
   display: grid;
   gap: 8px;
   place-items: center;
-  color: #2563eb;
+  color: var(--blue-600);
 }
 
 .plan-preview {
@@ -102,27 +102,48 @@
   max-height: 180px;
   object-fit: contain;
   margin: 0 0 16px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--surface-muted);
+}
+
+.building-floor-upload-note {
+  margin-bottom: 16px;
+}
+
+.building-floor-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  max-height: 360px;
+  overflow: auto;
+  padding: 2px;
+}
+
+.building-floor-upload-item {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
 }
 
 .table-thumb {
   width: 58px;
   height: 42px;
   object-fit: cover;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .table-thumb-placeholder {
   display: inline-block;
-  background: #f1f5f9;
+  background: var(--surface-muted);
 }
 
 .muted {
-  color: #6b7280;
+  color: var(--ink-500);
   font-size: 13px;
 }
 
@@ -137,7 +158,7 @@
 
 .home-hero h1.ant-typography {
   margin: 8px 0 12px;
-  color: #111827;
+  color: var(--ink-900);
   font-size: 44px;
   line-height: 1.08;
 }
@@ -174,10 +195,10 @@
   width: 44px;
   height: 44px;
   place-items: center;
-  color: #ffffff;
+  color: var(--surface);
   font-size: 22px;
   border-radius: 8px;
-  background: #2563eb;
+  background: var(--blue-600);
 }
 
 .building-detail-grid {
@@ -192,9 +213,9 @@
   width: 100%;
   max-height: 260px;
   object-fit: contain;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--surface-muted);
 }
 
 .store-profile-card .ant-card-body {
@@ -233,9 +254,9 @@
   gap: 6px;
   padding: 14px;
   text-align: left;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--surface);
   transition:
     border-color 0.2s,
     background 0.2s;
@@ -243,8 +264,8 @@
 
 .owner-building-card:hover,
 .owner-building-card-active {
-  border-color: #2563eb;
-  background: #eff6ff;
+  border-color: var(--blue-600);
+  background: var(--blue-50);
 }
 
 .store-owner-list-card,
@@ -274,9 +295,9 @@
   display: grid;
   min-height: 360px;
   place-items: center;
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed var(--border-strong);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--surface-muted);
 }
 
 .store-gallery-grid {
@@ -288,9 +309,9 @@
 .store-gallery-grid .ant-image-img {
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--surface-muted);
 }
 
 .elevator-link-panel {
@@ -337,15 +358,15 @@
   top: 84px;
   overflow: hidden;
   padding: 18px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #ffffff !important;
+  background: var(--surface) !important;
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
 }
 
 .manager-sider h1.ant-typography {
   margin: 0;
-  color: #111827;
+  color: var(--ink-900);
   font-size: 26px;
   line-height: 1.2;
 }
@@ -388,10 +409,10 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px !important;
-  border: 1px solid #e5e7eb !important;
+  border: 1px solid var(--border) !important;
   border-radius: 8px;
   margin-bottom: 8px;
-  background: #ffffff;
+  background: var(--surface);
   transition:
     border-color 0.2s,
     background 0.2s;
@@ -412,8 +433,8 @@
 
 .floor-list-item:hover,
 .floor-list-item-active {
-  border-color: #2563eb !important;
-  background: #eff6ff;
+  border-color: var(--blue-600) !important;
+  background: var(--blue-50);
 }
 
 .canvas-card .ant-card-body {
@@ -440,9 +461,9 @@
 .canvas-shell-empty {
   display: grid;
   place-items: center;
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed var(--border-strong);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--surface-muted);
 }
 
 .canvas-toolbar {
@@ -451,7 +472,7 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
-  color: #111827;
+  color: var(--ink-900);
 }
 
 .canvas-toolbar div {
@@ -461,7 +482,7 @@
 }
 
 .canvas-toolbar span {
-  color: #6b7280;
+  color: var(--ink-500);
   font-size: 13px;
 }
 
@@ -486,14 +507,14 @@
 .stage-wrap {
   max-width: 100%;
   overflow: hidden;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
   background:
-    linear-gradient(45deg, #f1f5f9 25%, transparent 25%),
-    linear-gradient(-45deg, #f1f5f9 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #f1f5f9 75%),
-    linear-gradient(-45deg, transparent 75%, #f1f5f9 75%);
-  background-color: #ffffff;
+    linear-gradient(45deg, var(--surface-muted) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--surface-muted) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--surface-muted) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--surface-muted) 75%);
+  background-color: var(--surface);
   background-position:
     0 0,
     0 10px,
@@ -507,9 +528,9 @@
   width: 100%;
   min-height: 520px;
   place-items: center;
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed var(--border-strong);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--surface-muted);
 }
 
 .poi-list {
@@ -523,11 +544,22 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 0;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--surface-muted);
 }
 
 .poi-list-item:last-child {
   border-bottom: 0;
+}
+
+.graph-node-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.graph-node-button {
+  justify-content: flex-start;
 }
 
 .recognition-workspace {
@@ -561,9 +593,9 @@
   align-items: end;
   padding: 14px;
   margin-bottom: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--surface-muted);
 }
 
 .recognition-mask-switch {
@@ -645,14 +677,14 @@
   min-width: 0;
   height: clamp(420px, 70vh, 720px);
   overflow: hidden;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
   background:
-    linear-gradient(45deg, #f8fafc 25%, transparent 25%),
-    linear-gradient(-45deg, #f8fafc 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #f8fafc 75%),
-    linear-gradient(-45deg, transparent 75%, #f8fafc 75%);
-  background-color: #ffffff;
+    linear-gradient(45deg, var(--surface-muted) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--surface-muted) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--surface-muted) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--surface-muted) 75%);
+  background-color: var(--surface);
   background-position:
     0 0,
     0 10px,
@@ -676,9 +708,9 @@
   gap: 8px;
   padding: 10px;
   transform: translate(14px, -50%);
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--surface);
   box-shadow: 0 16px 32px rgba(15, 23, 42, 0.16);
 }
 
@@ -706,16 +738,16 @@
   width: 100%;
   padding: 10px;
   text-align: left;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--surface);
   cursor: pointer;
 }
 
 .guest-step:hover,
 .guest-step-active {
-  border-color: #2563eb;
-  background: #eff6ff;
+  border-color: var(--blue-600);
+  background: var(--blue-50);
 }
 
 .guest-step-icon {
@@ -723,17 +755,17 @@
   width: 34px;
   height: 34px;
   place-items: center;
-  color: #ffffff;
+  color: var(--surface);
   font-size: 11px;
   font-weight: 700;
   border-radius: 999px;
-  background: #2563eb;
+  background: var(--blue-600);
 }
 
 .guest-step small {
   display: block;
   margin-top: 3px;
-  color: #6b7280;
+  color: var(--ink-500);
 }
 
 .map3d-shell {
@@ -755,9 +787,9 @@
   min-width: 0;
   height: clamp(420px, 70vh, 720px);
   overflow: hidden;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--surface-muted);
 }
 
 .map3d-empty {
@@ -768,7 +800,7 @@
 .map3d-label {
   display: inline-block;
   padding: 4px 7px;
-  color: #111827;
+  color: var(--ink-900);
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
@@ -780,6 +812,54 @@
 
 .map3d-room-label {
   background: rgba(255, 255, 255, 0.78);
+}
+
+.map3d-route-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 4px 10px;
+  color: var(--blue-700);
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid rgba(37, 99, 235, 0.24);
+  border-radius: 999px;
+  background: rgba(219, 234, 254, 0.9);
+}
+
+.map3d-route-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 9px;
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  border-radius: 999px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.22);
+}
+
+.map3d-route-label.start {
+  background: var(--success);
+}
+
+.map3d-route-label.end {
+  background: var(--danger);
+}
+
+.map3d-route-step {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 800;
+  border: 2px solid rgba(255, 255, 255, 0.94);
+  border-radius: 999px;
+  background: var(--blue-600);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.28);
 }
 
 @media (max-width: 900px) {

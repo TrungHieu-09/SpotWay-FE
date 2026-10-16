@@ -5,6 +5,14 @@
 
 ---
 
+<!-- ===== SKILL: ui-design-system ===== -->
+
+# UI Design System
+- Dùng `src/theme/theme.ts` làm nguồn token Ant Design và `src/styles/global.css` làm nguồn token CSS.
+- Giao diện tiếng Việt, dùng Be Vietnam Pro/Cormorant Garamond, ưu tiên nền sáng xanh nhạt và bố cục responsive.
+- Tái sử dụng component trong `src/components/ui/`; không rải mã màu hex, emoji hoặc style tuỳ ý trong page.
+- Xem đầy đủ tại `docs/DESIGN_SYSTEM.md` và `project-skills/ui-design-system/SKILL.md`.
+
 <!-- ===== SKILL: auth-permissions ===== -->
 
 # Auth And Permissions
@@ -397,5 +405,13 @@ docs(fe): thêm SKILL.md quy ước mock API contract
 - Mỗi PR ứng với 1 task trong bảng Project_tasks (không gộp nhiều task không liên quan vào 1 PR).
 - Tên PR = commit message chính của PR đó.
 - Trước khi merge, cập nhật status task trong bảng Project_tasks từ "In progress" sang "Done" (không để agent tự động đổi status thay bạn — chỉ nhắc bạn nhớ làm).
+
+## Contract mở rộng cho luồng demo hiện tại
+
+- Store có thêm `createdByUserId`, `roomId`, `nodeId`, `openingHours`; Store Owner chỉ sửa mô tả, ảnh, giờ mở cửa và trạng thái, không tự tạo/xóa/gán vị trí.
+- Endpoint quản trị tài khoản Store Owner, khuyến mãi, vùng bảo trì và mã QR được ghi trong `project-skills/mock-api-contract/SKILL.md`.
+- Edge dùng `kind` (`walk`, `stairs`, `ramp`); route hỗ trợ `accessible=true` và cảnh báo khi vùng bảo trì chặn tuyến.
+- Manager UI phải truyền `readOnly` khi `canEditFloor` false; không hiển thị thao tác ghi cho floor ngoài khu vực được gán.
+- Publish floor chỉ thành công khi có ảnh sơ đồ, ít nhất 2 node và 1 edge.
 
 ---
