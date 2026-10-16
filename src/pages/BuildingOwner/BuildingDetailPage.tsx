@@ -4,6 +4,7 @@ import {
   Button,
   Empty,
   Image,
+  Popconfirm,
   Spin,
 } from 'antd'
 import {
@@ -12,13 +13,24 @@ import {
   EnvironmentOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
+  CloudUploadOutlined,
+  CompassOutlined,
+  DeleteOutlined,
   EyeOutlined,
+  PictureOutlined,
+  PlusOutlined,
+  ShopOutlined,
+  TeamOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getFloors } from '../../api/floors'
+import { deleteFloor, getFloors } from '../../api/floors'
 import { useBuildingStore } from '../../store/useBuildingStore'
 import type { Floor } from '../../types/floor'
 import { GlassCard, StatusPill } from '../../components/ui'
+import { CreateFloorModal } from './CreateFloorModal'
+import { UploadFloorPlanModal } from './UploadFloorPlanModal'
+import { CreateStoreModal } from './CreateStoreModal'
+import { AssignManagerModal } from './AssignManagerModal'
 import './BuildingDetailPage.css'
 
 export function BuildingDetailPage() {
@@ -27,12 +39,26 @@ export function BuildingDetailPage() {
   const [floors, setFloors] = useState<Floor[]>([])
   const [isFloorLoading, setIsFloorLoading] = useState(false)
   const [hasLoadedBuildings, setHasLoadedBuildings] = useState(false)
+  const [createFloorOpen, setCreateFloorOpen] = useState(false)
+  const [editingFloor, setEditingFloor] = useState<Floor | null>(null)
+  const [createStoreOpen, setCreateStoreOpen] = useState(false)
+  const [assignManagerOpen, setAssignManagerOpen] = useState(false)
   const loadBuildings = useBuildingStore((state) => state.loadBuildings)
   const isBuildingLoading = useBuildingStore((state) => state.isLoading)
   const building = useBuildingStore((state) =>
     buildingId ? state.getBuildingById(buildingId) : undefined,
   )
   const { message } = AntApp.useApp()
+
+  async function handleDeleteFloor(floorId: string) {
+    try {
+      await deleteFloor(floorId)
+      setFloors((prev) => prev.filter((f) => f.id !== floorId))
+      message.success('Đã xóa tầng')
+    } catch (err) {
+      message.error((err as Error).message)
+    }
+  }
 
   useEffect(() => {
     loadBuildings()
@@ -80,7 +106,43 @@ export function BuildingDetailPage() {
             {building?.name ?? 'Building detail'}
           </h1>
         </div>
-        {buildingId ? <Button icon={<EyeOutlined />} onClick={() => navigate(`/owner/buildings/${buildingId}/overview`)}>Tổng quan 2.5D</Button> : null}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {buildingId && (
+            <Button icon={<TeamOutlined />} onClick={() => setAssignManagerOpen(true)}>
+              Gán Manager
+            </Button>
+          )}
+          {buildingId && (
+            <Button icon={<ShopOutlined />} onClick={() => setCreateStoreOpen(true)}>
+              Tạo điểm đến
+            </Button>
+          )}
+          {buildingId && (
+            <Button
+              type="primary"
+              icon={<CompassOutlined />}
+              onClick={() => navigate(`/navigate/${buildingId}`)}
+            >
+              Mở chỉ đường khách
+            </Button>
+          )}
+          {buildingId && (
+            <Button
+              icon={<PictureOutlined />}
+              onClick={() => navigate(`/owner/buildings/${buildingId}/2d`)}
+            >
+              Xem sơ đồ 2D
+            </Button>
+          )}
+          {buildingId && (
+            <Button
+              icon={<EyeOutlined />}
+              onClick={() => navigate(`/owner/buildings/${buildingId}/overview`)}
+            >
+              Tổng quan 2.5D
+            </Button>
+          )}
+        </div>
         {building && <StatusPill status={building.status} />}
       </section>
 
@@ -146,14 +208,32 @@ export function BuildingDetailPage() {
             <GlassCard
               title="Danh sách tầng"
               extra={
-                <span className="bdp-floor-count">
-                  {floors.length}/{building.floorCount} tầng
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span className="bdp-floor-count">
+                    {floors.length}/{building.floorCount} tầng
+                  </span>
+                  <Button
+                    type="primary"
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={() => setCreateFloorOpen(true)}
+                  >
+                    Thêm tầng
+                  </Button>
+                </div>
               }
             >
               <Spin spinning={isFloorLoading}>
                 {floors.length === 0 && !isFloorLoading ? (
-                  <Empty description="Chưa có tầng" />
+                  <Empty description="Chưa có tầng nào">
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={() => setCreateFloorOpen(true)}
+                    >
+                      Thêm tầng đầu tiên
+                    </Button>
+                  </Empty>
                 ) : (
                   <div className="bdp-floor-list">
                     {floors.map((floor, idx) => (
@@ -165,11 +245,62 @@ export function BuildingDetailPage() {
                         <div className="bdp-floor-item__level">
                           <span>{floor.level}</span>
                         </div>
+
+                        {floor.mapImageUrl ? (
+                          <img
+                            src={floor.mapImageUrl}
+                            alt={`Sơ đồ ${floor.name}`}
+                            className="bdp-floor-thumb"
+                          />
+                        ) : (
+                          <div className="bdp-floor-thumb-placeholder" title="Chưa có sơ đồ">
+                            <PictureOutlined />
+                          </div>
+                        )}
+
                         <div className="bdp-floor-item__info">
                           <span className="bdp-floor-item__name">{floor.name}</span>
-                          <span className="bdp-floor-item__label">Level {floor.level}</span>
+                          <span className="bdp-floor-item__label">
+                            Level {floor.level} {floor.mapImageUrl ? `· ${floor.mapWidth}×${floor.mapHeight}px` : '· Chưa có sơ đồ'}
+                          </span>
                         </div>
+
                         <StatusPill status={floor.publishStatus} />
+
+                        <div className="bdp-floor-item__actions">
+                          <Button
+                            size="small"
+                            icon={<EyeOutlined />}
+                            onClick={() =>
+                              navigate(
+                                `/owner/buildings/${buildingId}/2d?floorId=${floor.id}`,
+                              )
+                            }
+                          >
+                            Xem 2D
+                          </Button>
+                          <Button
+                            size="small"
+                            icon={<CloudUploadOutlined />}
+                            onClick={() => setEditingFloor(floor)}
+                          >
+                            Sơ đồ
+                          </Button>
+                          <Popconfirm
+                            title="Xác nhận xóa tầng?"
+                            description="Tầng và toàn bộ dữ liệu sơ đồ sẽ bị xóa."
+                            onConfirm={() => handleDeleteFloor(floor.id)}
+                            okText="Xóa"
+                            cancelText="Hủy"
+                            okButtonProps={{ danger: true }}
+                          >
+                            <Button
+                              size="small"
+                              danger
+                              icon={<DeleteOutlined />}
+                            />
+                          </Popconfirm>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -179,6 +310,37 @@ export function BuildingDetailPage() {
           </>
         )}
       </Spin>
+
+      {/* ── Modals ── */}
+      {buildingId && (
+        <>
+          <CreateFloorModal
+            buildingId={buildingId}
+            open={createFloorOpen}
+            existingLevels={floors.map((f) => f.level)}
+            onClose={() => setCreateFloorOpen(false)}
+            onSuccess={(newFloor) => {
+              setFloors((prev) =>
+                [...prev, newFloor].sort((a, b) => a.level - b.level),
+              )
+            }}
+          />
+
+          <UploadFloorPlanModal
+            buildingId={buildingId}
+            floor={editingFloor}
+            open={Boolean(editingFloor)}
+            onClose={() => setEditingFloor(null)}
+            onSuccess={(updated) => {
+              setFloors((prev) =>
+                prev.map((f) => (f.id === updated.id ? { ...f, ...updated } : f)),
+              )
+            }}
+          />
+          <CreateStoreModal floors={floors} open={createStoreOpen} onClose={() => setCreateStoreOpen(false)} />
+          <AssignManagerModal buildingId={buildingId} open={assignManagerOpen} onClose={() => setAssignManagerOpen(false)} />
+        </>
+      )}
     </main>
   )
 }

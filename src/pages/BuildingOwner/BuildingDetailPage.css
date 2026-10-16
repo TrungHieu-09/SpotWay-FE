@@ -140,16 +140,16 @@
 }
 
 .bdp-floor-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
 .bdp-floor-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 16px;
+  padding: 14px 18px;
   border: 1px solid var(--sw-border);
   border-radius: var(--sw-radius-md);
   background: var(--sw-surface-2);
@@ -214,10 +214,39 @@
   }
 
   .bdp-header__title {
-    font-size: 20px;
-  }
-
   .bdp-floor-list {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Floor Item Thumbnail & Actions ── */
+.bdp-floor-thumb {
+  width: 52px;
+  height: 38px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--sw-border);
+  background: #141424;
+  flex-shrink: 0;
+}
+
+.bdp-floor-thumb-placeholder {
+  width: 52px;
+  height: 38px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--sw-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--sw-text-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.bdp-floor-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
 }
