@@ -69,6 +69,7 @@ button, input, textarea, select { font-family: inherit; }
 .app-footer { padding: 12px 32px 20px; text-align: right; background: transparent; }
 
 .workspace { width: min(1280px, 100%); margin: 0 auto; padding: 32px; }
+.manager-layout.workspace { width: 100%; max-width: none; margin: 0; padding: 24px 32px 40px; }
 .page-header { margin-bottom: 28px; }
 .page-header .ant-breadcrumb { margin-bottom: 16px; }
 .page-header-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }

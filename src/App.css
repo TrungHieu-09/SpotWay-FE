@@ -347,8 +347,8 @@
 
 .manager-layout {
   display: grid;
-  grid-template-columns: 292px minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: minmax(280px, 292px) minmax(0, 1fr);
+  gap: 24px;
   align-items: start;
   background: transparent;
 }
@@ -564,7 +564,8 @@
 
 .recognition-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
   gap: 16px;
   align-items: stretch;
 }
@@ -582,20 +583,44 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 12px;
 }
 
+.recognition-toolbar > .ant-space:first-child {
+  min-width: 0;
+  flex: 1 1 560px;
+}
+
+.recognition-toolbar > .ant-space:last-child {
+  flex: 0 0 auto;
+}
+
 .recognition-control-panel {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 14px;
-  align-items: end;
+  align-items: stretch;
+  min-width: 0;
   padding: 14px;
   margin-bottom: 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-muted);
+}
+
+.recognition-control-panel > div {
+  min-width: 0;
+}
+
+.recognition-control-panel > div > .ant-typography:first-child {
+  display: block;
+  min-height: 42px;
+}
+
+.recognition-control-panel .ant-slider {
+  margin-inline: 4px;
 }
 
 .recognition-mask-switch {
@@ -1213,6 +1238,11 @@
 
   .recognition-control-panel {
     grid-template-columns: 1fr;
+  }
+
+  .recognition-toolbar > .ant-space:first-child,
+  .recognition-toolbar > .ant-space:last-child {
+    flex-basis: 100%;
   }
 }
 
