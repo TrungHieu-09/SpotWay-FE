@@ -1,0 +1,146 @@
+.route-map {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 380px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.route-map svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  background: #f1f5f9;
+}
+
+.route-map__fallback {
+  fill: #e2e8f0;
+}
+
+.route-map__graph {
+  stroke: rgba(148, 163, 184, 0.4);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+/* Crisp Navigation Path matching the Reference Photo */
+.route-map__route-outline {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 16;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 2px 6px rgba(37, 99, 235, 0.35));
+}
+
+.route-map__route {
+  fill: none;
+  stroke: #2563eb;
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.route-map__node {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.route-map__node--base {
+  fill: #94a3b8;
+  stroke: #ffffff;
+  stroke-width: 2.5;
+}
+
+.route-map__node--route {
+  fill: #3b82f6;
+  stroke: #ffffff;
+  stroke-width: 3.5;
+}
+
+.route-map__node--active {
+  fill: #2563eb;
+  stroke: #ffffff;
+  stroke-width: 4;
+}
+
+/* Radar Pulse Animation for Current User Position */
+@keyframes radarWave {
+  0% {
+    r: 16;
+    opacity: 0.8;
+  }
+  100% {
+    r: 44;
+    opacity: 0;
+  }
+}
+
+.radar-wave {
+  fill: none;
+  stroke: #3b82f6;
+  stroke-width: 3;
+  animation: radarWave 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+.radar-core {
+  fill: #2563eb;
+  stroke: #ffffff;
+  stroke-width: 3.5;
+  filter: drop-shadow(0 3px 8px rgba(37, 99, 235, 0.5));
+}
+
+.radar-heading {
+  fill: #ffffff;
+  pointer-events: none;
+}
+
+/* Destination Teardrop Pin Marker */
+.destination-pin-body {
+  fill: #2563eb;
+  stroke: #ffffff;
+  stroke-width: 3;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
+}
+
+.destination-pin-dot {
+  fill: #ffffff;
+}
+
+.destination-room-highlight {
+  fill: rgba(37, 99, 235, 0.12);
+  stroke: #2563eb;
+  stroke-width: 2.5;
+  stroke-dasharray: 6 4;
+}
+
+.route-map__step-label circle {
+  fill: #1e293b;
+  stroke: #ffffff;
+  stroke-width: 2.5;
+}
+
+.route-map__step-label text {
+  fill: #ffffff;
+  font: 700 13px system-ui, sans-serif;
+  pointer-events: none;
+}
+
+.route-map__notice {
+  position: absolute;
+  inset: auto 16px 16px;
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 8px;
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  font-size: 12px;
+}
