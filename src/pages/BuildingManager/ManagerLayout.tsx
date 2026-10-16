@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { App as AntApp, Button, Layout, Tabs, Typography, Upload } from 'antd'
+import { App as AntApp, Button, Layout, Tabs, Tooltip, Typography, Upload } from 'antd'
 import { ExperimentOutlined, UploadOutlined } from '@ant-design/icons'
 import { FloorSelector } from './FloorSelector'
 import { CanvasBoard } from './CanvasBoard'
@@ -17,7 +17,7 @@ import { usePermissions } from '../../auth/usePermissions'
 import { compressPlanImageFile } from '../../utils/planRecognition'
 
 const { Content, Sider } = Layout
-const { Text, Title } = Typography
+const { Title } = Typography
 
 export function ManagerLayout() {
   const [buildingId, setBuildingId] = useState<string>()
@@ -57,6 +57,16 @@ export function ManagerLayout() {
     }
   }, [buildingId, loadFloors, message])
 
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>('.editor-stage-column .ant-tabs-tab-active')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      })
+    })
+  }, [activeTab])
+
   async function handlePlanUpload(file: File) {
     if (!selectedFloor || isReadOnly) {
       return
@@ -78,8 +88,7 @@ export function ManagerLayout() {
 
   return (
     <Layout className="workspace manager-layout">
-      <Sider width={292} theme="light" className="manager-sider">
-        <Text type="secondary">Quản lý tòa nhà</Text>
+      <Sider width={340} theme="light" className="manager-sider">
         <Title level={1}>Quản lý sơ đồ tầng</Title>
         <FloorSelector buildingId={buildingId} />
       </Sider>
@@ -92,34 +101,45 @@ export function ManagerLayout() {
           selectedFloorId={selectedFloor?.id}
           isBuildingLoading={isBuildingLoading}
           readOnly={isReadOnly}
-          secondaryAction={<Upload
-            accept="image/png,image/jpeg,image/webp"
-            showUploadList={false}
-            beforeUpload={(file) => {
-              void handlePlanUpload(file)
-              return Upload.LIST_IGNORE
-            }}
-          >
-            <Button icon={<UploadOutlined />} disabled={!selectedFloor || isReadOnly}>
-              Tải ảnh 2D
-            </Button>
-          </Upload>}
-          primaryAction={<Button
-            type="primary"
-            icon={<ExperimentOutlined />}
-            disabled={!selectedFloor}
-            onClick={() => {
-              setActiveTab('recognition')
-              setAutoRecognizeRequestId((requestId) => requestId + 1)
-            }}
-          >
-            Tạo mô hình 3D
-          </Button>}
+          secondaryAction={<Tooltip title={isReadOnly ? 'Tầng này chỉ đọc nên không thể chỉnh sửa' : undefined}>
+            <span>
+              <Upload
+                accept="image/png,image/jpeg,image/webp"
+                showUploadList={false}
+                disabled={!selectedFloor || isReadOnly}
+                beforeUpload={(file) => {
+                  void handlePlanUpload(file)
+                  return Upload.LIST_IGNORE
+                }}
+              >
+                <Button icon={<UploadOutlined />} disabled={!selectedFloor || isReadOnly} aria-disabled={!selectedFloor || isReadOnly}>
+                  Tải ảnh 2D
+                </Button>
+              </Upload>
+            </span>
+          </Tooltip>}
+          primaryAction={<Tooltip title={isReadOnly ? 'Tầng này chỉ đọc nên không thể chỉnh sửa' : undefined}>
+            <span>
+              <Button
+                type="primary"
+                icon={<ExperimentOutlined />}
+                disabled={!selectedFloor || isReadOnly}
+                aria-disabled={!selectedFloor || isReadOnly}
+                onClick={() => {
+                  setActiveTab('recognition')
+                  setAutoRecognizeRequestId((requestId) => requestId + 1)
+                }}
+              >
+                Tạo mô hình 3D
+              </Button>
+            </span>
+          </Tooltip>}
           onBuildingChange={setBuildingId}
           onFloorChange={selectFloor}
         >
           <Tabs
             activeKey={activeTab}
+            moreIcon={null}
             onChange={(nextTab) => {
               if (activeTab === 'recognition' && isRecognitionDirty) {
                 modal.confirm({

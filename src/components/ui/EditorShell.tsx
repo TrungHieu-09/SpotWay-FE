@@ -1,5 +1,5 @@
 import { Button, Select, Space, Tag, Tooltip, Typography } from 'antd'
-import { AimOutlined, DeleteOutlined, EnvironmentOutlined, LinkOutlined, LockOutlined, PlusOutlined, SaveOutlined, ZoomInOutlined, ZoomOutOutlined, ReloadOutlined } from '@ant-design/icons'
+import { AimOutlined, DeleteOutlined, EnvironmentOutlined, LinkOutlined, PlusOutlined, SaveOutlined, ReloadOutlined } from '@ant-design/icons'
 import { useEffect, useState, type ReactNode } from 'react'
 import type { Building } from '../../types/building'
 import type { Floor } from '../../types/floor'
@@ -45,17 +45,29 @@ export function EditorShell({ buildings, buildingId, floors, selectedFloorId, is
 
   return <section className="editor-shell">
     <aside className="editor-tool-rail" aria-label="Công cụ bản đồ">
-      {toolItems.map((tool) => <Tooltip key={tool.key} title={`${tool.label} (${tool.shortcut})`} placement="right"><Button type={activeTool === tool.key ? 'primary' : 'text'} className="editor-tool-button" disabled={readOnly} icon={tool.icon} aria-label={tool.label} onClick={() => setActiveTool(tool.key)} /></Tooltip>)}
+      {toolItems.map((tool) => <Tooltip key={tool.key} title={`${tool.label} (${tool.shortcut})`} placement="right"><Button type={activeTool === tool.key ? 'primary' : 'text'} danger={tool.key === 'delete' && activeTool !== tool.key} className="editor-tool-button" disabled={readOnly} icon={tool.icon} aria-label={tool.label} aria-disabled={readOnly} onClick={() => setActiveTool(tool.key)} /></Tooltip>)}
       <div className="editor-tool-spacer" />
       <Tooltip title="Hoàn tác"><Button type="text" className="editor-tool-button" icon={<ReloadOutlined />} aria-label="Hoàn tác" /></Tooltip>
     </aside>
     <div className="editor-stage-column">
       <div className="editor-context-bar">
-        <div className="editor-context-main"><Select aria-label="Chọn tòa nhà" value={buildingId} loading={isBuildingLoading} placeholder="Chọn tòa nhà" options={buildings.map((building) => ({ value: building.id, label: building.name }))} onChange={onBuildingChange} /><div className="editor-floor-chips">{floors.map((floor) => <button key={floor.id} type="button" className={`editor-floor-chip${floor.id === selectedFloorId ? ' is-active' : ''}`} onClick={() => onFloorChange(floor.id)}><span className="editor-area-dot" />{floor.name}{floor.id === selectedFloorId && selectedFloor?.publishStatus === 'draft' ? <Tag color="gold">Nháp</Tag> : null}{readOnly ? <LockOutlined /> : null}</button>)}</div></div><Space wrap><Tag color={selectedFloor?.publishStatus === 'published' ? 'green' : 'gold'}>{selectedFloor?.publishStatus === 'published' ? 'Đã xuất bản' : 'Bản nháp'}</Tag><span className={`editor-save-state ${status}`}>{status === 'saving' ? <SaveOutlined /> : null} {statusLabel}</span>{secondaryAction}{primaryAction}</Space>
+        <div className="editor-context-row editor-context-row-top">
+          <div className="editor-context-main">
+            <Select aria-label="Chọn tòa nhà" value={buildingId} loading={isBuildingLoading} placeholder="Chọn tòa nhà" options={buildings.map((building) => ({ value: building.id, label: building.name }))} onChange={onBuildingChange} />
+            <Select aria-label="Chọn tầng" value={selectedFloorId} placeholder="Chọn tầng" disabled={!buildingId || floors.length === 0} options={floors.map((floor) => ({ value: floor.id, label: `${floor.name} · Tầng ${floor.level}` }))} onChange={onFloorChange} />
+          </div>
+        </div>
+        <div className="editor-context-row editor-context-row-bottom">
+          <Space className="editor-context-status" wrap>
+            <Tag color={selectedFloor?.publishStatus === 'published' ? 'green' : 'gold'}>{selectedFloor?.publishStatus === 'published' ? 'Đã xuất bản' : 'Bản nháp'}</Tag>
+            <span className={`editor-save-state ${status}`}>{status === 'saving' ? <SaveOutlined /> : null} {statusLabel}</span>
+          </Space>
+          <Space className="editor-context-actions" wrap>{secondaryAction}{primaryAction}</Space>
+        </div>
       </div>
       {readOnly ? <div className="editor-readonly-note">Tầng này chỉ đọc. Bạn có thể xem dữ liệu nhưng không thể chỉnh sửa.</div> : null}
-      <div className="editor-canvas-region">{children}<div className="editor-zoom-controls"><Tooltip title="Thu nhỏ"><Button icon={<ZoomOutOutlined />} aria-label="Thu nhỏ" /></Tooltip><Tooltip title="Phóng to"><Button icon={<ZoomInOutlined />} aria-label="Phóng to" /></Tooltip><Tooltip title="Về mặc định"><Button icon={<AimOutlined />} aria-label="Về mặc định" /></Tooltip></div></div>
-      <div className="editor-status-bar"><Typography.Text type="secondary">Con trỏ: --%, --%</Typography.Text><Typography.Text type="secondary">{readOnly ? 'Chế độ xem' : `Công cụ: ${toolItems.find((tool) => tool.key === activeTool)?.label}`}</Typography.Text></div>
+      <div className="editor-canvas-region">{children}</div>
+      <div className="editor-status-bar"><Typography.Text type="secondary">Tọa độ: phần trăm theo sơ đồ</Typography.Text><Typography.Text type="secondary">{readOnly ? 'Chế độ xem' : `Công cụ: ${toolItems.find((tool) => tool.key === activeTool)?.label}`}</Typography.Text></div>
     </div>
   </section>
 }
