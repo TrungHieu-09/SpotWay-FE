@@ -1,12 +1,13 @@
 import { apiClient } from './client'
 
-export type GraphNodeType = 'NORMAL' | 'DOOR' | 'ELEVATOR' | 'JUNCTION'
+export type GraphNodeType = 'NORMAL' | 'DOOR' | 'ELEVATOR' | 'STAIR' | 'ESCALATOR' | 'JUNCTION'
 
 export type GraphNode = {
   id: string
   floorId: string
   x: number
   y: number
+  name: string | null
   type: GraphNodeType
   accessible: boolean
 }

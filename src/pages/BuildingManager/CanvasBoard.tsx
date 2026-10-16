@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   Empty,
+  Input,
   List,
   message,
   Popconfirm,
@@ -147,6 +148,7 @@ export function CanvasBoard() {
   const selectedFloorId = selectedFloor?.id
   const [editorMode, setEditorMode] = useState<'poi' | 'node' | 'edge' | 'wall'>('node')
   const [nodeType, setNodeType] = useState<GraphNodeType>('NORMAL')
+  const [nodeName, setNodeName] = useState('')
   const [nodes, setNodes] = useState<GraphNode[]>([])
   const [edges, setEdges] = useState<GraphEdge[]>([])
   const [edgeStartNodeId, setEdgeStartNodeId] = useState<string>()
@@ -363,12 +365,18 @@ export function CanvasBoard() {
 
     if (editorMode !== 'node') return
 
+    if (nodeType !== 'NORMAL' && !nodeName.trim()) {
+      setGraphError('Nhập tên điểm trước khi tạo Node chức năng.')
+      return
+    }
+
     setIsGraphSaving(true)
     setGraphError(undefined)
     try {
       const node = await createGraphNode(selectedFloor.id, {
         x: (position.x / stageSize.width) * selectedFloor.mapWidth,
         y: (position.y / stageSize.height) * selectedFloor.mapHeight,
+        name: nodeName.trim() || null,
         type: nodeType,
         accessible: true,
       })
@@ -379,6 +387,7 @@ export function CanvasBoard() {
       }
       setRouteAnchorNodeId(node.id)
       setSelectedNodeId(node.id)
+      setNodeName('')
     } catch (reason) {
       setGraphError((reason as Error).message)
     } finally {
@@ -528,17 +537,28 @@ export function CanvasBoard() {
               </Radio.Button>
             </Radio.Group>
             {editorMode === 'node' && (
-              <Select
-                value={nodeType}
-                onChange={setNodeType}
-                style={{ width: 140 }}
-                options={[
-                  { value: 'NORMAL', label: 'Normal' },
-                  { value: 'JUNCTION', label: 'Junction' },
-                  { value: 'DOOR', label: 'Door' },
-                  { value: 'ELEVATOR', label: 'Elevator' },
-                ]}
-              />
+              <>
+                <Select
+                  value={nodeType}
+                  onChange={setNodeType}
+                  style={{ width: 150 }}
+                  options={[
+                    { value: 'NORMAL', label: 'Lối đi' },
+                    { value: 'JUNCTION', label: 'Giao lộ' },
+                    { value: 'DOOR', label: 'Cửa ra vào' },
+                    { value: 'ELEVATOR', label: 'Thang máy' },
+                    { value: 'STAIR', label: 'Cầu thang bộ' },
+                    { value: 'ESCALATOR', label: 'Thang cuốn' },
+                  ]}
+                />
+                <Input
+                  value={nodeName}
+                  onChange={(event) => setNodeName(event.target.value)}
+                  placeholder="Tên điểm, ví dụ: Cửa vào Zara"
+                  maxLength={100}
+                  style={{ width: 230 }}
+                />
+              </>
             )}
             {editorMode === 'edge' && (
               <AntText type="secondary">
