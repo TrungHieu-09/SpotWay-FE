@@ -14,3 +14,13 @@ export async function createBuilding(payload: CreateBuildingPayload) {
   return toBuilding(data)
 }
 
+export async function assignManagerByEmail(buildingId: string, email: string) {
+  const { data } = await apiClient.post(`/buildings/${buildingId}/managers/by-email`, { email })
+  return data
+}
+
+export async function createAndAssignManager(buildingId: string, email: string, password: string) {
+  const { data } = await apiClient.post(`/buildings/${buildingId}/managers`, { email, password })
+  return data
+}
+

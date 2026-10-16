@@ -40,16 +40,79 @@ export async function deleteFloor(floorId: string) {
   await apiClient.delete(`/floors/${floorId}`)
 }
 
-async function getFloorPois(floor: Floor) {
-  const [{ data: pois }, { data: nodes }] = await Promise.all([
-    apiClient.get<ApiPoi[]>(`/floors/${floor.id}/pois`),
-    apiClient.get<ApiNode[]>(`/floors/${floor.id}/nodes`),
-  ])
-  const nodeById = new Map(nodes.map((node) => [node.id, node]))
-  return pois.flatMap((poi): Poi[] => {
-    const node = nodeById.get(poi.nodeId)
-    return node ? [{ id: poi.id, nodeId: poi.nodeId, floorId: poi.floorId, name: poi.name, type: 'custom', x: (node.x / floor.mapWidth) * 100, y: (node.y / floor.mapHeight) * 100 }] : []
+export type UploadUrlResponse = {
+  signedUrl: string
+  path: string
+  publicUrl: string
+  token: string
+}
+
+export async function getFloorUploadUrl(buildingId: string, filename: string, mimeType?: string) {
+  const { data } = await apiClient.post<UploadUrlResponse>(
+    `/buildings/${buildingId}/floors/upload-url`,
+    { filename, mimeType },
+  )
+  return data
+}
+
+export async function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      resolve({ width: img.naturalWidth || 1200, height: img.naturalHeight || 800 })
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve({ width: 1200, height: 800 })
+    }
+    img.src = url
   })
+}
+
+export async function uploadFloorPlanImage(
+  buildingId: string,
+  file: File,
+): Promise<{ mapImageUrl: string; mapWidth: number; mapHeight: number }> {
+  const [{ width, height }, uploadInfo] = await Promise.all([
+    getImageDimensions(file),
+    getFloorUploadUrl(buildingId, file.name, file.type),
+  ])
+
+  const uploadResponse = await fetch(uploadInfo.signedUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': file.type || 'image/png',
+    },
+    body: file,
+  })
+
+  if (!uploadResponse.ok) {
+    throw new Error(`Upload ảnh sơ đồ thất bại: ${uploadResponse.statusText}`)
+  }
+
+  return {
+    mapImageUrl: uploadInfo.publicUrl,
+    mapWidth: width,
+    mapHeight: height,
+  }
+}
+
+async function getFloorPois(floor: Floor) {
+  try {
+    const [{ data: pois }, { data: nodes }] = await Promise.all([
+      apiClient.get<ApiPoi[]>(`/floors/${floor.id}/pois`),
+      apiClient.get<ApiNode[]>(`/floors/${floor.id}/nodes`),
+    ])
+    const nodeById = new Map(nodes.map((node) => [node.id, node]))
+    return pois.flatMap((poi): Poi[] => {
+      const node = nodeById.get(poi.nodeId)
+      return node ? [{ id: poi.id, nodeId: poi.nodeId, floorId: poi.floorId, name: poi.name, type: 'custom', x: (node.x / floor.mapWidth) * 100, y: (node.y / floor.mapHeight) * 100 }] : []
+    })
+  } catch {
+    return []
+  }
 }
 
 export async function saveFloorPois(floorId: string, pois: Poi[]) {
