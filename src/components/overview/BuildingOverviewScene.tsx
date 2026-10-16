@@ -22,10 +22,7 @@ import type {
   OverviewStore,
 } from '../../api/navigation'
 import type { CubiCasaPolygons, DetectedWall } from '../../api/floorPlanAnalysis'
-import {
-  detectWallsAndDoorsFromFloorPlanImage,
-  type DetectedDoor,
-} from '../../utils/wallDetection'
+import type { DetectedDoor } from '../../utils/wallDetection'
 
 export type SelectedElement =
   | { type: 'node'; id: string; data: OverviewNode; floorName: string }
@@ -471,41 +468,21 @@ function FloorPlane({
   useEffect(() => {
     const draftWalls = floor.mapRevision?.editorState?.walls
     const draftDoors = floor.mapRevision?.editorState?.doors
-    // Nếu draftWalls từ DB có số lượng hợp lý (<= 35 đoạn), sử dụng bản duyệt chính xác.
-    // Nếu draftWalls > 35, đây là bản quét thô cũ chưa lọc (rối mù đè lên chữ/nét đứt), sẽ tự động bỏ qua và phân tích lại.
-    if (Array.isArray(draftWalls) && draftWalls.length > 0 && draftWalls.length <= 35) {
+    // A 2.5D wall layer is shown only from a server-side revision.  Never
+    // infer geometry in the browser or restore an old browser cache: before
+    // the user presses Analyze, the source plan must remain a flat image.
+    if (Array.isArray(draftWalls) && draftWalls.length > 0) {
       setWalls(draftWalls)
       if (Array.isArray(draftDoors) && draftDoors.length > 0) {
         setDoors(draftDoors)
+      } else {
+        setDoors([])
       }
       return
     }
-    try {
-      const saved = localStorage.getItem(`spotway.walls.${floor.id}`)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length > 0 && parsed.length <= 35) {
-          setWalls(parsed)
-          return
-        }
-      }
-    } catch {}
 
-    if (floor.mapImageUrl) {
-      let active = true
-      detectWallsAndDoorsFromFloorPlanImage(floor.mapImageUrl, floor.id).then(({ walls: detectedWalls, doors: detectedDoors }) => {
-        if (active) {
-          if (detectedWalls.length > 0) setWalls(detectedWalls)
-          if (detectedDoors.length > 0) setDoors(detectedDoors)
-        }
-      })
-      return () => {
-        active = false
-      }
-    } else {
-      setWalls([])
-      setDoors([])
-    }
+    setWalls([])
+    setDoors([])
   }, [floor.id, floor.mapRevision?.version, floor.mapImageUrl])
 
   useEffect(() => {

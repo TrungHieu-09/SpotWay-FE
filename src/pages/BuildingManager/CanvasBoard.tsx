@@ -179,7 +179,9 @@ export function CanvasBoard() {
       })
       .catch((reason: Error) => setGraphError(reason.message))
 
-    // Load walls from backend revision first, fallback to localStorage
+    // Only a persisted server revision may initialize the editor.  Restoring
+    // browser-local walls made a newly uploaded, unanalyzed plan look as if
+    // it had already been processed by the AI.
     getLatestFloorPlanRevision(selectedFloorId)
       .then((revision) => {
         const draftWalls = revision?.editorState?.walls
@@ -189,22 +191,11 @@ export function CanvasBoard() {
             floorId: selectedFloorId,
           }))
           setWalls(loaded)
-          try {
-            localStorage.setItem(`spotway.walls.${selectedFloorId}`, JSON.stringify(loaded))
-          } catch {}
           return
         }
-        const saved = localStorage.getItem(`spotway.walls.${selectedFloorId}`)
-        setWalls(saved ? JSON.parse(saved) : [])
+        setWalls([])
       })
-      .catch(() => {
-        try {
-          const saved = localStorage.getItem(`spotway.walls.${selectedFloorId}`)
-          setWalls(saved ? JSON.parse(saved) : [])
-        } catch {
-          setWalls([])
-        }
-      })
+      .catch(() => setWalls([]))
 
     setWallStart(null)
     setPreviewPointer(null)
