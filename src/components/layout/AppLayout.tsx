@@ -10,6 +10,8 @@ const routeTitles = [
   { prefix: '/admin', title: 'Quản trị hệ thống' },
   { prefix: '/owner/dashboard', title: 'Tổng quan doanh nghiệp' },
   { prefix: '/owner/staff', title: 'Nhân viên' },
+  { prefix: '/owner/managers', title: 'Quản lý khu vực' },
+  { prefix: '/owner/store-owners', title: 'Chủ gian hàng' },
   { prefix: '/owner/subscription', title: 'Gói dịch vụ' },
   { prefix: '/owner/buildings/', title: 'Chi tiết tòa nhà' },
   { prefix: '/owner/buildings', title: 'Chủ tòa nhà' },
@@ -33,6 +35,10 @@ export function AppLayout() {
           ? '/owner/dashboard'
           : location.pathname.startsWith('/owner/staff')
             ? '/owner/staff'
+            : location.pathname.startsWith('/owner/managers')
+              ? '/owner/managers'
+              : location.pathname.startsWith('/owner/store-owners')
+                ? '/owner/store-owners'
             : location.pathname.startsWith('/owner/subscription')
               ? '/owner/subscription'
               : location.pathname.startsWith('/owner')
@@ -54,6 +60,8 @@ export function AppLayout() {
           { label: 'Tổng quan', path: '/owner/dashboard' },
           { label: 'Tòa nhà', path: '/owner/buildings' },
           { label: 'Nhân viên', path: '/owner/staff' },
+          { label: 'Quản lý khu vực', path: '/owner/managers' },
+          { label: 'Chủ gian hàng', path: '/owner/store-owners' },
           { label: 'Gói dịch vụ', path: '/owner/subscription' },
           { label: 'Quản lý tòa nhà', path: '/manager' },
         ]

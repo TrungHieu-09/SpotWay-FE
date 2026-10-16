@@ -1,6 +1,7 @@
 import { apiClient } from './client'
 import type { AdminOverview, AdminUser, TenantDetail } from '../types/admin'
 import type { Plan, Tenant } from '../types/auth'
+import type { Building } from '../types/building'
 
 export type CreateTenantPayload = {
   name: string
@@ -67,4 +68,23 @@ export async function updateAdminUser(userId: string, payload: UpdateAdminUserPa
 
 export async function deleteAdminUser(userId: string) {
   await apiClient.delete(`/admin/users/${userId}`)
+}
+
+export async function resetAdminUserPassword(userId: string) {
+  const { data } = await apiClient.post<AdminUser & { temporaryPassword: string }>(`/admin/users/${userId}/reset-password`)
+  return data
+}
+
+export async function createAdminBuilding(tenantId: string, payload: { name: string; address: string }) {
+  const { data } = await apiClient.post<Building>(`/admin/tenants/${tenantId}/buildings`, payload)
+  return data
+}
+
+export async function updateAdminBuilding(buildingId: string, payload: Partial<Pick<Building, 'name' | 'address' | 'status'>>) {
+  const { data } = await apiClient.patch<Building>(`/admin/buildings/${buildingId}`, payload)
+  return data
+}
+
+export async function deleteAdminBuilding(buildingId: string) {
+  await apiClient.delete(`/admin/buildings/${buildingId}`)
 }
