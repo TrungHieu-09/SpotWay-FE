@@ -13,28 +13,24 @@ const { Paragraph, Text, Title } = Typography
 const roleCards = [
   {
     title: 'Khách tham quan',
-    role: 'guest',
     path: '/guest',
     icon: <CompassOutlined />,
     description: 'Xem bản đồ trong nhà, chọn điểm đến và theo dõi chỉ dẫn 2D/3D.',
   },
   {
     title: 'Chủ gian hàng',
-    role: 'store_owner',
     path: '/store/profile',
     icon: <ShopOutlined />,
     description: 'Quản lý hồ sơ, logo, hình ảnh và trạng thái gian hàng.',
   },
   {
     title: 'Quản lý tòa nhà',
-    role: 'building_manager',
     path: '/manager',
     icon: <TeamOutlined />,
     description: 'Quản lý tầng, POI, gian hàng, nhận diện sơ đồ và bản xem 3D.',
   },
   {
     title: 'Chủ tòa nhà',
-    role: 'building_owner',
     path: '/owner/buildings',
     icon: <BankOutlined />,
     description: 'Theo dõi danh sách tòa nhà, tạo tòa nhà mới và xem chi tiết.',
@@ -44,9 +40,8 @@ const roleCards = [
 export function HomePage() {
   const navigate = useNavigate()
 
-  function enterRole(role: string, path: string) {
-    window.localStorage.setItem('demoRole', role)
-    navigate(path)
+  function enterRole(path: string) {
+    navigate(path === '/guest' ? path : `/login?redirect=${encodeURIComponent(path)}`)
   }
 
   return (
@@ -69,7 +64,7 @@ export function HomePage() {
             <Button
               type="primary"
               icon={<HomeOutlined />}
-              onClick={() => enterRole(card.role, card.path)}
+              onClick={() => enterRole(card.path)}
             >
               Vào màn hình
             </Button>
