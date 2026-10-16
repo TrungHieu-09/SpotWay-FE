@@ -1,7 +1,7 @@
 import { apiClient } from './client'
 import type { AdminOverview, AdminUser, TenantDetail } from '../types/admin'
 import type { Plan, Tenant } from '../types/auth'
-import type { Building } from '../types/building'
+import type { Building, CreateBuildingFloorPayload } from '../types/building'
 
 export type CreateTenantPayload = {
   name: string
@@ -76,7 +76,7 @@ export async function resetAdminUserPassword(userId: string) {
   return data
 }
 
-export async function createAdminBuilding(tenantId: string, payload: { name: string; address: string }) {
+export async function createAdminBuilding(tenantId: string, payload: { name: string; address: string; floors: CreateBuildingFloorPayload[] }) {
   const { data } = await apiClient.post<Building>(`/admin/tenants/${tenantId}/buildings`, payload)
   return data
 }

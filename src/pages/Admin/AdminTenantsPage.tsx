@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import {
   App as AntApp,
+  Alert,
   Button,
   Card,
   DatePicker,
   Form,
   Input,
+  InputNumber,
   Modal,
   Popconfirm,
   Select,
@@ -13,8 +15,10 @@ import {
   Table,
   Tag,
   Typography,
+  Upload,
 } from 'antd'
 import { CopyOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import type { RcFile, UploadChangeParam, UploadFile } from 'antd/es/upload/interface'
 import dayjs, { type Dayjs } from 'dayjs'
 import {
   createAdminBuilding,
@@ -29,11 +33,38 @@ import {
 } from '../../api/admin'
 import type { Plan, Tenant, User } from '../../types/auth'
 import type { TenantDetail } from '../../types/admin'
+import type { CreateBuildingFloorPayload } from '../../types/building'
+import { compressPlanImageFile } from '../../utils/planRecognition'
 
 const { Text, Title } = Typography
 type TenantForm = { name: string; subdomain: string; planId: string; planExpiresAt: Dayjs; ownerName: string; ownerEmail: string }
 type OwnerForm = { name: string; email: string }
 type LoginCredentials = { email: string; temporaryPassword: string }
+type BuildingForm = { name: string; address: string; floorCount?: number; floors?: Array<{ upload?: UploadFile[] }> }
+
+const MAX_PLAN_IMAGE_SIZE = 5 * 1024 * 1024
+const MAX_FLOOR_COUNT = 20
+
+function normalizeFloorCount(value: number | null | undefined) {
+  if (!value || Number.isNaN(value)) return 1
+  return Math.min(MAX_FLOOR_COUNT, Math.max(1, Math.trunc(value)))
+}
+
+function getUploadFileList(event: UploadChangeParam<UploadFile>) {
+  return event.fileList
+}
+
+function validatePlanFile(file: RcFile, showError: (content: string) => void) {
+  if (!file.type.startsWith('image/')) {
+    showError('File upload phải là ảnh')
+    return Upload.LIST_IGNORE
+  }
+  if (file.size > MAX_PLAN_IMAGE_SIZE) {
+    showError('Ảnh sơ đồ không được vượt quá 5MB')
+    return Upload.LIST_IGNORE
+  }
+  return false
+}
 
 export function AdminTenantsPage() {
   const [tenants, setTenants] = useState<Tenant[]>([])
@@ -45,7 +76,7 @@ export function AdminTenantsPage() {
   const [ownerOpen, setOwnerOpen] = useState(false)
   const [credentials, setCredentials] = useState<LoginCredentials | null>(null)
   const [form] = Form.useForm<TenantForm>()
-  const [buildingForm] = Form.useForm<{ name: string; address: string }>()
+  const [buildingForm] = Form.useForm<BuildingForm>()
   const [ownerForm] = Form.useForm<OwnerForm>()
   const { message } = AntApp.useApp()
 
@@ -83,9 +114,30 @@ export function AdminTenantsPage() {
     try { await updateAdminTenant(tenant.id, { status: tenant.status === 'active' ? 'suspended' : 'active' }); await reload() } catch (error) { message.error((error as Error).message) }
   }
 
-  async function submitBuilding(values: { name: string; address: string }) {
+  const watchedFloorCount = Form.useWatch('floorCount', buildingForm)
+  const floorCount = normalizeFloorCount(watchedFloorCount)
+
+  async function submitBuilding(values: BuildingForm) {
     if (!selected) return
-    try { await createAdminBuilding(selected.id, values); message.success('Đã tạo tòa nhà cho doanh nghiệp'); setBuildingOpen(false); buildingForm.resetFields(); await openTenant(selected.id) } catch (error) { message.error((error as Error).message) }
+    try {
+      const floors: CreateBuildingFloorPayload[] = []
+      for (let index = 0; index < floorCount; index += 1) {
+        const file = values.floors?.[index]?.upload?.[0]?.originFileObj
+        const compressedImage = file ? await compressPlanImageFile(file) : null
+        floors.push({
+          name: `Tầng ${index + 1}`,
+          level: index + 1,
+          mapImageUrl: compressedImage?.dataUrl ?? null,
+          mapWidth: compressedImage?.width,
+          mapHeight: compressedImage?.height,
+        })
+      }
+      await createAdminBuilding(selected.id, { name: values.name, address: values.address, floors })
+      message.success('Đã tạo tòa nhà và các tầng')
+      setBuildingOpen(false)
+      buildingForm.resetFields()
+      await openTenant(selected.id)
+    } catch (error) { message.error((error as Error).message) }
   }
 
   async function submitOwner(values: OwnerForm) {
@@ -171,18 +223,50 @@ export function AdminTenantsPage() {
       <Modal title="Thêm doanh nghiệp và chủ tòa nhà" open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} okText="Tạo" cancelText="Hủy">
         <Form form={form} layout="vertical" onFinish={submit}>
           <Form.Item name="name" label="Tên doanh nghiệp" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="subdomain" label="Subdomain" rules={[{ required: true }]}><Input addonAfter=".indoor-spatial.vn" /></Form.Item>
+          <Form.Item
+            name="subdomain"
+            label="Subdomain"
+            extra="Ví dụ: saigon-retail.indoor-spatial.vn. Bản demo dùng giá trị này làm mã nhận diện tenant, chưa tự tạo DNS/domain thật."
+            rules={[
+              { required: true, message: 'Vui lòng nhập subdomain' },
+              { pattern: /^[a-z0-9-]+$/, message: 'Chỉ dùng chữ thường, số và dấu gạch ngang' },
+            ]}
+          >
+            <Input addonAfter=".indoor-spatial.vn" placeholder="saigon-retail" />
+          </Form.Item>
           <Form.Item name="planId" label="Gói dịch vụ" rules={[{ required: true }]}><Select options={plans.map((plan) => ({ value: plan.id, label: plan.name }))} /></Form.Item>
           <Form.Item name="planExpiresAt" label="Ngày hết hạn" initialValue={dayjs().add(1, 'year')} rules={[{ required: true }]}><DatePicker className="full-width" /></Form.Item>
           <Form.Item name="ownerName" label="Tên chủ tòa nhà" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="ownerEmail" label="Email chủ tòa nhà" rules={[{ required: true, type: 'email' }]}><Input /></Form.Item>
+          <Alert showIcon type="info" message="Sau khi tạo doanh nghiệp, chọn Quản lý chủ và tòa nhà ở bảng danh sách để thêm tòa nhà, chọn số tầng và tải ảnh sơ đồ riêng cho từng tầng." />
         </Form>
       </Modal>
       <Modal title="Thêm chủ tòa nhà" open={ownerOpen} onCancel={() => setOwnerOpen(false)} onOk={() => ownerForm.submit()} okText="Thêm" cancelText="Hủy">
         <Form form={ownerForm} layout="vertical" onFinish={submitOwner}><Form.Item name="name" label="Tên chủ tòa nhà" rules={[{ required: true, message: 'Vui lòng nhập tên' }]}><Input /></Form.Item><Form.Item name="email" label="Email" rules={[{ required: true, type: 'email', message: 'Email không hợp lệ' }]}><Input /></Form.Item></Form>
       </Modal>
-      <Modal title="Thêm tòa nhà" open={buildingOpen} onCancel={() => setBuildingOpen(false)} onOk={() => buildingForm.submit()} okText="Tạo" cancelText="Hủy">
-        <Form form={buildingForm} layout="vertical" onFinish={submitBuilding}><Form.Item name="name" label="Tên tòa nhà" rules={[{ required: true }]}><Input /></Form.Item><Form.Item name="address" label="Địa chỉ" rules={[{ required: true }]}><Input /></Form.Item></Form>
+      <Modal title="Thêm tòa nhà" open={buildingOpen} onCancel={() => setBuildingOpen(false)} onOk={() => buildingForm.submit()} okText="Tạo" cancelText="Hủy" width={720} destroyOnHidden>
+        <Form form={buildingForm} layout="vertical" initialValues={{ floorCount: 1 }} onFinish={submitBuilding}>
+          <Form.Item name="name" label="Tên tòa nhà" rules={[{ required: true, message: 'Vui lòng nhập tên tòa nhà' }]}><Input placeholder="Saigon Central Mall" /></Form.Item>
+          <Form.Item name="address" label="Địa chỉ" rules={[{ required: true, message: 'Vui lòng nhập địa chỉ' }]}><Input placeholder="72 Lê Lợi, Quận 1" /></Form.Item>
+          <Form.Item name="floorCount" label="Số lượng tầng" rules={[{ required: true, message: 'Vui lòng nhập số lượng tầng' }]}>
+            <InputNumber className="full-width" min={1} max={MAX_FLOOR_COUNT} precision={0} />
+          </Form.Item>
+          <Alert showIcon type="info" message="Bạn có thể tải sơ đồ riêng cho từng tầng. Tầng chưa có ảnh vẫn tạo được và có thể tải bổ sung sau tại màn Quản lý tòa nhà." />
+          <div className="building-floor-upload-grid">
+            {Array.from({ length: floorCount }, (_, index) => (
+              <div className="building-floor-upload-item" key={index}>
+                <Space orientation="vertical" size={8}>
+                  <Text strong>{`Tầng ${index + 1}`}</Text>
+                  <Form.Item name={['floors', index, 'upload']} valuePropName="fileList" getValueFromEvent={getUploadFileList} noStyle>
+                    <Upload accept="image/*" beforeUpload={(file) => validatePlanFile(file, message.error)} maxCount={1} listType="picture-card">
+                      <div className="upload-card-trigger"><PlusOutlined /><span>Tải ảnh</span></div>
+                    </Upload>
+                  </Form.Item>
+                </Space>
+              </div>
+            ))}
+          </div>
+        </Form>
       </Modal>
       <Modal title="Thông tin đăng nhập chủ tòa nhà" open={credentials !== null} onCancel={() => setCredentials(null)} footer={<Button type="primary" icon={<CopyOutlined />} onClick={() => void copyCredentials()}>Sao chép thông tin</Button>}>
         <Typography.Paragraph>Hãy gửi thông tin này cho chủ tòa nhà. Đây là mật khẩu tạm và tài khoản sẽ được yêu cầu đổi mật khẩu sau lần đăng nhập đầu tiên.</Typography.Paragraph>

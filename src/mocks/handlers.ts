@@ -827,11 +827,14 @@ export const handlers = [
     if (!tenant) return apiError('NOT_FOUND', 'Không tìm thấy doanh nghiệp.', 404)
     const overview = tenantOverview(tenant.id)
     if (overview.plan && overview.usage.buildings >= overview.plan.maxBuildings) return apiError('PLAN_LIMIT_BUILDINGS', 'Gói hiện tại đã đạt giới hạn tòa nhà.', 403)
-    const payload = (await request.json()) as { name?: string; address?: string }
+    const payload = (await request.json()) as { name?: string; address?: string; floors?: CreateBuildingFloorPayload[] }
     if (!payload.name?.trim() || !payload.address?.trim()) return apiError('VALIDATION_ERROR', 'Tên và địa chỉ tòa nhà là bắt buộc.', 400)
-    const building: Building = { id: `bldg-${crypto.randomUUID()}`, tenantId: tenant.id, name: payload.name.trim(), address: payload.address.trim(), status: 'draft', floorCount: 0, planImageUrl: null, createdAt: new Date().toISOString() }
+    const requestedFloors = payload.floors?.length ? payload.floors : [{ name: 'Tầng 1', level: 1, mapImageUrl: null }]
+    const building: Building = { id: `bldg-${crypto.randomUUID()}`, tenantId: tenant.id, name: payload.name.trim(), address: payload.address.trim(), status: 'draft', floorCount: requestedFloors.length, planImageUrl: requestedFloors.find((floor) => floor.mapImageUrl)?.mapImageUrl ?? null, createdAt: new Date().toISOString() }
     buildings.push(building)
+    requestedFloors.forEach((floor) => floors.push(makeFloor({ buildingId: building.id, name: floor.name, level: floor.level, mapImageUrl: floor.mapImageUrl, mapWidth: floor.mapWidth, mapHeight: floor.mapHeight })))
     saveToStorage(MOCK_STORAGE_KEYS.buildings, buildings)
+    saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
     return HttpResponse.json(building, { status: 201 })
   }),
 
