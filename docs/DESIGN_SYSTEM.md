@@ -16,7 +16,15 @@ Token được định nghĩa tập trung trong `src/theme/theme.ts` và `src/st
 
 ## Thành phần dùng chung
 
-`BrandLogo`, `PageHeader`, `StatStrip`, `StatusTag`, `SectionCard` và `FloorPlanIllustration` nằm trong `src/components/ui/`.
+`BrandLogo`, `PageHeader`, `StatStrip`, `StatusTag`, `SectionCard`, `FloorPlanIllustration` và `EditorShell` nằm trong `src/components/ui/`.
+
+## Không gian bản đồ
+
+`EditorShell` cung cấp khung làm việc chung cho các tab quản lý sơ đồ: thanh công cụ dọc, thanh ngữ cảnh tòa nhà/tầng, trạng thái lưu và vùng bản đồ. Các bảng thuộc từng tính năng vẫn được giữ trong tab tương ứng để không làm mất nghiệp vụ hiện có.
+
+Màu phòng, POI và lộ trình dùng `mapTokens` trong `src/theme/theme.ts`, áp dụng thống nhất cho trình xem 2D, nhận diện sơ đồ và 3D. Trang Guest ưu tiên bản đồ trên màn hình nhỏ: bản đồ hiển thị trước, tiếp theo là tìm đường và chỉ dẫn; các vùng thao tác có thể cuộn ngang hoặc xếp một cột dưới 900px.
+
+Các nút, liên kết và điều khiển biểu mẫu có focus ring rõ ràng để hỗ trợ điều hướng bằng bàn phím. Luồng tải dữ liệu dùng Spin hoặc loading state của Ant Design; trạng thái rỗng và lỗi dùng Empty/Alert hoặc message theo ngữ cảnh.
 
 ## Không được làm
 
