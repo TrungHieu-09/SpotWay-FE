@@ -51,6 +51,7 @@ import {
   runSyntheticPlanRecognitionCheck,
   type PlanRecognitionParams,
 } from '../../utils/planRecognition'
+import { designTokens } from '../../theme/theme'
 
 const { Text: AntText } = Typography
 
@@ -58,6 +59,7 @@ type FloorRecognitionPanelProps = {
   onDirtyChange?: (isDirty: boolean) => void
   autoRecognizeRequestId?: number
   onView3D?: () => void
+  readOnly?: boolean
 }
 
 type ImageStatus = 'idle' | 'loading' | 'loaded' | 'failed'
@@ -68,6 +70,7 @@ const DEFAULT_RECOGNITION_PARAMS: PlanRecognitionParams = {
   thresholdOffset: 0,
   minRoomArea: 1600,
   simplifyTolerance: 1.2,
+  gapBridgePercent: 6,
 }
 
 const roomTypeOptions: { value: RoomType; label: string }[] = [
@@ -91,13 +94,13 @@ const roomFillByType: Record<RoomType, string> = {
 }
 
 const roomStrokeByType: Record<RoomType, string> = {
-  store: '#2563eb',
-  corridor: '#64748b',
-  atrium: '#f59e0b',
-  office: '#0284c7',
-  toilet: '#7c3aed',
-  service: '#16a34a',
-  other: '#475569',
+  store: designTokens.blue600,
+  corridor: designTokens.ink500,
+  atrium: designTokens.warning,
+  office: designTokens.blue600,
+  toilet: designTokens.blue700,
+  service: designTokens.success,
+  other: designTokens.ink700,
 }
 
 function useImage(src?: string | null) {
@@ -226,6 +229,7 @@ export function FloorRecognitionPanel({
   onDirtyChange,
   autoRecognizeRequestId = 0,
   onView3D,
+  readOnly = false,
 }: FloorRecognitionPanelProps) {
   const [stageHostRef, stageHostSize] = useElementSize<HTMLDivElement>()
   const [draftGeometry, setDraftGeometry] = useState<FloorGeometry | null>(null)
@@ -263,6 +267,7 @@ export function FloorRecognitionPanel({
   const mapImage = useImage(selectedFloor?.mapImageUrl ?? null)
   const wallMaskImage = useImage(wallMaskDataUrl)
   const { message } = AntApp.useApp()
+  const canEdit = !readOnly
 
   const selectedRoom = useMemo(
     () => draftGeometry?.rooms.find((room) => room.id === selectedRoomId),
@@ -345,6 +350,7 @@ export function FloorRecognitionPanel({
     recognitionParams.thresholdOffset,
     recognitionParams.minRoomArea,
     recognitionParams.simplifyTolerance,
+    recognitionParams.gapBridgePercent,
     realWidthM,
     selectedFloor?.mapImageUrl,
   ])
@@ -396,7 +402,7 @@ export function FloorRecognitionPanel({
   }
 
   async function handleSampleRecognize() {
-    if (!selectedFloor) {
+    if (!selectedFloor || !canEdit) {
       return
     }
 
@@ -416,7 +422,7 @@ export function FloorRecognitionPanel({
   }
 
   async function handleAutoRecognize(silent: boolean) {
-    if (!selectedFloor?.mapImageUrl) {
+    if (!canEdit || !selectedFloor?.mapImageUrl) {
       if (!silent) {
         message.warning('Hãy tải ảnh sơ đồ cho tầng trước khi tự tách phòng')
       }
@@ -470,7 +476,7 @@ export function FloorRecognitionPanel({
   }
 
   async function handleFloorPlanUpload(file: File) {
-    if (!selectedFloor) {
+    if (!selectedFloor || !canEdit) {
       return
     }
 
@@ -490,6 +496,7 @@ export function FloorRecognitionPanel({
   }
 
   function handleRealWidthChange(value: number | null) {
+    if (!canEdit) return
     const nextRealWidth = value ?? 20
     setRealWidthM(nextRealWidth)
     if (!draftGeometry || !selectedFloor) {
@@ -510,7 +517,7 @@ export function FloorRecognitionPanel({
   }
 
   async function handleSave() {
-    if (!selectedFloor || !draftGeometry) {
+    if (!canEdit || !selectedFloor || !draftGeometry) {
       return
     }
 
@@ -526,6 +533,7 @@ export function FloorRecognitionPanel({
   }
 
   function handleUndo() {
+    if (!canEdit) return
     setUndoStack((currentStack) => {
       const [previousGeometry, ...nextStack] = currentStack
       if (previousGeometry) {
@@ -537,7 +545,7 @@ export function FloorRecognitionPanel({
   }
 
   function handleStageClick(event: Konva.KonvaEventObject<MouseEvent>) {
-    if (!isAddingRoom) {
+    if (!canEdit || !isAddingRoom) {
       return
     }
 
@@ -560,7 +568,7 @@ export function FloorRecognitionPanel({
   }
 
   function closeNewRoom() {
-    if (!draftGeometry || newRoomPoints.length < 3) {
+    if (!canEdit || !draftGeometry || newRoomPoints.length < 3) {
       return
     }
 
@@ -585,6 +593,7 @@ export function FloorRecognitionPanel({
   }
 
   function addVertexToEdge(roomId: string, pointIndex: number, point: Point) {
+    if (!canEdit) return
     applyGeometryUpdate((currentGeometry) =>
       updateRoom(currentGeometry, roomId, (room) => {
         const polygon = [...room.polygon]
@@ -596,6 +605,7 @@ export function FloorRecognitionPanel({
   }
 
   function updateVertex(roomId: string, pointIndex: number, point: Point) {
+    if (!canEdit) return
     applyGeometryUpdate((currentGeometry) =>
       updateRoom(currentGeometry, roomId, (room) => ({
         ...room,
@@ -607,7 +617,7 @@ export function FloorRecognitionPanel({
   }
 
   function deleteSelectedVertex() {
-    if (!selectedVertex) {
+    if (!canEdit || !selectedVertex) {
       return
     }
 
@@ -630,7 +640,7 @@ export function FloorRecognitionPanel({
   }
 
   function deleteSelectedRoom() {
-    if (!selectedRoomId || !draftGeometry || draftGeometry.rooms.length <= 1) {
+    if (!canEdit || !selectedRoomId || !draftGeometry || draftGeometry.rooms.length <= 1) {
       return
     }
 
@@ -644,7 +654,7 @@ export function FloorRecognitionPanel({
   }
 
   function updateSelectedRoomField(field: 'name' | 'type', value: string) {
-    if (!selectedRoomId) {
+    if (!canEdit || !selectedRoomId) {
       return
     }
 
@@ -668,6 +678,7 @@ export function FloorRecognitionPanel({
             <Segmented
               value={recognitionMode}
               onChange={(value) => setRecognitionMode(value as RecognitionMode)}
+              disabled={!canEdit}
               options={[
                 { label: 'Tự tách từ ảnh', value: 'auto' },
                 { label: 'Dữ liệu mẫu', value: 'sample' },
@@ -678,6 +689,7 @@ export function FloorRecognitionPanel({
               icon={<CheckCircleOutlined />}
               loading={isRecognizing || isAutoRecognizing}
               onClick={handleRecognize}
+              disabled={!canEdit}
             >
               {recognitionMode === 'auto'
                 ? 'Chạy nhận diện'
@@ -690,6 +702,7 @@ export function FloorRecognitionPanel({
                 void handleFloorPlanUpload(file)
                 return Upload.LIST_IGNORE
               }}
+              disabled={!canEdit}
             >
               <Button icon={<UploadOutlined />}>Tải ảnh sơ đồ</Button>
             </Upload>
@@ -700,12 +713,13 @@ export function FloorRecognitionPanel({
                 setIsAddingRoom((current) => !current)
                 setNewRoomPoints([])
               }}
+              disabled={!canEdit}
             >
               Thêm phòng
             </Button>
             <Button
               icon={<UndoOutlined />}
-              disabled={undoStack.length === 0}
+              disabled={!canEdit || undoStack.length === 0}
               onClick={handleUndo}
             >
               Hoàn tác
@@ -713,8 +727,9 @@ export function FloorRecognitionPanel({
             <Button
               type="primary"
               loading={isSaving}
-              disabled={!draftGeometry || !isDirty}
+              disabled={!canEdit || !draftGeometry || !isDirty}
               onClick={handleSave}
+
             >
               Xác nhận và lưu
             </Button>
@@ -751,6 +766,7 @@ export function FloorRecognitionPanel({
               min={-60}
               max={60}
               value={recognitionParams.thresholdOffset}
+              disabled={!canEdit}
               onChange={(thresholdOffset) =>
                 setRecognitionParams((currentParams) => ({
                   ...currentParams,
@@ -766,6 +782,7 @@ export function FloorRecognitionPanel({
               max={12000}
               step={100}
               value={recognitionParams.minRoomArea}
+              disabled={!canEdit}
               onChange={(minRoomArea) =>
                 setRecognitionParams((currentParams) => ({
                   ...currentParams,
@@ -781,6 +798,7 @@ export function FloorRecognitionPanel({
               max={5}
               step={0.2}
               value={recognitionParams.simplifyTolerance}
+              disabled={!canEdit}
               onChange={(simplifyTolerance) =>
                 setRecognitionParams((currentParams) => ({
                   ...currentParams,
@@ -790,6 +808,26 @@ export function FloorRecognitionPanel({
             />
           </div>
           <div>
+            <AntText strong>Độ nối khe cửa</AntText>
+            <Slider
+              min={0}
+              max={10}
+              step={0.5}
+              value={recognitionParams.gapBridgePercent}
+              disabled={!canEdit}
+              tooltip={{ formatter: (value) => `${value ?? 0}%` }}
+              onChange={(gapBridgePercent) =>
+                setRecognitionParams((currentParams) => ({
+                  ...currentParams,
+                  gapBridgePercent,
+                }))
+              }
+            />
+            <AntText type="secondary">
+              Tăng nếu phòng có cửa bị dính nhau.
+            </AntText>
+          </div>
+          <div>
             <AntText strong>Chiều rộng thực (m)</AntText>
             <InputNumber
               className="full-width"
@@ -797,6 +835,7 @@ export function FloorRecognitionPanel({
               precision={2}
               value={realWidthM}
               onChange={handleRealWidthChange}
+              disabled={!canEdit}
             />
             <AntText type="secondary">
               Cao khoảng{' '}
@@ -814,7 +853,7 @@ export function FloorRecognitionPanel({
             <AntText strong>Hiện mặt nạ tường</AntText>
             <Switch
               checked={showWallMask}
-              disabled={!wallMaskDataUrl}
+              disabled={!canEdit || !wallMaskDataUrl}
               onChange={setShowWallMask}
             />
           </div>
@@ -860,8 +899,8 @@ export function FloorRecognitionPanel({
                           name="recognition-background"
                           width={stageSize.width}
                           height={stageSize.height}
-                          fill="#f8fafc"
-                          stroke="#cbd5e1"
+                          fill={designTokens.surfaceMuted}
+                          stroke={designTokens.borderStrong}
                           strokeWidth={2}
                         />
                         <Text
@@ -873,7 +912,7 @@ export function FloorRecognitionPanel({
                               : 'Chưa có ảnh sơ đồ'
                           }
                           fontSize={18}
-                          fill="#64748b"
+                          fill={designTokens.ink500}
                           listening={false}
                         />
                       </>
@@ -900,7 +939,7 @@ export function FloorRecognitionPanel({
                             stageSize.height,
                           )}
                           fill={roomFillByType[room.type]}
-                          stroke={isSelected ? '#ef4444' : roomStrokeByType[room.type]}
+                          stroke={isSelected ? designTokens.danger : roomStrokeByType[room.type]}
                           strokeWidth={isSelected ? 3 : 2}
                           onClick={() => {
                             setSelectedRoomId(room.id)
@@ -928,7 +967,7 @@ export function FloorRecognitionPanel({
                           text={room.name}
                           fontSize={13}
                           fontStyle="bold"
-                          fill="#111827"
+                          fill={designTokens.ink900}
                           listening={false}
                         />
                       )
@@ -956,7 +995,7 @@ export function FloorRecognitionPanel({
                             <Line
                               key={`${selectedRoom.id}-edge-${pointIndex}`}
                               points={[start.pixelX, start.pixelY, end.pixelX, end.pixelY]}
-                              stroke="#2563eb"
+                              stroke={designTokens.blue600}
                               strokeWidth={12}
                               opacity={0.01}
                               onDblClick={(event) => {
@@ -1000,8 +1039,8 @@ export function FloorRecognitionPanel({
                               x={pixelX}
                               y={pixelY}
                               radius={7}
-                              fill={isSelectedVertex ? '#ef4444' : '#ffffff'}
-                              stroke="#2563eb"
+                              fill={isSelectedVertex ? designTokens.danger : designTokens.surface}
+                              stroke={designTokens.blue600}
                               strokeWidth={2}
                               draggable
                               onClick={() =>
@@ -1035,7 +1074,7 @@ export function FloorRecognitionPanel({
                           stageSize.width,
                           stageSize.height,
                         )}
-                        stroke="#10b981"
+                        stroke={designTokens.success}
                         strokeWidth={2}
                         dash={[8, 8]}
                       />
@@ -1054,7 +1093,7 @@ export function FloorRecognitionPanel({
                           x={pixelX}
                           y={pixelY}
                           radius={5}
-                          fill="#10b981"
+                          fill={designTokens.success}
                         />
                       )
                     })}
@@ -1086,6 +1125,7 @@ export function FloorRecognitionPanel({
                   onChange={(event) =>
                     updateSelectedRoomField('name', event.target.value)
                   }
+                  disabled={!canEdit}
                 />
               </Form.Item>
               <Form.Item label="Loại phòng">
@@ -1095,21 +1135,22 @@ export function FloorRecognitionPanel({
                   onChange={(value: RoomType) =>
                     updateSelectedRoomField('type', value)
                   }
+                  disabled={!canEdit}
                 />
               </Form.Item>
             </Form>
             <Button
               danger
               icon={<DeleteOutlined />}
-              disabled={!draftGeometry || draftGeometry.rooms.length <= 1}
               onClick={deleteSelectedRoom}
+              disabled={!canEdit || !draftGeometry || draftGeometry.rooms.length <= 1}
             >
               Xoá phòng
             </Button>
             <Button
-              disabled={!selectedVertex}
               icon={<DeleteOutlined />}
               onClick={deleteSelectedVertex}
+              disabled={!canEdit || !selectedVertex}
             >
               Xoá đỉnh đang chọn
             </Button>

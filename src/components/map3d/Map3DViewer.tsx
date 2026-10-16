@@ -15,6 +15,7 @@ import {
   toWorld,
   type WorldCoordinate,
 } from '../../utils/worldCoordinates'
+import { designTokens } from '../../theme/theme'
 
 const { Text: AntText } = Typography
 
@@ -52,24 +53,24 @@ type FloorSceneProps = {
 }
 
 const roomColorByType: Record<RoomType, string> = {
-  store: '#38bdf8',
-  corridor: '#e2e8f0',
-  atrium: '#facc15',
-  office: '#67e8f9',
-  toilet: '#a78bfa',
-  service: '#86efac',
-  other: '#cbd5e1',
+  store: designTokens.blue400,
+  corridor: designTokens.surfaceMuted,
+  atrium: designTokens.gold100,
+  office: designTokens.blue300,
+  toilet: designTokens.blue200,
+  service: designTokens.successBg,
+  other: designTokens.border,
 }
 
 const poiColorByType: Record<PoiType, string> = {
-  entrance: '#2563eb',
-  shop: '#0ea5e9',
-  store: '#0ea5e9',
-  service: '#16a34a',
-  elevator: '#f97316',
-  toilet: '#7c3aed',
-  exit: '#dc2626',
-  custom: '#64748b',
+  entrance: designTokens.blue600,
+  shop: designTokens.blue500,
+  store: designTokens.blue500,
+  service: designTokens.success,
+  elevator: designTokens.warning,
+  toilet: designTokens.blue700,
+  exit: designTokens.danger,
+  custom: designTokens.ink500,
 }
 
 function hasWebGL() {
@@ -130,6 +131,27 @@ function makeWallTransform(
   return { center, length, angle }
 }
 
+function midpoint(left: THREE.Vector3, right: THREE.Vector3) {
+  return new THREE.Vector3(
+    (left.x + right.x) / 2,
+    (left.y + right.y) / 2,
+    (left.z + right.z) / 2,
+  )
+}
+
+function routeDirectionQuaternion(fromPoint: THREE.Vector3, toPoint: THREE.Vector3) {
+  const direction = new THREE.Vector3(
+    toPoint.x - fromPoint.x,
+    0,
+    toPoint.z - fromPoint.z,
+  ).normalize()
+
+  return new THREE.Quaternion().setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0),
+    direction,
+  )
+}
+
 function shouldShowPoi(type: PoiType, camera: THREE.Camera, position: WorldCoordinate) {
   if (['entrance', 'elevator', 'exit'].includes(type)) {
     return true
@@ -152,7 +174,7 @@ function FloorTextureMesh({ src, geometry, elevation }: {
   return (
     <mesh position={[0, elevation - 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
       <planeGeometry args={[geometry.realWidthM, geometry.realHeightM]} />
-      <meshBasicMaterial map={texture} transparent opacity={0.92} />
+      <meshBasicMaterial map={texture} transparent opacity={0.82} />
     </mesh>
   )
 }
@@ -204,7 +226,11 @@ function FloorTexturePlane({ floor, geometry, elevation }: {
     <>
       <mesh position={[0, elevation - 0.018, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[geometry.realWidthM, geometry.realHeightM]} />
-        <meshStandardMaterial color="#f8fafc" roughness={0.9} />
+        <meshStandardMaterial color={designTokens.surface} roughness={0.74} />
+      </mesh>
+      <mesh position={[0, elevation - 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[geometry.realWidthM + 1.2, geometry.realHeightM + 1.2]} />
+        <meshStandardMaterial color={designTokens.blue100} transparent opacity={0.36} />
       </mesh>
       {mapImageUrl ? (
         <FloorTextureMesh
@@ -234,8 +260,8 @@ function RoomMesh({ room, geometry, elevation }: {
         <meshStandardMaterial
           color={roomColorByType[room.type]}
           transparent
-          opacity={0.28}
-          roughness={0.86}
+          opacity={0.34}
+          roughness={0.72}
         />
       </mesh>
       {room.polygon.map((point, index) => {
@@ -252,7 +278,7 @@ function RoomMesh({ room, geometry, elevation }: {
             rotation={[0, -wall.angle, 0]}
           >
             <boxGeometry args={[wall.length, geometry.wallHeight, 0.18]} />
-            <meshStandardMaterial color="#334155" transparent opacity={0.54} />
+            <meshStandardMaterial color={designTokens.ink900} transparent opacity={0.36} roughness={0.58} />
           </mesh>
         )
       })}
@@ -303,8 +329,12 @@ function NodeMarker({ node, geometry, elevation }: {
   const world = toWorld(node.x, node.y, geometry, elevation + 0.08)
   return (
     <mesh position={[world.x, world.y, world.z]}>
-      <sphereGeometry args={[node.isElevatorLink ? 0.2 : 0.12, 16, 10]} />
-      <meshStandardMaterial color={node.isElevatorLink ? '#f97316' : '#475569'} />
+      <sphereGeometry args={[node.isElevatorLink ? 0.22 : 0.07, 16, 10]} />
+      <meshStandardMaterial
+        color={node.isElevatorLink ? designTokens.warning : designTokens.ink500}
+        transparent
+        opacity={node.isElevatorLink ? 0.92 : 0.34}
+      />
     </mesh>
   )
 }
@@ -318,14 +348,23 @@ function RouteLine({ route, geometry, floorId, elevation, muted }: {
 }) {
   const [dashOffset, setDashOffset] = useState(0)
   const segment = route.segments.find((item) => item.floorId === floorId)
+  const routeElevation = elevation + 0.16
   const points = useMemo(
     () =>
       segment?.points.map((point) => {
-        const world = toWorld(point.x, point.y, geometry, elevation + 0.16)
+        const world = toWorld(point.x, point.y, geometry, routeElevation)
         return new THREE.Vector3(world.x, world.y, world.z)
       }) ?? [],
-    [elevation, geometry, segment],
+    [geometry, routeElevation, segment],
   )
+  const routeCurve = useMemo(
+    () =>
+      points.length >= 2
+        ? new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.04)
+        : null,
+    [points],
+  )
+  const floorSteps = route.steps.filter((step) => step.floorId === floorId)
 
   useFrame(() => {
     setDashOffset((value) => (value + 0.015) % 1)
@@ -336,11 +375,31 @@ function RouteLine({ route, geometry, floorId, elevation, muted }: {
   }
 
   return (
-    <group>
+    <group renderOrder={20}>
+      {routeCurve ? (
+        <>
+          <mesh renderOrder={19}>
+            <tubeGeometry args={[routeCurve, Math.max(24, points.length * 18), 0.12, 14, false]} />
+            <meshBasicMaterial
+              color={muted ? designTokens.ink400 : designTokens.warning}
+              transparent
+              opacity={muted ? 0.35 : 0.92}
+            />
+          </mesh>
+          <mesh renderOrder={18}>
+            <tubeGeometry args={[routeCurve, Math.max(24, points.length * 18), 0.22, 14, false]} />
+            <meshBasicMaterial
+              color={muted ? designTokens.borderStrong : designTokens.gold100}
+              transparent
+              opacity={muted ? 0.16 : 0.38}
+            />
+          </mesh>
+        </>
+      ) : null}
       <Line
         points={points}
-        color={muted ? '#94a3b8' : '#2563eb'}
-        lineWidth={muted ? 2 : 5}
+        color={muted ? designTokens.ink500 : designTokens.blue600}
+        lineWidth={muted ? 2 : 7}
         dashed
         dashScale={8}
         dashSize={0.35}
@@ -349,12 +408,52 @@ function RouteLine({ route, geometry, floorId, elevation, muted }: {
         transparent
         opacity={muted ? 0.34 : 1}
       />
+      {points.slice(0, -1).map((point, index) => {
+        const nextPoint = points[index + 1]
+        return (
+          <mesh
+            key={`${floorId}-route-arrow-${index}`}
+            position={midpoint(point, nextPoint)}
+            quaternion={routeDirectionQuaternion(point, nextPoint)}
+            renderOrder={21}
+          >
+            <coneGeometry args={[0.2, 0.52, 18]} />
+            <meshBasicMaterial
+              color={muted ? designTokens.ink400 : designTokens.blue600}
+              transparent
+              opacity={muted ? 0.44 : 1}
+            />
+          </mesh>
+        )
+      })}
       {[points[0], points[points.length - 1]].map((point, index) => (
-        <mesh key={`${floorId}-route-marker-${index}`} position={point}>
-          <sphereGeometry args={[index === 0 ? 0.28 : 0.36, 24, 16]} />
-          <meshStandardMaterial color={index === 0 ? '#16a34a' : '#dc2626'} />
-        </mesh>
+        <group key={`${floorId}-route-marker-${index}`} position={point}>
+          <mesh renderOrder={22}>
+            <sphereGeometry args={[index === 0 ? 0.3 : 0.36, 28, 18]} />
+            <meshBasicMaterial
+              color={index === 0 ? designTokens.success : designTokens.danger}
+            />
+          </mesh>
+          <Html center distanceFactor={22} position={[0, 0.78, 0]}>
+            <span className={`map3d-route-label ${index === 0 ? 'start' : 'end'}`}>
+              {index === 0 ? 'Bắt đầu' : 'Kết thúc'}
+            </span>
+          </Html>
+        </group>
       ))}
+      {floorSteps.map((step) => {
+        const world = toWorld(step.x, step.y, geometry, routeElevation + 0.42)
+        return (
+          <Html
+            key={`${floorId}-route-step-${step.index}`}
+            center
+            distanceFactor={26}
+            position={[world.x, world.y, world.z]}
+          >
+            <span className="map3d-route-step">{step.index}</span>
+          </Html>
+        )
+      })}
     </group>
   )
 }
@@ -531,9 +630,10 @@ function Map3DScene({
 
   return (
     <>
-      <ambientLight intensity={0.62} />
-      <directionalLight position={[18, 28, 16]} intensity={1.08} castShadow />
-      <gridHelper args={[90, 30, '#cbd5e1', '#e2e8f0']} position={[0, -0.03, 0]} />
+      <ambientLight intensity={0.84} />
+      <hemisphereLight args={[designTokens.blue50, designTokens.blue100, 0.82]} />
+      <directionalLight position={[18, 30, 14]} intensity={1.18} castShadow />
+      <gridHelper args={[96, 32, designTokens.blue200, designTokens.border]} position={[0, -0.08, 0]} />
       <CameraRig
         selectedGeometry={selectedGeometry}
         focusTarget={focusTarget}
@@ -628,6 +728,11 @@ export default function Map3DViewer({
           />
         </Space>
         <Space>
+          {route ? (
+            <span className="map3d-route-status">
+              Đang hiển thị chỉ đường 3D
+            </span>
+          ) : null}
           <AntText type="secondary">Xếp chồng tầng</AntText>
           <Switch checked={stacked} onChange={setStacked} />
           <Button onClick={() => resetCameraRef.current()}>
@@ -637,7 +742,7 @@ export default function Map3DViewer({
       </div>
       <div className="map3d-host">
         <Canvas camera={{ position: [0, 42, 32], fov: 48 }} shadows>
-          <color attach="background" args={['#f8fafc']} />
+          <color attach="background" args={[designTokens.surfaceMuted]} />
           <Map3DScene
             floors={floors}
             geometriesByFloorId={geometriesByFloorId}

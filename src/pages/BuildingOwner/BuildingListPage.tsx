@@ -8,10 +8,7 @@ import {
   Modal,
   Popconfirm,
   Space,
-  Statistic,
   Table,
-  Tag,
-  Typography,
 } from 'antd'
 import { EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
@@ -19,8 +16,9 @@ import { CreateBuildingModal } from './CreateBuildingModal'
 import { useBuildingStore } from '../../store/useBuildingStore'
 import type { Building } from '../../types/building'
 import { usePermissions } from '../../auth/usePermissions'
-
-const { Text, Title } = Typography
+import { PageHeader } from '../../components/ui/PageHeader'
+import { StatStrip } from '../../components/ui/StatStrip'
+import { StatusTag } from '../../components/ui/StatusTag'
 
 export function BuildingListPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -66,23 +64,14 @@ export function BuildingListPage() {
 
   return (
     <main className="workspace">
-      <section className="page-heading">
-        <div>
-          <Text type="secondary">Chủ tòa nhà</Text>
-          <Title level={1}>Tòa nhà của bạn</Title>
-        </div>
-          <Space size="large" wrap>
-          <Statistic title="Tòa nhà" value={buildings.length} />
-          <Statistic title="Tổng số tầng" value={totalFloors} />
-            {permissions.can('create', 'building') ? <Button
+      <PageHeader eyebrow="Chủ tòa nhà" title="Tòa nhà của bạn" description="Quản lý sơ đồ, tầng và thông tin vận hành của các tòa nhà thuộc sở hữu." actions={permissions.can('create', 'building') ? <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => setIsCreateOpen(true)}
           >
             Tạo tòa nhà mới
-            </Button> : null}
-        </Space>
-      </section>
+            </Button> : null} />
+      <StatStrip items={[{ label: 'Tòa nhà', value: buildings.length }, { label: 'Tổng số tầng', value: totalFloors }]} />
 
       <Card title="Danh sách tòa nhà" className="tool-card">
         <Table<Building>
@@ -117,9 +106,7 @@ export function BuildingListPage() {
               dataIndex: 'status',
               width: 110,
               render: (status: Building['status']) => (
-                <Tag color={status === 'active' ? 'green' : 'gold'}>
-                  {status === 'active' ? 'Đang hoạt động' : 'Bản nháp'}
-                </Tag>
+                <StatusTag status={status} label={status === 'active' ? 'Đang hoạt động' : 'Bản nháp'} />
               ),
             },
             {

@@ -3,6 +3,7 @@ import { App as AntApp, Button, Card, Form, Input, Modal, Popconfirm, Space, Tab
 import { PlusOutlined } from '@ant-design/icons'
 import { createArea, deleteArea, getBuildingAreas, updateArea } from '../../api/areas'
 import type { Area } from '../../types/area'
+import { designTokens } from '../../theme/theme'
 
 type AreaFormValues = Pick<Area, 'name' | 'description' | 'color'>
 
@@ -24,7 +25,7 @@ export function AreaManagementPanel({ buildingId }: { buildingId: string }) {
 
   function openForm(area?: Area) {
     setEditing(area ?? null)
-    form.setFieldsValue(area ? { name: area.name, description: area.description, color: area.color } : { color: '#1677ff' })
+    form.setFieldsValue(area ? { name: area.name, description: area.description, color: area.color } : { color: designTokens.blue600 })
     setOpen(true)
   }
 

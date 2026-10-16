@@ -19,6 +19,7 @@ import type { RouteResult } from '../../types/route'
 import type { Destination } from '../../types/route'
 import type { Store } from '../../types/store'
 import { percentToPixel } from '../../utils/canvasCoordinates'
+import { designTokens } from '../../theme/theme'
 
 const { Text: AntText } = Typography
 
@@ -127,14 +128,14 @@ function roomCenter(room: Room): Point {
 
 function poiColor(type: PoiType) {
   const colorByType: Record<PoiType, string> = {
-    entrance: '#2563eb',
-    shop: '#0ea5e9',
-    store: '#0ea5e9',
-    service: '#16a34a',
-    elevator: '#f97316',
-    toilet: '#7c3aed',
-    exit: '#dc2626',
-    custom: '#64748b',
+    entrance: designTokens.blue600,
+    shop: designTokens.blue500,
+    store: designTokens.blue500,
+    service: designTokens.success,
+    elevator: designTokens.warning,
+    toilet: designTokens.blue700,
+    exit: designTokens.danger,
+    custom: designTokens.ink500,
   }
   return colorByType[type]
 }
@@ -378,8 +379,8 @@ export function MapViewer2D({
                   <Rect
                     width={floor.mapWidth}
                     height={floor.mapHeight}
-                    fill="#f8fafc"
-                    stroke="#94a3b8"
+                    fill={designTokens.surfaceMuted}
+                    stroke={designTokens.ink400}
                     strokeWidth={2 / totalScale}
                   />
                 )}
@@ -408,7 +409,7 @@ export function MapViewer2D({
                         points={points}
                         closed
                         fill="rgba(255,255,255,0.12)"
-                        stroke="#334155"
+                        stroke={designTokens.ink700}
                         strokeWidth={1.5 / totalScale}
                       />
                       {zoom >= 1.2 ? (
@@ -420,7 +421,7 @@ export function MapViewer2D({
                           text={room.name}
                           fontSize={13 / totalScale}
                           fontStyle="bold"
-                          fill="#111827"
+                          fill={designTokens.ink900}
                         />
                       ) : null}
                     </Group>
@@ -439,7 +440,7 @@ export function MapViewer2D({
                         )
                         return [pixelX, pixelY]
                       })}
-                      stroke="#2563eb"
+                      stroke={designTokens.blue600}
                       strokeWidth={8 / totalScale}
                       dash={[18 / totalScale, 12 / totalScale]}
                       dashOffset={dashOffset / totalScale}
@@ -464,8 +465,8 @@ export function MapViewer2D({
                           x={pixelX}
                           y={pixelY}
                           radius={index === 0 ? 9 / totalScale : 12 / totalScale}
-                          fill={index === 0 ? '#16a34a' : '#dc2626'}
-                          stroke="#ffffff"
+                          fill={index === 0 ? designTokens.success : designTokens.danger}
+                          stroke={designTokens.surface}
                           strokeWidth={3 / totalScale}
                         />
                       )
@@ -494,7 +495,7 @@ export function MapViewer2D({
                       <Circle
                         radius={15 / totalScale}
                         fill={poiColor(poi.type)}
-                        stroke="#ffffff"
+                        stroke={designTokens.surface}
                         strokeWidth={4 / totalScale}
                       />
                       <Text
@@ -505,7 +506,7 @@ export function MapViewer2D({
                         fontSize={9 / totalScale}
                         fontStyle="bold"
                         align="center"
-                        fill="#ffffff"
+                        fill={designTokens.surface}
                       />
                     </Group>
                   )

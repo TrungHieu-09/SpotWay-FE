@@ -24,6 +24,8 @@ import { DeleteOutlined } from '@ant-design/icons'
 import { useFloorStore } from '../../store/useFloorStore'
 import type { FloorPublishStatus } from '../../types/floor'
 import { percentToPixel, pixelToPercent } from '../../utils/canvasCoordinates'
+import { usePermissions } from '../../auth/usePermissions'
+import { designTokens } from '../../theme/theme'
 
 const { Text: AntText } = Typography
 
@@ -97,7 +99,7 @@ function useElementSize<T extends HTMLElement>() {
   return [ref, size] as const
 }
 
-export function CanvasBoard() {
+export function CanvasBoard({ readOnly = false }: { readOnly?: boolean }) {
   const [stageHostRef, stageHostSize] = useElementSize<HTMLDivElement>()
   const selectedFloor = useFloorStore((state) => state.selectedFloor)
   const pois = useFloorStore((state) => state.pois)
@@ -108,6 +110,8 @@ export function CanvasBoard() {
   const removePoi = useFloorStore((state) => state.removePoi)
   const mapImageUrl = selectedFloor?.mapImageUrl?.trim() || null
   const mapImage = useImage(mapImageUrl)
+  const permissions = usePermissions()
+  const canEdit = Boolean(selectedFloor && permissions.canEditFloor(selectedFloor) && !readOnly)
 
   const stageSize = useMemo(() => {
     if (!selectedFloor) {
@@ -141,7 +145,7 @@ export function CanvasBoard() {
   }
 
   async function handleStageClick(event: Konva.KonvaEventObject<MouseEvent>) {
-    if (!selectedFloor) {
+    if (!selectedFloor || !canEdit) {
       return
     }
 
@@ -240,8 +244,8 @@ export function CanvasBoard() {
                             name="map-background"
                             width={stageSize.width}
                             height={stageSize.height}
-                            fill="#f1f5f9"
-                            stroke="#94a3b8"
+                            fill={designTokens.surfaceMuted}
+                            stroke={designTokens.ink400}
                             strokeWidth={2}
                           />
                           <Text
@@ -255,7 +259,7 @@ export function CanvasBoard() {
                                   : 'Chưa có ảnh sơ đồ'
                             }
                             fontSize={18}
-                            fill="#475569"
+                            fill={designTokens.ink700}
                             listening={false}
                           />
                         </>
@@ -274,10 +278,10 @@ export function CanvasBoard() {
                             x={pixelX}
                             y={pixelY}
                             radius={16}
-                            fill="#f97316"
-                            stroke="#ffffff"
+                            fill={designTokens.warning}
+                            stroke={designTokens.surface}
                             strokeWidth={5}
-                            draggable
+                            draggable={canEdit}
                             onDragEnd={(event) =>
                               handlePoiDragEnd(poi.id, event)
                             }
@@ -299,11 +303,11 @@ export function CanvasBoard() {
                             y={pixelY - 17}
                             listening={false}
                           >
-                            <KonvaTag fill="#111827" cornerRadius={4} />
+                            <KonvaTag fill={designTokens.ink900} cornerRadius={4} />
                             <Text
                               text={poi.name}
                               fontSize={14}
-                              fill="#ffffff"
+                              fill={designTokens.surface}
                               padding={6}
                             />
                           </Label>
@@ -342,12 +346,12 @@ export function CanvasBoard() {
                     {poi.x.toFixed(1)}%, {poi.y.toFixed(1)}%
                   </AntText>
                 </Space>
-                <Button
+                {canEdit ? <Button
                   danger
                   size="small"
                   icon={<DeleteOutlined />}
                   onClick={() => removePoi(poi.id)}
-                />
+                /> : null}
               </div>
             ))}
           </div>
