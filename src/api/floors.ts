@@ -30,6 +30,11 @@ export async function deleteFloor(floorId: string) {
   await apiClient.delete(`/floors/${floorId}`)
 }
 
+export async function getFloorPois(floorId: string) {
+  const { data } = await apiClient.get<Poi[]>(`/floors/${floorId}/pois`)
+  return data
+}
+
 export async function saveFloorPois(
   floorId: string,
   pois: Poi[],

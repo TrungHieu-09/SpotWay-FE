@@ -2,7 +2,7 @@ export type StoreStatus = 'active' | 'inactive'
 
 export type Store = {
   id: string
-  ownerId: string
+  ownerUserId: string | null
   buildingId: string
   floorId: string
   name: string
@@ -23,10 +23,11 @@ export type UpdateStorePayload = Partial<{
   description: string
   category: string
   status: StoreStatus
+  ownerUserId: string | null
 }>
 
 export type CreateStorePayload = {
-  ownerId: string
+  ownerUserId?: string | null
   buildingId: string
   floorId: string
   name: string

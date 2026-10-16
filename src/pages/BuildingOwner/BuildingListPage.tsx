@@ -3,6 +3,10 @@ import {
   App as AntApp,
   Button,
   Card,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
   Space,
   Statistic,
   Table,
@@ -19,10 +23,15 @@ const { Text, Title } = Typography
 
 export function BuildingListPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [editingBuilding, setEditingBuilding] = useState<Building | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [editForm] = Form.useForm<{ name: string; address: string }>()
   const navigate = useNavigate()
   const buildings = useBuildingStore((state) => state.buildings)
   const isLoading = useBuildingStore((state) => state.isLoading)
   const loadBuildings = useBuildingStore((state) => state.loadBuildings)
+  const updateBuilding = useBuildingStore((state) => state.updateBuilding)
+  const deleteBuilding = useBuildingStore((state) => state.deleteBuilding)
   const { message } = AntApp.useApp()
 
   useEffect(() => {
@@ -33,6 +42,25 @@ export function BuildingListPage() {
     () => buildings.reduce((sum, building) => sum + building.floorCount, 0),
     [buildings],
   )
+
+  function openEdit(building: Building) {
+    setEditingBuilding(building)
+    editForm.setFieldsValue({ name: building.name, address: building.address })
+  }
+
+  async function submitEdit(values: { name: string; address: string }) {
+    if (!editingBuilding) return
+    setIsSaving(true)
+    try {
+      await updateBuilding(editingBuilding.id, values)
+      message.success('Đã cập nhật tòa nhà')
+      setEditingBuilding(null)
+    } catch (error) {
+      message.error((error as Error).message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   return (
     <main className="workspace">
@@ -112,9 +140,12 @@ export function BuildingListPage() {
                   >
                     Xem chi tiết
                   </Button>
-                  <Button size="small" icon={<EditOutlined />}>
+                  <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
                     Sửa
                   </Button>
+                  <Popconfirm title="Xóa tòa nhà này?" description="Các tầng, POI và dữ liệu bản đồ liên quan cũng sẽ bị xóa." okText="Xóa" cancelText="Hủy" onConfirm={() => deleteBuilding(record.id).then(() => message.success('Đã xóa tòa nhà')).catch((error: Error) => message.error(error.message))}>
+                    <Button danger size="small">Xóa</Button>
+                  </Popconfirm>
                 </Space>
               ),
             },
@@ -126,6 +157,12 @@ export function BuildingListPage() {
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
       />
+      <Modal title="Chỉnh sửa tòa nhà" open={Boolean(editingBuilding)} confirmLoading={isSaving} onCancel={() => setEditingBuilding(null)} onOk={() => editForm.submit()} okText="Lưu" cancelText="Hủy">
+        <Form form={editForm} layout="vertical" onFinish={submitEdit}>
+          <Form.Item name="name" label="Tên tòa nhà" rules={[{ required: true, message: 'Vui lòng nhập tên tòa nhà' }]}><Input /></Form.Item>
+          <Form.Item name="address" label="Địa chỉ" rules={[{ required: true, message: 'Vui lòng nhập địa chỉ' }]}><Input /></Form.Item>
+        </Form>
+      </Modal>
     </main>
   )
 }

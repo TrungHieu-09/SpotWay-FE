@@ -31,7 +31,7 @@ function logo(label: string, fill: string) {
 export const initialStoresSeed: Store[] = [
   {
     id: 'store-1',
-    ownerId: 'owner-1',
+    ownerUserId: 'user-lumi',
     buildingId: 'bldg-1',
     floorId: 'floor-1',
     name: 'Lumi Fashion',
@@ -46,7 +46,7 @@ export const initialStoresSeed: Store[] = [
   },
   {
     id: 'store-2',
-    ownerId: 'owner-2',
+    ownerUserId: 'user-green',
     buildingId: 'bldg-1',
     floorId: 'floor-1',
     name: 'Bep Saigon',
@@ -61,7 +61,7 @@ export const initialStoresSeed: Store[] = [
   },
   {
     id: 'store-3',
-    ownerId: 'owner-3',
+    ownerUserId: null,
     buildingId: 'bldg-1',
     floorId: 'floor-1',
     name: 'TechCare',
@@ -73,7 +73,7 @@ export const initialStoresSeed: Store[] = [
   },
   {
     id: 'store-4',
-    ownerId: 'owner-1',
+    ownerUserId: 'user-green',
     buildingId: 'bldg-1',
     floorId: 'floor-2',
     name: 'Green Home',
@@ -85,7 +85,7 @@ export const initialStoresSeed: Store[] = [
   },
   {
     id: 'store-5',
-    ownerId: 'owner-1',
+    ownerUserId: 'user-lumi',
     buildingId: 'bldg-2',
     floorId: 'floor-4',
     name: 'River Coffee',
@@ -97,15 +97,17 @@ export const initialStoresSeed: Store[] = [
   },
 ]
 
-type StoredStore = Omit<Store, 'ownerId' | 'buildingId'> &
-  Partial<Pick<Store, 'ownerId' | 'buildingId'>>
+type StoredStore = Omit<Store, 'ownerUserId' | 'buildingId'> &
+  Partial<Pick<Store, 'ownerUserId' | 'buildingId'>> & {
+    ownerId?: string | null
+  }
 
-const legacyOwnerByStoreId: Record<string, string> = {
-  'store-1': 'owner-1',
-  'store-2': 'owner-2',
-  'store-3': 'owner-3',
-  'store-4': 'owner-1',
-  'store-5': 'owner-1',
+const legacyOwnerByStoreId: Record<string, string | null> = {
+  'store-1': 'user-lumi',
+  'store-2': 'user-green',
+  'store-3': null,
+  'store-4': 'user-green',
+  'store-5': 'user-lumi',
 }
 
 function getBuildingIdByFloorId(floorId: string) {
@@ -115,7 +117,11 @@ function getBuildingIdByFloorId(floorId: string) {
 function normalizeStore(store: StoredStore): Store {
   return {
     ...store,
-    ownerId: store.ownerId ?? legacyOwnerByStoreId[store.id] ?? 'owner-1',
+    ownerUserId:
+      store.ownerUserId ??
+      (store.ownerId !== undefined
+        ? store.ownerId
+        : legacyOwnerByStoreId[store.id] ?? null),
     buildingId: store.buildingId ?? getBuildingIdByFloorId(store.floorId),
     logoUrl: store.logoUrl?.trim() ? store.logoUrl : null,
     galleryImageUrls: store.galleryImageUrls.slice(0, 5),

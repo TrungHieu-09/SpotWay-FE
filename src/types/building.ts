@@ -2,6 +2,7 @@ export type BuildingStatus = 'draft' | 'active'
 
 export type Building = {
   id: string
+  tenantId: string
   name: string
   address: string
   status: BuildingStatus
@@ -13,6 +14,16 @@ export type Building = {
 export type CreateBuildingPayload = {
   name: string
   address: string
-  planImage?: File
+  floors: CreateBuildingFloorPayload[]
 }
+
+export type CreateBuildingFloorPayload = {
+  name: string
+  level: number
+  mapImageUrl: string | null
+  mapWidth?: number
+  mapHeight?: number
+}
+
+export type UpdateBuildingPayload = Partial<Pick<Building, 'name' | 'address' | 'status'>>
 

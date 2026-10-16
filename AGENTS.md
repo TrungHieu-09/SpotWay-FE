@@ -5,6 +5,20 @@
 
 ---
 
+<!-- ===== SKILL: auth-permissions ===== -->
+
+# Auth And Permissions
+
+- Roles: `admin`, `building_owner`, `building_manager`, `store_owner`; Guest is public and is not a login role.
+- Store the session in `src/auth/store.ts`, attach `auth:token` through Axios, restore with `/api/auth/me`, and clear it on `401`.
+- Use `ProtectedRoute` for role groups. Do not use a free role switch or `demoRole` localStorage value.
+- Use the authenticated user id for owner/store-owner requests. Never hardcode an owner id.
+- Every protected MSW handler returns `{ code, message }` on authorization/business errors and scopes tenant data by authenticated `tenantId`.
+- Guest sees only active buildings, active tenants, and published floors. Writes require an authenticated role and an active tenant subscription.
+- `admin` manages `/api/admin/*` but does not read tenant map data; `building_owner` manages its tenant/staff/buildings/subscription; `building_manager` manages map data/stores; `store_owner` updates only stores assigned to that user and cannot create/delete/reassign stores.
+
+---
+
 
 <!-- ===== SKILL: token-efficiency ===== -->
 
@@ -104,13 +118,15 @@ Không tự đổi tên field hoặc thêm endpoint ngoài danh sách dưới đ
 `GET /api/buildings` → `Building[]`
 `POST /api/buildings` (multipart/form-data: name, address, planImage?) → `Building`
 `GET /api/buildings/:id` → `Building`
+`PATCH /api/buildings/:id` → `Building`
+`DELETE /api/buildings/:id`
 
 ```ts
 interface Building {
   id: string;
   name: string;
   address: string;
-  ownerId: string;
+  tenantId: string;
   planImageUrl: string | null;
   floorCount: number;
   createdAt: string;
@@ -156,13 +172,13 @@ interface Poi {
 `GET /api/owners/:ownerId/stores` → `Store[]`
 `GET /api/floors/:floorId/stores` → `Store[]`
 `GET /api/stores/:id` → `Store`
-`POST /api/stores` (multipart/form-data: ownerId, buildingId, floorId, name, description, category, status, logo?, galleryImages?) → `Store`
+`POST /api/stores` (multipart/form-data: ownerUserId, buildingId, floorId, name, description, category, status, logo?, galleryImages?) → `Store`
 `PATCH /api/stores/:id` → `Store`
 
 ```ts
 interface Store {
   id: string;
-  ownerId: string;
+  ownerUserId: string | null;
   buildingId: string;
   floorId: string;
   name: string;

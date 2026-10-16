@@ -10,8 +10,8 @@ export async function getStoresByFloor(floorId: string) {
   return data
 }
 
-export async function getStoresByOwner(ownerId: string) {
-  const { data } = await apiClient.get<Store[]>(`/owners/${ownerId}/stores`)
+export async function getStoresByOwner(ownerUserId: string) {
+  const { data } = await apiClient.get<Store[]>(`/owners/${ownerUserId}/stores`)
   return data
 }
 
@@ -23,7 +23,9 @@ export async function getStore(storeId: string) {
 export async function createStore(payload: CreateStorePayload) {
   const formData = new FormData()
 
-  formData.append('ownerId', payload.ownerId)
+  if (payload.ownerUserId) {
+    formData.append('ownerUserId', payload.ownerUserId)
+  }
   formData.append('buildingId', payload.buildingId)
   formData.append('floorId', payload.floorId)
   formData.append('name', payload.name)

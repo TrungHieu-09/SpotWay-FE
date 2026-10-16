@@ -1,5 +1,5 @@
 const MOCK_STORAGE_PREFIX = 'mock:'
-export const MOCK_SEED_VERSION = '2026-10-12-guest-routing-v1'
+export const MOCK_SEED_VERSION = '2026-10-15-auth-rbac-v1'
 
 export const MOCK_STORAGE_KEYS = {
   seedVersion: `${MOCK_STORAGE_PREFIX}seedVersion`,
@@ -9,6 +9,10 @@ export const MOCK_STORAGE_KEYS = {
   nodes: `${MOCK_STORAGE_PREFIX}nodes`,
   edges: `${MOCK_STORAGE_PREFIX}edges`,
   geometry: `${MOCK_STORAGE_PREFIX}geometry`,
+  tenants: `${MOCK_STORAGE_PREFIX}tenants`,
+  plans: `${MOCK_STORAGE_PREFIX}plans`,
+  users: `${MOCK_STORAGE_PREFIX}users`,
+  invoices: `${MOCK_STORAGE_PREFIX}invoices`,
 } as const
 
 function getStorage() {

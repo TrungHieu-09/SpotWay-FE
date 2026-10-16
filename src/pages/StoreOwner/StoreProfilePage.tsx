@@ -30,12 +30,11 @@ import { useBuildingStore } from '../../store/useBuildingStore'
 import { useStoreStore } from '../../store/useStoreStore'
 import type { Floor } from '../../types/floor'
 import type { Store, StoreStatus } from '../../types/store'
+import { useAuthStore } from '../../auth/store'
 
 const { Text, Title } = Typography
 const { TextArea } = Input
 
-// Replace this owner id with the authenticated user id later.
-const STORE_OWNER_ID = 'owner-1'
 const STORE_CATEGORIES = ['Thời trang', 'Ăn uống', 'Dịch vụ']
 
 type StoreProfileFormValues = {
@@ -96,6 +95,8 @@ export function StoreProfilePage() {
   const updateStore = useStoreStore((state) => state.updateStore)
   const isActive = Form.useWatch('isActive', form)
   const { message } = AntApp.useApp()
+  const currentUser = useAuthStore((state) => state.user)
+  const storeOwnerId = currentUser?.id ?? ''
 
   const loadFloorsForBuilding = useCallback(
     async (buildingId: string) => {
@@ -116,9 +117,10 @@ export function StoreProfilePage() {
 
   useEffect(() => {
     loadBuildings().catch((error: Error) => message.error(error.message))
-    loadStoresByOwner(STORE_OWNER_ID)
+    if (!storeOwnerId) return
+    loadStoresByOwner(storeOwnerId)
       .catch((error: Error) => message.error(error.message))
-  }, [loadBuildings, loadStoresByOwner, message])
+  }, [loadBuildings, loadStoresByOwner, message, storeOwnerId])
 
   useEffect(() => {
     if (ownerStores.length === 0) {
@@ -272,7 +274,7 @@ export function StoreProfilePage() {
 
     try {
       const store = await createStore({
-        ownerId: STORE_OWNER_ID,
+        ownerUserId: storeOwnerId,
         buildingId: values.buildingId,
         floorId: values.floorId,
         name: values.name,
@@ -320,6 +322,7 @@ export function StoreProfilePage() {
     : []
 
   const visibleStatus: StoreStatus = isActive ? 'active' : 'inactive'
+  const canCreateStore = currentUser?.role === 'building_owner' || currentUser?.role === 'building_manager'
 
   return (
     <main className="workspace">
@@ -339,13 +342,7 @@ export function StoreProfilePage() {
         <Card className="tool-card store-picker-card">
           <div className="store-picker-heading">
             <Text strong>Tòa nhà có gian hàng của bạn</Text>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={openCreateStoreModal}
-            >
-              Thêm gian hàng
-            </Button>
+            {canCreateStore ? <Button type="primary" icon={<PlusOutlined />} onClick={openCreateStoreModal}>Thêm gian hàng</Button> : null}
           </div>
           <div className="owner-building-grid">
             {ownerBuildingIds.length > 0 ? (

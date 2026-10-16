@@ -92,7 +92,7 @@ export const useStoreStore = create<StoreState>((set) => ({
       set((state) => ({
         currentStore: store,
         ownerStores:
-          store.ownerId === payload.ownerId
+          store.ownerUserId === payload.ownerUserId
             ? [...state.ownerStores, store]
             : state.ownerStores,
         storesByFloorId: {

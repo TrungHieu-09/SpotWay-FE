@@ -5,6 +5,7 @@ import { mallPlan, officePlan } from './floors.mock'
 export const initialBuildingsSeed: Building[] = [
   {
     id: 'bldg-1',
+    tenantId: 'tenant-1',
     name: 'Saigon Central Mall',
     address: '72 Le Loi, District 1',
     status: 'active',
@@ -14,6 +15,7 @@ export const initialBuildingsSeed: Building[] = [
   },
   {
     id: 'bldg-2',
+    tenantId: 'tenant-2',
     name: 'Rivergate Office Tower',
     address: '151 Ben Van Don, District 4',
     status: 'draft',
@@ -23,6 +25,7 @@ export const initialBuildingsSeed: Building[] = [
   },
   {
     id: 'bldg-3',
+    tenantId: 'tenant-2',
     name: 'Hanoi Innovation Hub',
     address: '24 Tran Duy Hung, Cau Giay',
     status: 'active',
@@ -32,6 +35,7 @@ export const initialBuildingsSeed: Building[] = [
   },
   {
     id: 'bldg-4',
+    tenantId: 'tenant-1',
     name: 'Danang Retail Plaza',
     address: '09 Bach Dang, Hai Chau',
     status: 'draft',
