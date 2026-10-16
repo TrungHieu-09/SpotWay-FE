@@ -32,6 +32,7 @@ export const initialStoresSeed: Store[] = [
   {
     id: 'store-1',
     ownerUserId: 'user-lumi',
+    createdByUserId: 'user-manager-1a',
     buildingId: 'bldg-1',
     floorId: 'floor-1',
     name: 'Lumi Fashion',
@@ -47,6 +48,7 @@ export const initialStoresSeed: Store[] = [
   {
     id: 'store-2',
     ownerUserId: 'user-bep',
+    createdByUserId: 'user-manager-1b',
     buildingId: 'bldg-1',
     floorId: 'floor-1',
     name: 'Bep Saigon',
@@ -62,6 +64,7 @@ export const initialStoresSeed: Store[] = [
   {
     id: 'store-3',
     ownerUserId: null,
+    createdByUserId: 'user-manager-1a',
     buildingId: 'bldg-1',
     floorId: 'floor-1',
     name: 'TechCare',
@@ -74,6 +77,7 @@ export const initialStoresSeed: Store[] = [
   {
     id: 'store-4',
     ownerUserId: 'user-green',
+    createdByUserId: 'user-manager-1a',
     buildingId: 'bldg-1',
     floorId: 'floor-2',
     name: 'Green Home',
@@ -86,6 +90,7 @@ export const initialStoresSeed: Store[] = [
   {
     id: 'store-5',
     ownerUserId: 'user-lumi',
+    createdByUserId: 'user-owner-1',
     buildingId: 'bldg-2',
     floorId: 'floor-4',
     name: 'River Coffee',
@@ -100,6 +105,7 @@ export const initialStoresSeed: Store[] = [
 type StoredStore = Omit<Store, 'ownerUserId' | 'buildingId'> &
   Partial<Pick<Store, 'ownerUserId' | 'buildingId'>> & {
     ownerId?: string | null
+  createdByUserId?: string
   }
 
 const legacyOwnerByStoreId: Record<string, string | null> = {
@@ -123,6 +129,7 @@ function normalizeStore(store: StoredStore): Store {
         ? store.ownerId
         : legacyOwnerByStoreId[store.id] ?? null),
     buildingId: store.buildingId ?? getBuildingIdByFloorId(store.floorId),
+    createdByUserId: store.createdByUserId ?? 'user-owner-1',
     logoUrl: store.logoUrl?.trim() ? store.logoUrl : null,
     galleryImageUrls: store.galleryImageUrls.slice(0, 5),
     status: store.status ?? 'inactive',

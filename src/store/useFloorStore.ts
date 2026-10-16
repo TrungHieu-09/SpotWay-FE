@@ -19,6 +19,9 @@ type NewPoiInput = {
 type NewFloorInput = {
   name: string
   level: number
+  mapImageUrl?: string | null
+  mapWidth?: number
+  mapHeight?: number
 }
 
 type FloorPlanInput = {
@@ -107,10 +110,10 @@ export const useFloorStore = create<FloorState>((set, get) => ({
         buildingId,
         name: floorInput.name,
         level: floorInput.level,
-        planImageUrl: null,
+        mapImageUrl: floorInput.mapImageUrl ?? null,
         publishStatus: 'draft',
-        mapWidth: get().selectedFloor?.mapWidth ?? 1200,
-        mapHeight: get().selectedFloor?.mapHeight ?? 760,
+        mapWidth: floorInput.mapWidth ?? get().selectedFloor?.mapWidth ?? 1200,
+        mapHeight: floorInput.mapHeight ?? get().selectedFloor?.mapHeight ?? 760,
         nextPoiNumber: 1,
       })
       set((state) => ({

@@ -5,6 +5,9 @@ import { fallbackMap, floors, getFloorPois } from './data/floors.mock'
 import { floorGeometry } from './data/geometry.mock'
 import { nodes } from './data/nodes.mock'
 import { stores } from './data/stores.mock'
+import { promotions } from './data/promotions.mock'
+import { maintenanceZones } from './data/maintenance.mock'
+import { qrCodes } from './data/qr.mock'
 import {
   invoices,
   plans,
@@ -26,6 +29,7 @@ import type {
   Edge,
   Node,
   UpdateNodePayload,
+  UpdateEdgePayload,
 } from '../types/node'
 import type { Poi } from '../types/poi'
 import type {
@@ -36,6 +40,9 @@ import type {
 import type { FloorGeometry, Point, Room } from '../types/geometry'
 import type { Role, User } from '../types/auth'
 import type { Area } from '../types/area'
+import type { MaintenanceZone } from '../types/maintenance'
+import type { Promotion, PromotionPayload } from '../types/promotion'
+import type { QrCode } from '../types/qr'
 import { PERMISSIONS } from '../auth/permissions'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api'
@@ -350,6 +357,9 @@ function updateStoreWithPayload(store: Store, payload: UpdateStorePayload) {
   store.category = payload.category ?? store.category
   store.description = payload.description ?? store.description
   store.status = payload.status ?? store.status
+  store.openingHours = payload.openingHours ?? store.openingHours
+  store.roomId = payload.roomId !== undefined ? payload.roomId : store.roomId
+  store.nodeId = payload.nodeId !== undefined ? payload.nodeId : store.nodeId
   if (payload.ownerUserId !== undefined) {
     store.ownerUserId = payload.ownerUserId
   }
@@ -825,6 +835,33 @@ export const handlers = [
     return HttpResponse.json(building, { status: 201 })
   }),
 
+  http.post(endpoint('/admin/tenants/:tenantId/owners'), async ({ params, request }) => {
+    const access = requireAccess(request, ['admin'])
+    if ('response' in access) return access.response
+    const tenant = tenants.find((item) => item.id === params.tenantId)
+    if (!tenant) return apiError('NOT_FOUND', 'Không tìm thấy doanh nghiệp.', 404)
+    const payload = (await request.json()) as { name?: string; email?: string }
+    if (!payload.name?.trim() || !payload.email?.trim()) return apiError('VALIDATION_ERROR', 'Tên và email chủ tòa nhà là bắt buộc.', 400)
+    const email = payload.email.trim().toLowerCase()
+    if (users.some((user) => user.email.toLowerCase() === email)) return apiError('EMAIL_EXISTS', 'Email tài khoản đã tồn tại.', 409)
+    const owner = {
+      id: `user-${crypto.randomUUID()}`,
+      tenantId: tenant.id,
+      role: 'building_owner' as const,
+      name: payload.name.trim(),
+      email,
+      password: 'Demo@123',
+      areaIds: [],
+      createdByUserId: access.auth.user.id,
+      mustChangePassword: true,
+      status: 'active' as const,
+      createdAt: new Date().toISOString(),
+    }
+    users.push(owner)
+    saveToStorage(MOCK_STORAGE_KEYS.users, users)
+    return HttpResponse.json({ ...publicUser(owner), tenantName: tenant.name, temporaryPassword: 'Demo@123' }, { status: 201 })
+  }),
+
   http.patch(endpoint('/admin/buildings/:buildingId'), async ({ params, request }) => {
     const access = requireAccess(request, ['admin'])
     if ('response' in access) return access.response
@@ -841,12 +878,27 @@ export const handlers = [
     const index = buildings.findIndex((item) => item.id === params.buildingId)
     if (index < 0) return apiError('NOT_FOUND', 'Không tìm thấy tòa nhà.', 404)
     const floorIds = new Set(floors.filter((floor) => floor.buildingId === params.buildingId).map((floor) => floor.id))
+    const storeIds = new Set(stores.filter((store) => store.buildingId === params.buildingId).map((store) => store.id))
     buildings.splice(index, 1)
     for (let item = floors.length - 1; item >= 0; item -= 1) if (floorIds.has(floors[item].id)) floors.splice(item, 1)
     for (let item = floorGeometry.length - 1; item >= 0; item -= 1) if (floorIds.has(floorGeometry[item].floorId)) floorGeometry.splice(item, 1)
+    for (let item = areas.length - 1; item >= 0; item -= 1) if (areas[item].buildingId === params.buildingId) areas.splice(item, 1)
+    for (let item = nodes.length - 1; item >= 0; item -= 1) if (floorIds.has(nodes[item].floorId)) nodes.splice(item, 1)
+    for (let item = edges.length - 1; item >= 0; item -= 1) if (floorIds.has(edges[item].floorId)) edges.splice(item, 1)
+    for (let item = stores.length - 1; item >= 0; item -= 1) if (storeIds.has(stores[item].id)) stores.splice(item, 1)
+    for (let item = promotions.length - 1; item >= 0; item -= 1) if (storeIds.has(promotions[item].storeId)) promotions.splice(item, 1)
+    for (let item = maintenanceZones.length - 1; item >= 0; item -= 1) if (floorIds.has(maintenanceZones[item].floorId)) maintenanceZones.splice(item, 1)
+    for (let item = qrCodes.length - 1; item >= 0; item -= 1) if (qrCodes[item].buildingId === params.buildingId) qrCodes.splice(item, 1)
     saveToStorage(MOCK_STORAGE_KEYS.buildings, buildings)
     saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
     saveToStorage(MOCK_STORAGE_KEYS.geometry, floorGeometry)
+    saveToStorage(MOCK_STORAGE_KEYS.areas, areas)
+    saveToStorage(MOCK_STORAGE_KEYS.nodes, nodes)
+    saveToStorage(MOCK_STORAGE_KEYS.edges, edges)
+    saveToStorage(MOCK_STORAGE_KEYS.stores, stores)
+    saveToStorage(MOCK_STORAGE_KEYS.promotions, promotions)
+    saveToStorage(MOCK_STORAGE_KEYS.maintenanceZones, maintenanceZones)
+    saveToStorage(MOCK_STORAGE_KEYS.qrCodes, qrCodes)
     return new HttpResponse(null, { status: 204 })
   }),
 
@@ -864,7 +916,7 @@ export const handlers = [
     users.push(owner)
     saveToStorage(MOCK_STORAGE_KEYS.tenants, tenants)
     saveToStorage(MOCK_STORAGE_KEYS.users, users)
-    return HttpResponse.json({ ...tenant, plan: plans.find((plan) => plan.id === tenant.planId), buildings: [], users: [publicUser(owner)] }, { status: 201 })
+    return HttpResponse.json({ ...tenant, plan: plans.find((plan) => plan.id === tenant.planId), buildings: [], users: [publicUser(owner)], temporaryPassword: 'Demo@123' }, { status: 201 })
   }),
 
   http.patch(endpoint('/admin/tenants/:tenantId'), async ({ params, request }) => {
@@ -967,6 +1019,62 @@ export const handlers = [
     const access = requireAccess(request, ['building_owner'])
     if ('response' in access) return access.response
     return HttpResponse.json(areas.filter((area) => area.tenantId === access.auth.user.tenantId))
+  }),
+
+  http.get(endpoint('/store-owners'), async ({ request }) => {
+    const access = requireAccess(request, ['building_owner', 'building_manager'])
+    if ('response' in access) return access.response
+    return HttpResponse.json(users.filter((user) => user.tenantId === access.auth.user.tenantId && user.role === 'store_owner').map((user) => ({ ...publicUser(user), storeCount: stores.filter((store) => store.ownerUserId === user.id).length })))
+  }),
+
+  http.post(endpoint('/store-owners'), async ({ request }) => {
+    const access = requireAccess(request, ['building_owner', 'building_manager'])
+    if ('response' in access) return access.response
+    const tenantId = access.auth.user.tenantId ?? ''
+    const overview = tenantOverview(tenantId)
+    if (overview.plan && overview.usage.storeOwners >= overview.plan.maxStoreOwners) return apiError('PLAN_LIMIT_STORE_OWNERS', 'Gói hiện tại đã đạt giới hạn chủ gian hàng.', 403)
+    const payload = (await request.json()) as { name?: string; email?: string }
+    if (!payload.name?.trim() || !payload.email?.trim()) return apiError('VALIDATION_ERROR', 'Họ tên và email là bắt buộc.', 400)
+    if (users.some((user) => user.email.toLowerCase() === payload.email?.trim().toLowerCase())) return apiError('EMAIL_EXISTS', 'Email tài khoản đã tồn tại.', 409)
+    const user = { id: `user-${crypto.randomUUID()}`, tenantId, role: 'store_owner' as const, name: payload.name.trim(), email: payload.email.trim().toLowerCase(), password: 'Demo@123', areaIds: [], createdByUserId: access.auth.user.id, mustChangePassword: true, status: 'active' as const, createdAt: new Date().toISOString() }
+    users.push(user)
+    saveToStorage(MOCK_STORAGE_KEYS.users, users)
+    return HttpResponse.json({ ...publicUser(user), temporaryPassword: 'Demo@123', storeCount: 0 }, { status: 201 })
+  }),
+
+  http.patch(endpoint('/store-owners/:userId'), async ({ params, request }) => {
+    const access = requireAccess(request, ['building_owner', 'building_manager'])
+    if ('response' in access) return access.response
+    const user = users.find((item) => item.id === params.userId && item.tenantId === access.auth.user.tenantId && item.role === 'store_owner')
+    if (!user) return apiError('NOT_FOUND', 'Không tìm thấy chủ gian hàng.', 404)
+    if (access.auth.user.role === 'building_manager' && user.createdByUserId !== access.auth.user.id) return apiError('FORBIDDEN', 'Bạn chỉ được quản lý tài khoản do mình tạo.', 403)
+    const payload = (await request.json()) as { status?: 'active' | 'locked' }
+    if (payload.status) user.status = payload.status
+    saveToStorage(MOCK_STORAGE_KEYS.users, users)
+    return HttpResponse.json({ ...publicUser(user), storeCount: stores.filter((store) => store.ownerUserId === user.id).length })
+  }),
+
+  http.post(endpoint('/store-owners/:userId/reset-password'), async ({ params, request }) => {
+    const access = requireAccess(request, ['building_owner', 'building_manager'])
+    if ('response' in access) return access.response
+    const user = users.find((item) => item.id === params.userId && item.tenantId === access.auth.user.tenantId && item.role === 'store_owner')
+    if (!user) return apiError('NOT_FOUND', 'Không tìm thấy chủ gian hàng.', 404)
+    if (access.auth.user.role === 'building_manager' && user.createdByUserId !== access.auth.user.id) return apiError('FORBIDDEN', 'Bạn chỉ được quản lý tài khoản do mình tạo.', 403)
+    user.password = 'Demo@123'; user.mustChangePassword = true
+    saveToStorage(MOCK_STORAGE_KEYS.users, users)
+    return HttpResponse.json({ ...publicUser(user), temporaryPassword: 'Demo@123' })
+  }),
+
+  http.delete(endpoint('/store-owners/:userId'), async ({ params, request }) => {
+    const access = requireAccess(request, ['building_owner', 'building_manager'])
+    if ('response' in access) return access.response
+    const userIndex = users.findIndex((item) => item.id === params.userId && item.tenantId === access.auth.user.tenantId && item.role === 'store_owner')
+    if (userIndex < 0) return apiError('NOT_FOUND', 'Không tìm thấy chủ gian hàng.', 404)
+    const user = users[userIndex]
+    if (access.auth.user.role === 'building_manager' && user.createdByUserId !== access.auth.user.id) return apiError('FORBIDDEN', 'Bạn chỉ được quản lý tài khoản do mình tạo.', 403)
+    if (stores.some((store) => store.ownerUserId === user.id)) return apiError('STORE_OWNER_ASSIGNED', 'Không thể xóa tài khoản đang được gán gian hàng.', 409)
+    users.splice(userIndex, 1); saveToStorage(MOCK_STORAGE_KEYS.users, users)
+    return new HttpResponse(null, { status: 204 })
   }),
 
   http.post(endpoint('/tenant/users'), async ({ request }) => {
@@ -1289,7 +1397,7 @@ export const handlers = [
     }
 
     const route = buildRoute(
-      { floors, geometries: floorGeometry, nodes, edges },
+      { floors, geometries: floorGeometry, nodes, edges, maintenanceZones, accessibleOnly: url.searchParams.get('accessible') === 'true' },
       buildingId,
       fromNodeId,
       toNodeId,
@@ -1297,7 +1405,7 @@ export const handlers = [
 
     if (!route) {
       return HttpResponse.json(
-        { message: 'Không tìm thấy đường đi' },
+        { code: 'NO_ROUTE', message: 'Không tìm thấy đường đi. Có thể điểm đã nằm trong vùng bảo trì hoặc đồ thị chưa nối thông.' },
         { status: 404 },
       )
     }
@@ -1397,6 +1505,14 @@ export const handlers = [
     return HttpResponse.json(floorStores)
   }),
 
+  http.get(endpoint('/buildings/:buildingId/stores'), async ({ params, request }) => {
+    const building = buildings.find((item) => item.id === params.buildingId)
+    if (!building) return apiError('NOT_FOUND', 'Không tìm thấy tòa nhà.', 404)
+    const forbidden = canReadBuilding(request, building)
+    if (forbidden) return forbidden
+    return HttpResponse.json(stores.filter((store) => store.buildingId === building.id))
+  }),
+
   http.get(endpoint('/floors/:floorId/pois'), async ({ params, request }) => {
     const floor = floors.find((item) => item.id === params.floorId)
     if (!floor) return apiError('NOT_FOUND', 'Không tìm thấy tầng.', 404)
@@ -1416,6 +1532,12 @@ export const handlers = [
     }
     const ownerStores = stores.filter((store) => store.ownerUserId === params.ownerId)
     return HttpResponse.json(ownerStores)
+  }),
+
+  http.get(endpoint('/stores/mine'), async ({ request }) => {
+    const access = requireAccess(request, ['store_owner'])
+    if ('response' in access) return access.response
+    return HttpResponse.json(stores.filter((store) => store.ownerUserId === access.auth.user.id))
   }),
 
   http.post(endpoint('/stores'), async ({ request }) => {
@@ -1438,6 +1560,8 @@ export const handlers = [
     const buildingId =
       payload?.buildingId ?? formString(formData, 'buildingId')
     const floorId = payload?.floorId ?? formString(formData, 'floorId')
+    const roomId = (payload?.roomId ?? formString(formData, 'roomId')) || null
+    const nodeId = (payload?.nodeId ?? formString(formData, 'nodeId')) || null
     const floor = floors.find((item) => item.id === floorId)
 
     if (!floor) {
@@ -1475,13 +1599,17 @@ export const handlers = [
     const store: Store = {
       id: `store-${crypto.randomUUID()}`,
       ownerUserId,
+      createdByUserId: access.auth.user.id,
       buildingId,
       floorId,
+      roomId,
+      nodeId,
       name: payload?.name ?? formString(formData, 'name', 'Untitled store'),
       logoUrl: logoFile instanceof File ? await fileToDataUrl(logoFile) : null,
       galleryImageUrls: uploadedGalleryUrls.slice(0, 5),
       description: payload?.description ?? formString(formData, 'description'),
       category: payload?.category ?? formString(formData, 'category', 'Dịch vụ'),
+      openingHours: payload?.openingHours ?? formString(formData, 'openingHours'),
       status: status ?? 'inactive',
     }
 
@@ -1650,6 +1778,19 @@ export const handlers = [
     return HttpResponse.json(node)
   }),
 
+  http.delete(endpoint('/nodes/:nodeId'), async ({ params, request }) => {
+    const index = nodes.findIndex((item) => item.id === params.nodeId)
+    if (index < 0) return apiError('NOT_FOUND', 'Không tìm thấy node.', 404)
+    const floor = floors.find((item) => item.id === nodes[index].floorId)
+    if (!floor) return apiError('NOT_FOUND', 'Không tìm thấy tầng.', 404)
+    const access = canManageFloor(request, floor)
+    if ('response' in access) return access.response
+    nodes.splice(index, 1)
+    for (let edgeIndex = edges.length - 1; edgeIndex >= 0; edgeIndex -= 1) if (edges[edgeIndex].fromNodeId === params.nodeId || edges[edgeIndex].toNodeId === params.nodeId) edges.splice(edgeIndex, 1)
+    saveToStorage(MOCK_STORAGE_KEYS.nodes, nodes); saveToStorage(MOCK_STORAGE_KEYS.edges, edges)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
   http.post(endpoint('/edges'), async ({ request }) => {
     await delay(140)
     const payload = (await request.json()) as CreateEdgePayload
@@ -1699,12 +1840,38 @@ export const handlers = [
       floorId: payload.floorId,
       fromNodeId: payload.fromNodeId,
       toNodeId: payload.toNodeId,
-      accessible: payload.accessible ?? true,
+      accessible: payload.kind === 'stairs' ? false : payload.accessible ?? true,
+      kind: payload.kind ?? 'walk',
     }
 
     edges.push(edge)
     saveToStorage(MOCK_STORAGE_KEYS.edges, edges)
     return HttpResponse.json(edge, { status: 201 })
+  }),
+
+  http.patch(endpoint('/edges/:edgeId'), async ({ params, request }) => {
+    const edge = edges.find((item) => item.id === params.edgeId)
+    if (!edge) return apiError('NOT_FOUND', 'Không tìm thấy cạnh.', 404)
+    const floor = floors.find((item) => item.id === edge.floorId)
+    if (!floor) return apiError('NOT_FOUND', 'Không tìm thấy tầng.', 404)
+    const access = canManageFloor(request, floor)
+    if ('response' in access) return access.response
+    const payload = (await request.json()) as UpdateEdgePayload
+    Object.assign(edge, payload)
+    if (edge.kind === 'stairs') edge.accessible = false
+    saveToStorage(MOCK_STORAGE_KEYS.edges, edges)
+    return HttpResponse.json(edge)
+  }),
+
+  http.delete(endpoint('/edges/:edgeId'), async ({ params, request }) => {
+    const index = edges.findIndex((item) => item.id === params.edgeId)
+    if (index < 0) return apiError('NOT_FOUND', 'Không tìm thấy cạnh.', 404)
+    const floor = floors.find((item) => item.id === edges[index].floorId)
+    if (!floor) return apiError('NOT_FOUND', 'Không tìm thấy tầng.', 404)
+    const access = canManageFloor(request, floor)
+    if ('response' in access) return access.response
+    edges.splice(index, 1); saveToStorage(MOCK_STORAGE_KEYS.edges, edges)
+    return new HttpResponse(null, { status: 204 })
   }),
 
   http.get(endpoint('/stores/:storeId'), async ({ params, request }) => {
@@ -1765,6 +1932,9 @@ export const handlers = [
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData()
+      if (access.auth.user.role === 'store_owner' && ['name', 'category', 'ownerUserId', 'buildingId', 'floorId', 'roomId', 'nodeId'].some((key) => formData.has(key))) {
+        return apiError('FORBIDDEN', 'Chủ gian hàng chỉ được cập nhật mô tả, ảnh, giờ mở cửa và trạng thái.', 403)
+      }
       const logoFile = formData.get('logo')
       const logoUrl = formData.get('logoUrl')
       const retainedGalleryUrls = parseStringArray(
@@ -1785,6 +1955,9 @@ export const handlers = [
       if (typeof formData.get('description') === 'string') {
         store.description = String(formData.get('description'))
       }
+      if (typeof formData.get('openingHours') === 'string') store.openingHours = String(formData.get('openingHours'))
+      if (typeof formData.get('roomId') === 'string') store.roomId = String(formData.get('roomId')) || null
+      if (typeof formData.get('nodeId') === 'string') store.nodeId = String(formData.get('nodeId')) || null
 
       const status = normalizeStoreStatus(formData.get('status'))
       if (status) {
@@ -1806,11 +1979,170 @@ export const handlers = [
       ].slice(0, 5)
     } else {
       const payload = (await request.json()) as UpdateStorePayload
+      if (access.auth.user.role === 'store_owner' && Object.keys(payload).some((key) => ['name', 'category', 'ownerUserId', 'buildingId', 'floorId', 'roomId', 'nodeId'].includes(key))) {
+        return apiError('FORBIDDEN', 'Chủ gian hàng chỉ được cập nhật mô tả, ảnh, giờ mở cửa và trạng thái.', 403)
+      }
       updateStoreWithPayload(store, payload)
     }
 
     saveToStorage(MOCK_STORAGE_KEYS.stores, stores)
     return HttpResponse.json(store)
+  }),
+
+  http.delete(endpoint('/stores/:storeId'), async ({ params, request }) => {
+    const storeIndex = stores.findIndex((item) => item.id === params.storeId)
+    if (storeIndex < 0) return apiError('NOT_FOUND', 'Không tìm thấy gian hàng.', 404)
+    const access = requireAccess(request, ['building_owner', 'building_manager'])
+    if ('response' in access) return access.response
+    const store = stores[storeIndex]
+    const floor = floors.find((item) => item.id === store.floorId)
+    if (!floor) return apiError('NOT_FOUND', 'Không tìm thấy tầng của gian hàng.', 404)
+    const floorAccess = canManageFloor(request, floor)
+    if ('response' in floorAccess) return floorAccess.response
+    stores.splice(storeIndex, 1)
+    saveToStorage(MOCK_STORAGE_KEYS.stores, stores)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.get(endpoint('/stores/:storeId/promotions'), async ({ params, request }) => {
+    const store = stores.find((item) => item.id === params.storeId)
+    if (!store) return apiError('NOT_FOUND', 'Không tìm thấy gian hàng.', 404)
+    const access = getAuth(request)
+    if (!access) {
+      const now = Date.now()
+      return HttpResponse.json(promotions.filter((promotion) => promotion.storeId === store.id && promotion.status === 'published' && new Date(promotion.startDate).getTime() <= now && new Date(promotion.endDate).getTime() >= now))
+    }
+    if (access.user.role === 'store_owner' && store.ownerUserId !== access.user.id) return apiError('FORBIDDEN', 'Bạn chỉ được xem khuyến mãi của gian hàng được gán.', 403)
+    if (access.user.role === 'admin') return apiError('FORBIDDEN', 'Quản trị viên không truy cập dữ liệu tenant.', 403)
+    return HttpResponse.json(promotions.filter((promotion) => promotion.storeId === store.id))
+  }),
+
+  http.post(endpoint('/stores/:storeId/promotions'), async ({ params, request }) => {
+    const store = stores.find((item) => item.id === params.storeId)
+    if (!store) return apiError('NOT_FOUND', 'Không tìm thấy gian hàng.', 404)
+    const access = requireAccess(request, ['store_owner', 'building_owner', 'building_manager'])
+    if ('response' in access) return access.response
+    if (access.auth.user.role === 'store_owner' && store.ownerUserId !== access.auth.user.id) return apiError('FORBIDDEN', 'Bạn chỉ được quản lý khuyến mãi của gian hàng được gán.', 403)
+    const floor = floors.find((item) => item.id === store.floorId)
+    if (!floor) return apiError('NOT_FOUND', 'Không tìm thấy tầng.', 404)
+    const floorAccess = access.auth.user.role === 'store_owner' ? access : canManageFloor(request, floor)
+    if ('response' in floorAccess) return floorAccess.response
+    const payload = (await request.json()) as PromotionPayload
+    if (new Date(payload.endDate).getTime() < new Date(payload.startDate).getTime()) return apiError('INVALID_DATE_RANGE', 'Ngày kết thúc không được trước ngày bắt đầu.', 400)
+    const promotion: Promotion = { ...payload, id: `promotion-${crypto.randomUUID()}`, storeId: store.id }
+    promotions.push(promotion); saveToStorage(MOCK_STORAGE_KEYS.promotions, promotions)
+    return HttpResponse.json(promotion, { status: 201 })
+  }),
+
+  http.patch(endpoint('/promotions/:promotionId'), async ({ params, request }) => {
+    const promotion = promotions.find((item) => item.id === params.promotionId)
+    if (!promotion) return apiError('NOT_FOUND', 'Không tìm thấy khuyến mãi.', 404)
+    const store = stores.find((item) => item.id === promotion.storeId)
+    const access = requireAccess(request, ['store_owner', 'building_owner', 'building_manager'])
+    if ('response' in access) return access.response
+    if (!store) return apiError('NOT_FOUND', 'Không tìm thấy gian hàng.', 404)
+    if (access.auth.user.role === 'store_owner' && store.ownerUserId !== access.auth.user.id) return apiError('FORBIDDEN', 'Bạn không có quyền với khuyến mãi này.', 403)
+    if (access.auth.user.role !== 'store_owner') { const floor = floors.find((item) => item.id === store.floorId); const floorAccess = floor ? canManageFloor(request, floor) : { response: apiError('NOT_FOUND', 'Không tìm thấy tầng.', 404) }; if ('response' in floorAccess) return floorAccess.response }
+    const payload = (await request.json()) as Partial<PromotionPayload>
+    const nextStart = payload.startDate ?? promotion.startDate; const nextEnd = payload.endDate ?? promotion.endDate
+    if (new Date(nextEnd).getTime() < new Date(nextStart).getTime()) return apiError('INVALID_DATE_RANGE', 'Ngày kết thúc không được trước ngày bắt đầu.', 400)
+    Object.assign(promotion, payload); saveToStorage(MOCK_STORAGE_KEYS.promotions, promotions)
+    return HttpResponse.json(promotion)
+  }),
+
+  http.delete(endpoint('/promotions/:promotionId'), async ({ params, request }) => {
+    const index = promotions.findIndex((item) => item.id === params.promotionId)
+    if (index < 0) return apiError('NOT_FOUND', 'Không tìm thấy khuyến mãi.', 404)
+    const access = requireAccess(request, ['store_owner', 'building_owner', 'building_manager'])
+    if ('response' in access) return access.response
+    const store = stores.find((item) => item.id === promotions[index].storeId)
+    if (!store) return apiError('NOT_FOUND', 'Không tìm thấy gian hàng.', 404)
+    if (access.auth.user.role === 'store_owner' && store.ownerUserId !== access.auth.user.id) return apiError('FORBIDDEN', 'Bạn không có quyền với khuyến mãi này.', 403)
+    promotions.splice(index, 1); saveToStorage(MOCK_STORAGE_KEYS.promotions, promotions)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.get(endpoint('/floors/:floorId/maintenance-zones'), async ({ params, request }) => {
+    const floor = floors.find((item) => item.id === params.floorId)
+    if (!floor) return apiError('NOT_FOUND', 'Không tìm thấy tầng.', 404)
+    const forbidden = canReadPublishedFloor(request, floor)
+    if (forbidden) return forbidden
+    return HttpResponse.json(maintenanceZones.filter((zone) => zone.floorId === floor.id))
+  }),
+
+  http.post(endpoint('/floors/:floorId/maintenance-zones'), async ({ params, request }) => {
+    const floor = floors.find((item) => item.id === params.floorId)
+    if (!floor) return apiError('NOT_FOUND', 'Không tìm thấy tầng.', 404)
+    const access = canManageFloor(request, floor)
+    if ('response' in access) return access.response
+    const payload = (await request.json()) as Omit<MaintenanceZone, 'id' | 'floorId' | 'createdAt'>
+    const zone: MaintenanceZone = { ...payload, id: `maintenance-${crypto.randomUUID()}`, floorId: floor.id, createdAt: new Date().toISOString(), rect: { x: Math.min(100, Math.max(0, payload.rect.x)), y: Math.min(100, Math.max(0, payload.rect.y)), w: Math.min(100, Math.max(0, payload.rect.w)), h: Math.min(100, Math.max(0, payload.rect.h)) } }
+    maintenanceZones.push(zone); saveToStorage(MOCK_STORAGE_KEYS.maintenanceZones, maintenanceZones)
+    return HttpResponse.json(zone, { status: 201 })
+  }),
+
+  http.patch(endpoint('/maintenance-zones/:zoneId'), async ({ params, request }) => {
+    const zone = maintenanceZones.find((item) => item.id === params.zoneId)
+    if (!zone) return apiError('NOT_FOUND', 'Không tìm thấy vùng bảo trì.', 404)
+    const floor = floors.find((item) => item.id === zone.floorId)
+    if (!floor) return apiError('NOT_FOUND', 'Không tìm thấy tầng.', 404)
+    const access = canManageFloor(request, floor)
+    if ('response' in access) return access.response
+    Object.assign(zone, (await request.json()) as Partial<MaintenanceZone>)
+    saveToStorage(MOCK_STORAGE_KEYS.maintenanceZones, maintenanceZones)
+    return HttpResponse.json(zone)
+  }),
+
+  http.delete(endpoint('/maintenance-zones/:zoneId'), async ({ params, request }) => {
+    const index = maintenanceZones.findIndex((item) => item.id === params.zoneId)
+    if (index < 0) return apiError('NOT_FOUND', 'Không tìm thấy vùng bảo trì.', 404)
+    const floor = floors.find((item) => item.id === maintenanceZones[index].floorId)
+    if (!floor) return apiError('NOT_FOUND', 'Không tìm thấy tầng.', 404)
+    const access = canManageFloor(request, floor)
+    if ('response' in access) return access.response
+    maintenanceZones.splice(index, 1); saveToStorage(MOCK_STORAGE_KEYS.maintenanceZones, maintenanceZones)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.get(endpoint('/buildings/:buildingId/qr-codes'), async ({ params, request }) => {
+    const building = buildings.find((item) => item.id === params.buildingId)
+    if (!building) return apiError('NOT_FOUND', 'Không tìm thấy tòa nhà.', 404)
+    const forbidden = canReadBuilding(request, building)
+    if (forbidden) return forbidden
+    return HttpResponse.json(qrCodes.filter((code) => code.buildingId === building.id))
+  }),
+
+  http.post(endpoint('/buildings/:buildingId/qr-codes'), async ({ params, request }) => {
+    const building = buildings.find((item) => item.id === params.buildingId)
+    if (!building) return apiError('NOT_FOUND', 'Không tìm thấy tòa nhà.', 404)
+    const access = canManageTenantResource(request, building.tenantId, ['building_owner', 'building_manager'])
+    if ('response' in access) return access.response
+    const payload = (await request.json()) as Omit<QrCode, 'id' | 'buildingId' | 'code'>
+    const floor = floors.find((item) => item.id === payload.floorId)
+    if (!floor || floor.buildingId !== building.id) return apiError('NOT_FOUND', 'Không tìm thấy tầng.', 404)
+    const floorAccess = canManageFloor(request, floor)
+    if ('response' in floorAccess) return floorAccess.response
+    const qr: QrCode = { ...payload, id: `qr-${crypto.randomUUID()}`, buildingId: building.id, code: `${building.id}-${crypto.randomUUID()}` }
+    qrCodes.push(qr); saveToStorage(MOCK_STORAGE_KEYS.qrCodes, qrCodes)
+    return HttpResponse.json(qr, { status: 201 })
+  }),
+
+  http.delete(endpoint('/qr-codes/:qrId'), async ({ params, request }) => {
+    const index = qrCodes.findIndex((item) => item.id === params.qrId)
+    if (index < 0) return apiError('NOT_FOUND', 'Không tìm thấy mã QR.', 404)
+    const building = buildings.find((item) => item.id === qrCodes[index].buildingId)
+    if (!building) return apiError('NOT_FOUND', 'Không tìm thấy tòa nhà.', 404)
+    const access = canManageTenantResource(request, building.tenantId, ['building_owner', 'building_manager'])
+    if ('response' in access) return access.response
+    const floor = floors.find((item) => item.id === qrCodes[index].floorId)
+    if (floor) { const floorAccess = canManageFloor(request, floor); if ('response' in floorAccess) return floorAccess.response }
+    qrCodes.splice(index, 1); saveToStorage(MOCK_STORAGE_KEYS.qrCodes, qrCodes)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.get(endpoint('/qr/:code'), async ({ params }) => {
+    const qr = qrCodes.find((item) => item.code === params.code)
+    return qr ? HttpResponse.json({ buildingId: qr.buildingId, floorId: qr.floorId, nodeId: qr.nodeId, label: qr.label }) : apiError('NOT_FOUND', 'Mã QR không tồn tại.', 404)
   }),
 
   http.post(endpoint('/floors'), async ({ request }) => {
@@ -1893,6 +2225,16 @@ export const handlers = [
           { message: 'Floor level already exists' },
           { status: 409 },
         )
+      }
+    }
+
+    if (payload.publishStatus === 'published') {
+      const missing: string[] = []
+      if (!floor.mapImageUrl) missing.push('Ảnh sơ đồ')
+      if (nodes.filter((node) => node.floorId === floor.id).length < 2) missing.push('ít nhất 2 node')
+      if (edges.filter((edge) => edge.floorId === floor.id).length < 1) missing.push('ít nhất 1 edge')
+      if (missing.length > 0) {
+        return apiError('PUBLISH_REQUIREMENTS', `Chưa đủ điều kiện xuất bản: ${missing.join(', ')}.`, 400)
       }
     }
 

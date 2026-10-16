@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   App as AntApp,
   Button,
@@ -21,11 +21,13 @@ import type {
   UploadChangeParam,
   UploadFile,
 } from 'antd/es/upload/interface'
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import { DeleteOutlined, LockOutlined, PlusOutlined } from '@ant-design/icons'
 import { useFloorStore } from '../../store/useFloorStore'
 import type { FloorPublishStatus } from '../../types/floor'
 import { compressPlanImageFile } from '../../utils/planRecognition'
 import { usePermissions } from '../../auth/usePermissions'
+import { getBuildingAreas } from '../../api/areas'
+import type { Area } from '../../types/area'
 
 const MAX_PLAN_IMAGE_SIZE = 5 * 1024 * 1024
 
@@ -66,6 +68,7 @@ function floorStatusColor(status: FloorPublishStatus) {
 export function FloorSelector({ buildingId }: FloorSelectorProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [form] = Form.useForm<CreateFloorFormValues>()
+  const [areas, setAreas] = useState<Area[]>([])
   const floors = useFloorStore((state) => state.floors)
   const selectedFloorId = useFloorStore((state) => state.selectedFloorId)
   const isFloorLoading = useFloorStore((state) => state.isFloorLoading)
@@ -77,6 +80,11 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
   const permissions = usePermissions()
   const canManageFloorStructure = permissions.user?.role === 'building_owner'
   const canDeleteFloor = floors.length > 1
+
+  useEffect(() => {
+    if (!buildingId) { setAreas([]); return }
+    getBuildingAreas(buildingId).then(setAreas).catch(() => setAreas([]))
+  }, [buildingId])
 
   function closeCreateModal() {
     setIsCreateOpen(false)
@@ -169,6 +177,10 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
                         ? 'Đã xuất bản'
                         : 'Bản nháp'}
                     </Tag>
+                    <Tag color={floor.areaId ? areas.find((area) => area.id === floor.areaId)?.color : 'default'}>
+                      {areas.find((area) => area.id === floor.areaId)?.name ?? 'Chưa phân khu vực'}
+                    </Tag>
+                    {!canEdit ? <Tooltip title="Bạn chỉ có quyền xem tầng ngoài khu vực được gán"><Tag icon={<LockOutlined />}>Chỉ xem</Tag></Tooltip> : null}
                   </Space>
                   <Text type="secondary">Tầng {floor.level}</Text>
                 </div>

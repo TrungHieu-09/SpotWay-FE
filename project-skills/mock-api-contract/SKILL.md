@@ -55,3 +55,15 @@ Toạ độ POI, Node, Room polygon và Route segment luôn là `x`/`y` phần t
 Building uses `tenantId`. Floor uses `areaId: string | null`. User managers use `areaIds: string[]`; `createdByUserId` and `mustChangePassword` are part of the user contract. Store uses `ownerUserId`, which identifies the authenticated Store Owner and can be `null` before assignment. Plans expose `maxBuildings`, `maxManagers`, `maxStoreOwners`, `priceVnd`, and `durationMonths`. The mock seed password is `Demo@123` only and must never be returned to the frontend.
 
 Các type canonical nằm trong `src/types/`: `building.ts`, `floor.ts`, `poi.ts`, `node.ts`, `store.ts`, `geometry.ts`, `route.ts`.
+
+## Contract mở rộng cho demo quản trị
+
+- Store: `GET /api/buildings/:buildingId/stores`, `GET /api/stores/mine`, `DELETE /api/stores/:id`. Store có `createdByUserId`, `ownerUserId`, vị trí tùy chọn `roomId`/`nodeId` và `openingHours`.
+- Tài khoản Store Owner: `GET/POST /api/store-owners`, `PATCH /api/store-owners/:userId`, `POST /api/store-owners/:userId/reset-password`, `DELETE /api/store-owners/:userId`.
+- Admin: `POST /api/admin/tenants/:tenantId/owners` để thêm chủ tòa nhà vào doanh nghiệp đã tồn tại; `POST /api/admin/tenants/:tenantId/buildings` để thêm tòa nhà.
+- Khuyến mãi: `GET/POST /api/stores/:storeId/promotions`, `PATCH/DELETE /api/promotions/:promotionId`.
+- Graph: `PATCH/DELETE /api/edges/:id`, `DELETE /api/nodes/:id`. Edge có `kind: walk | stairs | ramp`; edge `stairs` mặc định không accessible.
+- Bảo trì: `GET/POST /api/floors/:floorId/maintenance-zones`, `PATCH/DELETE /api/maintenance-zones/:id`. Vùng dùng hình chữ nhật phần trăm `{ x, y, w, h }`.
+- QR: `GET/POST /api/buildings/:buildingId/qr-codes`, `DELETE /api/qr-codes/:id`, `GET /api/qr/:code`.
+- Xuất bản floor yêu cầu ảnh sơ đồ, tối thiểu 2 node và 1 edge; thiếu điều kiện trả `{ code: 'PUBLISH_REQUIREMENTS', message }` với HTTP 400.
+- Route có thể nhận `accessible=true`; vùng bảo trì active được dùng để loại các node/edge và tạo cảnh báo tuyến.

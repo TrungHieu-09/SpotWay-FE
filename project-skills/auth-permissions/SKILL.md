@@ -22,6 +22,13 @@ The application uses four authenticated roles: `admin`, `building_owner`, `build
 - `building_owner` may create buildings only when `PERMISSIONS.ownerCanCreateBuilding` is true; the current demo keeps it false.
 - `building_manager` can read tenant map resources but may write only floors whose `areaId` is in the authenticated user's `areaIds`. It cannot create/delete floors, manage areas, managers, or subscriptions.
 - `store_owner` can read and update only stores whose `ownerUserId` equals the authenticated user id. It cannot create, delete, move, or reassign stores.
+
+## Quy tắc UI quản trị hiện tại
+
+- `usePermissions().canEditFloor(floor)` là điều kiện duy nhất để bật các nút ghi của canvas, nhận diện, graph, vùng bảo trì và QR. Floor ngoài `areaIds` của Building Manager chỉ hiển thị read-only.
+- Building Manager/Owner có thể tạo, sửa, gán chủ và xóa store trong floor được quản lý; Store Owner không được đổi tên, category, vị trí hay owner của store.
+- Building Manager chỉ tạo/xóa tài khoản Store Owner do chính mình tạo; không xóa tài khoản đang được gán store.
+- Khi xuất bản floor, backend mock kiểm tra ảnh sơ đồ + node + edge và trả lỗi có mã `PUBLISH_REQUIREMENTS` nếu thiếu.
 - New manager accounts receive `areaIds`; first-login accounts may be forced through `/change-password` via `mustChangePassword`.
 - Tenant writes require an active tenant and respect plan limits for buildings, managers, and store owners.
 

@@ -15,6 +15,16 @@ export async function getStoresByOwner(ownerUserId: string) {
   return data
 }
 
+export async function getMyStores() {
+  const { data } = await apiClient.get<Store[]>('/stores/mine')
+  return data
+}
+
+export async function getStoresByBuilding(buildingId: string) {
+  const { data } = await apiClient.get<Store[]>(`/buildings/${buildingId}/stores`)
+  return data
+}
+
 export async function getStore(storeId: string) {
   const { data } = await apiClient.get<Store>(`/stores/${storeId}`)
   return data
@@ -28,9 +38,12 @@ export async function createStore(payload: CreateStorePayload) {
   }
   formData.append('buildingId', payload.buildingId)
   formData.append('floorId', payload.floorId)
+  if (payload.roomId) formData.append('roomId', payload.roomId)
+  if (payload.nodeId) formData.append('nodeId', payload.nodeId)
   formData.append('name', payload.name)
   formData.append('description', payload.description)
   formData.append('category', payload.category)
+  if (payload.openingHours) formData.append('openingHours', payload.openingHours)
   formData.append('status', payload.status)
 
   if (payload.logoFile) {
@@ -66,6 +79,10 @@ export async function updateStore(
     formData.append('description', payload.description)
   }
 
+  if (payload.openingHours !== undefined) formData.append('openingHours', payload.openingHours)
+  if (payload.roomId !== undefined) formData.append('roomId', payload.roomId ?? '')
+  if (payload.nodeId !== undefined) formData.append('nodeId', payload.nodeId ?? '')
+
   if (payload.status !== undefined) {
     formData.append('status', payload.status)
   }
@@ -94,4 +111,8 @@ export async function updateStore(
   })
 
   return data
+}
+
+export async function deleteStore(storeId: string) {
+  await apiClient.delete(`/stores/${storeId}`)
 }

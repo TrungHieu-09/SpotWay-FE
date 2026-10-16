@@ -218,8 +218,6 @@ export function StoreProfilePage() {
 
     try {
       await updateStore(currentStore.id, {
-        name: values.name,
-        category: values.category,
         description: values.description,
         status: values.isActive ? 'active' : 'inactive',
         logoUrl: retainedLogoUrl,
@@ -467,7 +465,7 @@ export function StoreProfilePage() {
                     name="name"
                     rules={[{ required: true, message: 'Vui lòng nhập tên gian hàng' }]}
                   >
-                    <Input prefix={<ShopOutlined />} placeholder="Lumi Fashion" />
+                    <Input prefix={<ShopOutlined />} placeholder="Lumi Fashion" disabled />
                   </Form.Item>
 
                   <Form.Item
@@ -476,6 +474,7 @@ export function StoreProfilePage() {
                     rules={[{ required: true, message: 'Vui lòng chọn nhóm dịch vụ' }]}
                   >
                     <Select
+                      disabled
                       options={STORE_CATEGORIES.map((category) => ({
                         label: category,
                         value: category,

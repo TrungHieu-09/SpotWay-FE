@@ -5,6 +5,7 @@ import {
   getStoresByFloor,
   getStoresByOwner,
   updateStore as updateStoreRequest,
+  deleteStore as deleteStoreRequest,
 } from '../api/stores'
 import type {
   CreateStorePayload,
@@ -27,6 +28,7 @@ type StoreState = {
     storeId: string,
     payload: UpdateStorePayload,
   ) => Promise<Store>
+  deleteStore: (storeId: string) => Promise<void>
 }
 
 const DEFAULT_STORE_ID = 'store-1'
@@ -130,6 +132,28 @@ export const useStoreStore = create<StoreState>((set) => ({
         },
       }))
       return store
+    } catch (error) {
+      set({ error: (error as Error).message })
+      throw error
+    } finally {
+      set({ isSaving: false })
+    }
+  },
+
+  async deleteStore(storeId) {
+    set({ isSaving: true, error: null })
+    try {
+      await deleteStoreRequest(storeId)
+      set((state) => ({
+        currentStore: state.currentStore?.id === storeId ? null : state.currentStore,
+        ownerStores: state.ownerStores.filter((store) => store.id !== storeId),
+        storesByFloorId: Object.fromEntries(
+          Object.entries(state.storesByFloorId).map(([floorId, stores]) => [
+            floorId,
+            stores.filter((store) => store.id !== storeId),
+          ]),
+        ),
+      }))
     } catch (error) {
       set({ error: (error as Error).message })
       throw error

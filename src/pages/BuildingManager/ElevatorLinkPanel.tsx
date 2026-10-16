@@ -16,6 +16,7 @@ import { useFloorStore } from '../../store/useFloorStore'
 import { useNodeStore } from '../../store/useNodeStore'
 import type { Floor } from '../../types/floor'
 import type { Node } from '../../types/node'
+import { usePermissions } from '../../auth/usePermissions'
 
 const { Text, Title } = Typography
 const UNASSIGNED_GROUP_VALUE = '__unassigned__'
@@ -32,7 +33,7 @@ function groupLabel(groupId: string, index: number) {
     : groupId
 }
 
-export function ElevatorLinkPanel() {
+export function ElevatorLinkPanel({ readOnly = false }: { readOnly?: boolean }) {
   const [createdGroupIds, setCreatedGroupIds] = useState<string[]>([])
   const floors = useFloorStore((state) => state.floors)
   const nodesByFloorId = useNodeStore((state) => state.nodesByFloorId)
@@ -43,6 +44,8 @@ export function ElevatorLinkPanel() {
     (state) => state.updateNodeElevatorGroup,
   )
   const { message } = AntApp.useApp()
+  const permissions = usePermissions()
+  const canEdit = !readOnly && permissions.user?.role !== 'store_owner'
   const floorIdsKey = floors.map((floor) => floor.id).join('|')
 
   useEffect(() => {
@@ -129,6 +132,7 @@ export function ElevatorLinkPanel() {
             type="primary"
             icon={<PlusOutlined />}
             onClick={handleCreateGroup}
+            disabled={!canEdit}
           >
             Tạo nhóm thang máy mới
           </Button>
@@ -169,6 +173,7 @@ export function ElevatorLinkPanel() {
                     className="full-width"
                     value={row.node.elevatorGroupId ?? UNASSIGNED_GROUP_VALUE}
                     onChange={(value) => handleAssignGroup(row.node.id, value)}
+                    disabled={!canEdit || isSaving}
                     options={[
                       {
                         label: 'Chưa liên kết',

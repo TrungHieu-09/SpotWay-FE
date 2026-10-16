@@ -31,6 +31,7 @@ const ManagerLayout = lazy(() =>
     default: module.ManagerLayout,
   })),
 )
+const StoreOwnerManagementPage = lazy(() => import('../pages/BuildingManager/StoreOwnerManagementPage').then((module) => ({ default: module.StoreOwnerManagementPage })))
 const GuestMapPage = lazy(() =>
   import('../pages/Guest/GuestMapPage').then((module) => ({
     default: module.GuestMapPage,
@@ -39,6 +40,11 @@ const GuestMapPage = lazy(() =>
 const StoreProfilePage = lazy(() =>
   import('../pages/StoreOwner/StoreProfilePage').then((module) => ({
     default: module.StoreProfilePage,
+  })),
+)
+const StorePromotionsPage = lazy(() =>
+  import('../pages/StoreOwner/StorePromotionsPage').then((module) => ({
+    default: module.StorePromotionsPage,
   })),
 )
 const OwnerDashboardPage = lazy(() =>
@@ -123,14 +129,17 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['building_manager', 'building_owner']} />
         ),
-        children: [{ path: 'manager', element: lazyElement(<ManagerLayout />) }],
+        children: [{ path: 'manager', element: lazyElement(<ManagerLayout />) }, { path: 'manager/store-owners', element: lazyElement(<StoreOwnerManagementPage />) }],
       },
       {
         children: [{ path: 'guest', element: lazyElement(<GuestMapPage />) }],
       },
       {
         element: <ProtectedRoute allowedRoles={['store_owner']} />,
-        children: [{ path: 'store/profile', element: lazyElement(<StoreProfilePage />) }],
+        children: [
+          { path: 'store/profile', element: lazyElement(<StoreProfilePage />) },
+          { path: 'store/promotions', element: lazyElement(<StorePromotionsPage />) },
+        ],
       },
       {
         element: <ProtectedRoute allowedRoles={['admin']} />,

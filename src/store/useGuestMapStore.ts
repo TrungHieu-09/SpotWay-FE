@@ -31,6 +31,7 @@ type GuestMapState = {
   isRouteLoading: boolean
   error: string | null
   loadInitialData: () => Promise<void>
+  refreshCurrentBuilding: () => Promise<void>
   selectBuilding: (buildingId: string) => Promise<void>
   selectFloor: (floorId: string) => Promise<void>
   setFromNodeId: (nodeId: string | undefined) => void
@@ -99,8 +100,7 @@ export const useGuestMapStore = create<GuestMapState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       const buildings = await getBuildings()
-      const defaultBuilding =
-        buildings.find((building) => building.id === 'bldg-1') ?? buildings[0]
+      const defaultBuilding = buildings[0]
 
       if (!defaultBuilding) {
         set({ buildings, floors: [], destinations: [], isLoading: false })
@@ -118,6 +118,47 @@ export const useGuestMapStore = create<GuestMapState>((set, get) => ({
           (destination) => destination.nodeId !== pickDefaultFromNode(bundle.destinations),
         )?.nodeId,
         route: null,
+        isLoading: false,
+      })
+    } catch (error) {
+      set({ error: (error as Error).message, isLoading: false })
+    }
+  },
+
+  async refreshCurrentBuilding() {
+    const selectedBuildingId = get().selectedBuildingId
+    set({ isLoading: true, error: null, route: null })
+    try {
+      const buildings = await getBuildings()
+      const nextBuilding =
+        buildings.find((building) => building.id === selectedBuildingId) ??
+        buildings[0]
+
+      if (!nextBuilding) {
+        set({
+          buildings,
+          floors: [],
+          destinations: [],
+          selectedBuildingId: undefined,
+          selectedFloorId: undefined,
+          isLoading: false,
+        })
+        return
+      }
+
+      const bundle = await loadBuildingBundle(nextBuilding.id)
+      const fromNodeId = pickDefaultFromNode(bundle.destinations)
+      set({
+        buildings,
+        ...bundle,
+        selectedBuildingId: nextBuilding.id,
+        selectedFloorId:
+          bundle.floors.find((floor) => floor.id === get().selectedFloorId)
+            ?.id ?? bundle.floors[0]?.id,
+        fromNodeId,
+        toNodeId: bundle.destinations.find(
+          (destination) => destination.nodeId !== fromNodeId,
+        )?.nodeId,
         isLoading: false,
       })
     } catch (error) {

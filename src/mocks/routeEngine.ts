@@ -1,6 +1,7 @@
 import type { Floor } from '../types/floor'
 import type { FloorGeometry, Point } from '../types/geometry'
 import type { Edge, Node } from '../types/node'
+import type { MaintenanceZone } from '../types/maintenance'
 import type {
   Destination,
   RouteResult,
@@ -29,6 +30,8 @@ type RouteContext = {
   geometries: FloorGeometry[]
   nodes: Node[]
   edges: Edge[]
+  maintenanceZones?: MaintenanceZone[]
+  accessibleOnly?: boolean
 }
 
 function round(value: number, fractionDigits = 1) {
@@ -58,12 +61,32 @@ function bearingDegrees(fromNode: Node, toNode: Node) {
   return (Math.atan2(dx, -dy) * 180) / Math.PI + 360
 }
 
+function bearingDegreesFromPoints(fromPoint: Point, toPoint: Point) {
+  const dx = toPoint.x - fromPoint.x
+  const dy = toPoint.y - fromPoint.y
+  return (Math.atan2(dx, -dy) * 180) / Math.PI + 360
+}
+
 function normalizeBearing(bearing: number) {
   return round(bearing % 360, 0)
 }
 
 function signedBearingDiff(fromBearing: number, toBearing: number) {
   return ((toBearing - fromBearing + 540) % 360) - 180
+}
+
+function distanceMetersBetweenPoints(
+  floorId: string,
+  fromPoint: Point,
+  toPoint: Point,
+  geometries: FloorGeometry[],
+) {
+  const geometry = getGeometry(geometries, floorId)
+  const realWidthM = geometry?.realWidthM ?? 60
+  const realHeightM = geometry?.realHeightM ?? 38
+  const dx = ((toPoint.x - fromPoint.x) / 100) * realWidthM
+  const dy = ((toPoint.y - fromPoint.y) / 100) * realHeightM
+  return Math.hypot(dx, dy)
 }
 
 function walkingInstruction(
@@ -92,6 +115,7 @@ function walkingInstruction(
 function buildGraph(context: RouteContext) {
   const nodeById = new Map(context.nodes.map((node) => [node.id, node]))
   const graph = new Map<string, GraphLink[]>()
+  const blockedNodeIds = new Set((context.maintenanceZones ?? []).filter((zone) => zone.active).flatMap((zone) => context.nodes.filter((node) => node.floorId === zone.floorId && node.x >= zone.rect.x && node.x <= zone.rect.x + zone.rect.w && node.y >= zone.rect.y && node.y <= zone.rect.y + zone.rect.h).map((node) => node.id)))
 
   function addLink(fromNodeId: string, link: GraphLink) {
     const links = graph.get(fromNodeId) ?? []
@@ -100,13 +124,13 @@ function buildGraph(context: RouteContext) {
   }
 
   for (const edge of context.edges) {
-    if (edge.accessible === false) {
+    if (edge.accessible === false || (context.accessibleOnly && edge.kind === 'stairs')) {
       continue
     }
 
     const fromNode = nodeById.get(edge.fromNodeId)
     const toNode = nodeById.get(edge.toNodeId)
-    if (!fromNode || !toNode || fromNode.floorId !== toNode.floorId) {
+    if (!fromNode || !toNode || blockedNodeIds.has(fromNode.id) || blockedNodeIds.has(toNode.id) || fromNode.floorId !== toNode.floorId) {
       continue
     }
 
@@ -125,7 +149,7 @@ function buildGraph(context: RouteContext) {
 
   const elevatorNodesByGroup = new Map<string, Node[]>()
   for (const node of context.nodes) {
-    if (!node.isElevatorLink || !node.elevatorGroupId) {
+    if (!node.isElevatorLink || !node.elevatorGroupId || blockedNodeIds.has(node.id)) {
       continue
     }
 
@@ -314,6 +338,83 @@ function buildSteps(
   return steps
 }
 
+function buildSameFloorFallbackRoute(
+  context: RouteContext,
+  buildingId: string,
+  fromNode: Node,
+  toNode: Node,
+  destinationLabel: string,
+): RouteResult {
+  const points: Point[] = [
+    { x: fromNode.x, y: fromNode.y },
+  ]
+
+  if (Math.abs(fromNode.x - toNode.x) > 2 && Math.abs(fromNode.y - toNode.y) > 2) {
+    points.push({
+      x: toNode.x,
+      y: fromNode.y,
+    })
+  }
+
+  points.push({ x: toNode.x, y: toNode.y })
+
+  const steps: RouteStep[] = []
+  let previousBearing: number | null = null
+  let totalDistance = 0
+
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const fromPoint = points[index]
+    const toPoint = points[index + 1]
+    const distance = distanceMetersBetweenPoints(
+      fromNode.floorId,
+      fromPoint,
+      toPoint,
+      context.geometries,
+    )
+    const bearing = normalizeBearing(bearingDegreesFromPoints(fromPoint, toPoint))
+    totalDistance += distance
+    steps.push({
+      index: steps.length + 1,
+      type: 'walk',
+      floorId: fromNode.floorId,
+      nodeId: index === points.length - 2 ? toNode.id : `${fromNode.id}-bend-${index}`,
+      x: toPoint.x,
+      y: toPoint.y,
+      bearing,
+      distance: round(distance),
+      instruction: walkingInstruction(distance, previousBearing, bearing),
+    })
+    previousBearing = bearing
+  }
+
+  steps.push({
+    index: steps.length + 1,
+    type: 'arrive',
+    floorId: toNode.floorId,
+    nodeId: toNode.id,
+    x: toNode.x,
+    y: toNode.y,
+    bearing: 0,
+    distance: 0,
+    instruction: `Đến ${destinationLabel}`,
+  })
+
+  return {
+    buildingId,
+    fromNodeId: fromNode.id,
+    toNodeId: toNode.id,
+    totalDistance: round(totalDistance),
+    estimatedSeconds: Math.round(totalDistance / WALKING_SPEED_MPS),
+    steps,
+    segments: [
+      {
+        floorId: fromNode.floorId,
+        points,
+      },
+    ],
+  }
+}
+
 export function getDestinations(context: RouteContext, buildingId: string): Destination[] {
   const buildingFloors = context.floors.filter((floor) => floor.buildingId === buildingId)
   const floorById = new Map(buildingFloors.map((floor) => [floor.id, floor]))
@@ -345,9 +446,11 @@ export function buildRoute(
 ): RouteResult | null {
   const buildingFloors = context.floors.filter((floor) => floor.buildingId === buildingId)
   const floorIds = new Set(buildingFloors.map((floor) => floor.id))
-  const routeNodes = context.nodes.filter((node) => floorIds.has(node.floorId))
+  const activeZones = (context.maintenanceZones ?? []).filter((zone) => zone.active && floorIds.has(zone.floorId))
+  const isBlocked = (node: Node) => activeZones.some((zone) => node.floorId === zone.floorId && node.x >= zone.rect.x && node.x <= zone.rect.x + zone.rect.w && node.y >= zone.rect.y && node.y <= zone.rect.y + zone.rect.h)
+  const routeNodes = context.nodes.filter((node) => floorIds.has(node.floorId) && !isBlocked(node))
   const routeEdges = context.edges.filter((edge) => floorIds.has(edge.floorId))
-  const routeContext = {
+  const routeContext: RouteContext = {
     ...context,
     floors: buildingFloors,
     nodes: routeNodes,
@@ -362,7 +465,21 @@ export function buildRoute(
   }
 
   const path = findPath(routeContext, fromNodeId, toNodeId)
+  const destination = getDestinations(context, buildingId).find(
+    (item) => item.nodeId === toNodeId,
+  )
+
   if (!path) {
+    if (fromNode.floorId === toNode.floorId && activeZones.length === 0) {
+      return buildSameFloorFallbackRoute(
+        routeContext,
+        buildingId,
+        fromNode,
+        toNode,
+        destination?.label ?? toNode.label ?? toNode.id,
+      )
+    }
+
     return null
   }
 
@@ -371,10 +488,6 @@ export function buildRoute(
     .filter((node): node is Node => Boolean(node))
   const totalDistance = path.links.reduce((total, link) => total + link.distance, 0)
   const estimatedSeconds = path.links.reduce((total, link) => total + link.seconds, 0)
-  const destination = getDestinations(context, buildingId).find(
-    (item) => item.nodeId === toNodeId,
-  )
-
   return {
     buildingId,
     fromNodeId,
@@ -388,6 +501,7 @@ export function buildRoute(
       destination?.label ?? toNode.label ?? toNode.id,
     ),
     segments: buildSegments(pathNodes, path.links),
+    warnings: activeZones.length > 0 ? [`Lộ trình đã tránh khu vực đang bảo trì: ${activeZones.map((zone) => zone.name).join(', ')}`] : undefined,
   }
 }
 

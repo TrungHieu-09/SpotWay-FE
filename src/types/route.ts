@@ -29,6 +29,7 @@ export type RouteResult = {
   estimatedSeconds: number
   steps: RouteStep[]
   segments: RouteSegment[]
+  warnings?: string[]
 }
 
 export type Destination = {

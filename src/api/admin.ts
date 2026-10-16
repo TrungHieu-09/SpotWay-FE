@@ -15,6 +15,7 @@ export type CreateTenantPayload = {
 export type UpdateTenantPayload = Partial<Pick<Tenant, 'planId' | 'planExpiresAt' | 'status'>>
 
 export type UpdateAdminUserPayload = { status?: 'active' | 'locked'; resetPassword?: boolean }
+export type CreateAdminOwnerPayload = { name: string; email: string }
 
 export async function getAdminOverview() {
   const { data } = await apiClient.get<AdminOverview>('/admin/overview')
@@ -32,7 +33,7 @@ export async function getAdminTenant(tenantId: string) {
 }
 
 export async function createAdminTenant(payload: CreateTenantPayload) {
-  const { data } = await apiClient.post<TenantDetail>('/admin/tenants', payload)
+  const { data } = await apiClient.post<TenantDetail & { temporaryPassword: string }>('/admin/tenants', payload)
   return data
 }
 
@@ -77,6 +78,11 @@ export async function resetAdminUserPassword(userId: string) {
 
 export async function createAdminBuilding(tenantId: string, payload: { name: string; address: string }) {
   const { data } = await apiClient.post<Building>(`/admin/tenants/${tenantId}/buildings`, payload)
+  return data
+}
+
+export async function createAdminOwner(tenantId: string, payload: CreateAdminOwnerPayload) {
+  const { data } = await apiClient.post<AdminUser & { temporaryPassword: string }>(`/admin/tenants/${tenantId}/owners`, payload)
   return data
 }
 

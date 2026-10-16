@@ -4,6 +4,7 @@ export type PlanRecognitionParams = {
   thresholdOffset: number
   minRoomArea: number
   simplifyTolerance: number
+  gapBridgePercent: number
 }
 
 export type PlanRecognitionResult = {
@@ -25,6 +26,7 @@ type Component = {
 }
 
 type CanvasSource = OffscreenCanvas | HTMLCanvasElement
+type Canvas2DContext = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
 
 const MAX_RECOGNITION_SIDE = 1000
 const MAX_STORAGE_IMAGE_SIDE = 1600
@@ -37,6 +39,13 @@ function createCanvas(width: number, height: number): CanvasSource {
   canvas.width = width
   canvas.height = height
   return canvas
+}
+
+function getCanvas2DContext(
+  canvas: CanvasSource,
+  options?: CanvasRenderingContext2DSettings,
+) {
+  return canvas.getContext('2d', options) as Canvas2DContext | null
 }
 
 function canvasToDataUrl(canvas: CanvasSource, type = 'image/png', quality?: number) {
@@ -188,8 +197,90 @@ function erode(mask: Uint8Array, width: number, height: number, radius: number) 
   return output
 }
 
-function closeMask(mask: Uint8Array, width: number, height: number) {
-  return erode(dilate(mask, width, height, 1), width, height, 1)
+function closeMask(
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  radius = 1,
+) {
+  return erode(dilate(mask, width, height, radius), width, height, radius)
+}
+
+function bridgeWallGaps(
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  maxGap: number,
+) {
+  const output = new Uint8Array(mask)
+
+  for (let y = 0; y < height; y += 1) {
+    let x = 0
+    while (x < width) {
+      const index = y * width + x
+      if (mask[index] !== 1) {
+        x += 1
+        continue
+      }
+
+      let nextX = x + 1
+      while (nextX < width && mask[y * width + nextX] === 0) {
+        nextX += 1
+      }
+
+      const gap = nextX - x - 1
+      if (gap > 0 && gap <= maxGap && nextX < width) {
+        for (let fillX = x + 1; fillX < nextX; fillX += 1) {
+          output[y * width + fillX] = 1
+        }
+      }
+
+      x = Math.max(nextX, x + 1)
+    }
+  }
+
+  for (let x = 0; x < width; x += 1) {
+    let y = 0
+    while (y < height) {
+      const index = y * width + x
+      if (output[index] !== 1) {
+        y += 1
+        continue
+      }
+
+      let nextY = y + 1
+      while (nextY < height && output[nextY * width + x] === 0) {
+        nextY += 1
+      }
+
+      const gap = nextY - y - 1
+      if (gap > 0 && gap <= maxGap && nextY < height) {
+        for (let fillY = y + 1; fillY < nextY; fillY += 1) {
+          output[fillY * width + x] = 1
+        }
+      }
+
+      y = Math.max(nextY, y + 1)
+    }
+  }
+
+  return output
+}
+
+function prepareWallMaskForRooms(
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  gapBridgePercent: number,
+) {
+  const normalizedGapPercent = Math.min(12, Math.max(0, gapBridgePercent))
+  const maxGap = Math.max(
+    8,
+    Math.round(Math.max(width, height) * (normalizedGapPercent / 100)),
+  )
+  const lightlyClosed = closeMask(mask, width, height, 1)
+  const bridged = bridgeWallGaps(lightlyClosed, width, height, maxGap)
+  return closeMask(bridged, width, height, 1)
 }
 
 function labelComponents(mask: Uint8Array, width: number, height: number, target: 0 | 1) {
@@ -408,7 +499,7 @@ function getBoundaryPoints(
 
 function makeWallMaskDataUrl(mask: Uint8Array, width: number, height: number) {
   const canvas = createCanvas(width, height)
-  const context = canvas.getContext('2d')
+  const context = getCanvas2DContext(canvas)
   if (!context) {
     return Promise.resolve('')
   }
@@ -474,7 +565,7 @@ export async function recognizePlanImage(
   const bitmap = await loadBitmap(imageDataUrl)
   const size = getScaledSize(bitmap.width, bitmap.height, MAX_RECOGNITION_SIDE)
   const canvas = createCanvas(size.width, size.height)
-  const context = canvas.getContext('2d', { willReadFrequently: true })
+  const context = getCanvas2DContext(canvas, { willReadFrequently: true })
 
   if (!context) {
     throw new Error('Trình duyệt không hỗ trợ xử lý ảnh bằng Canvas')
@@ -491,10 +582,11 @@ export async function recognizePlanImage(
     wallMask[index] = value <= threshold ? 1 : 0
   })
 
-  const cleanWallMask = closeMask(
+  const cleanWallMask = prepareWallMaskForRooms(
     filterWallMask(wallMask, size.width, size.height),
     size.width,
     size.height,
+    params.gapBridgePercent,
   )
   const rooms = extractRoomsFromWallMask(
     cleanWallMask,
@@ -556,7 +648,7 @@ export async function compressPlanImageFile(file: File) {
   const bitmap = await createImageBitmap(file)
   const size = getScaledSize(bitmap.width, bitmap.height, MAX_STORAGE_IMAGE_SIDE)
   const canvas = createCanvas(size.width, size.height)
-  const context = canvas.getContext('2d')
+  const context = getCanvas2DContext(canvas)
 
   if (!context) {
     throw new Error('Trình duyệt không hỗ trợ nén ảnh bằng Canvas')
@@ -600,16 +692,32 @@ export function runSyntheticPlanRecognitionCheck() {
     }
   }
 
+  function eraseWallRect(x: number, y: number, rectWidth: number, rectHeight: number) {
+    for (let row = y; row < y + rectHeight; row += 1) {
+      for (let column = x; column < x + rectWidth; column += 1) {
+        wallMask[row * width + column] = 0
+      }
+    }
+  }
+
   drawWallRect(20, 20, 200, 6)
   drawWallRect(20, 20, 6, 140)
   drawWallRect(214, 20, 6, 140)
   drawWallRect(20, 154, 200, 6)
   drawWallRect(85, 20, 6, 140)
   drawWallRect(150, 20, 6, 140)
+  eraseWallRect(85, 72, 6, 16)
+  eraseWallRect(150, 92, 6, 16)
 
-  const rooms = extractRoomsFromWallMask(wallMask, width, height, 'synthetic', {
-    minRoomArea: 600,
-    simplifyTolerance: 1.2,
-  })
-  console.info(`[planRecognition] Synthetic check: ${rooms.length} phòng`)
+  const rooms = extractRoomsFromWallMask(
+    prepareWallMaskForRooms(wallMask, width, height, 6),
+    width,
+    height,
+    'synthetic',
+    {
+      minRoomArea: 600,
+      simplifyTolerance: 1.2,
+    },
+  )
+  console.info(`[planRecognition] Synthetic gap-bridge check: ${rooms.length} phòng`)
 }

@@ -17,6 +17,31 @@ export type Edge = {
   fromNodeId: string
   toNodeId: string
   accessible?: boolean
+  kind?: 'walk' | 'stairs' | 'ramp'
+}
+
+export type CreateNodePayload = {
+  x: number
+  y: number
+  isElevatorLink?: boolean
+  elevatorGroupId?: string | null
+  poiId?: string | null
+  label?: string
+}
+
+export type CreateEdgePayload = {
+  floorId: string
+  fromNodeId: string
+  toNodeId: string
+  accessible?: boolean
+  kind?: 'walk' | 'stairs' | 'ramp'
+}
+
+export type UpdateEdgePayload = Partial<Pick<Edge, 'accessible' | 'kind' | 'fromNodeId' | 'toNodeId'>>
+
+export type NavigationGraph = {
+  nodes: Node[]
+  edges: Edge[]
 }
 
 export type UpdateNodePayload = Partial<{

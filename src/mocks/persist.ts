@@ -14,6 +14,9 @@ export const MOCK_STORAGE_KEYS = {
   users: `${MOCK_STORAGE_PREFIX}users`,
   invoices: `${MOCK_STORAGE_PREFIX}invoices`,
   areas: `${MOCK_STORAGE_PREFIX}areas`,
+  promotions: `${MOCK_STORAGE_PREFIX}promotions`,
+  maintenanceZones: `${MOCK_STORAGE_PREFIX}maintenance-zones`,
+  qrCodes: `${MOCK_STORAGE_PREFIX}qr-codes`,
 } as const
 
 function getStorage() {
