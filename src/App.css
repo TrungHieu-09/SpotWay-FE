@@ -924,6 +924,20 @@
   gap: 0;
 }
 
+.editor-stage-column > .ant-tabs {
+  min-width: 0;
+}
+
+.editor-stage-column > .ant-tabs .ant-tabs-nav {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.editor-stage-column > .ant-tabs .ant-tabs-tab {
+  white-space: nowrap;
+}
+
 .editor-context-bar {
   display: flex;
   min-width: 0;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { App as AntApp, Button, Layout, Tabs, Typography } from 'antd'
-import { ExperimentOutlined } from '@ant-design/icons'
+import { App as AntApp, Button, Layout, Tabs, Typography, Upload } from 'antd'
+import { ExperimentOutlined, UploadOutlined } from '@ant-design/icons'
 import { FloorSelector } from './FloorSelector'
 import { CanvasBoard } from './CanvasBoard'
 import { ElevatorLinkPanel } from './ElevatorLinkPanel'
@@ -14,6 +14,7 @@ import { EditorShell } from '../../components/ui/EditorShell'
 import { useBuildingStore } from '../../store/useBuildingStore'
 import { useFloorStore } from '../../store/useFloorStore'
 import { usePermissions } from '../../auth/usePermissions'
+import { compressPlanImageFile } from '../../utils/planRecognition'
 
 const { Content, Sider } = Layout
 const { Text, Title } = Typography
@@ -30,6 +31,7 @@ export function ManagerLayout() {
   const floors = useFloorStore((state) => state.floors)
   const selectedFloor = useFloorStore((state) => state.selectedFloor)
   const selectFloor = useFloorStore((state) => state.selectFloor)
+  const updateFloorPlan = useFloorStore((state) => state.updateFloorPlan)
   const { message, modal } = AntApp.useApp()
   const permissions = usePermissions()
   const isReadOnly = Boolean(selectedFloor && !permissions.canEditFloor(selectedFloor))
@@ -55,6 +57,25 @@ export function ManagerLayout() {
     }
   }, [buildingId, loadFloors, message])
 
+  async function handlePlanUpload(file: File) {
+    if (!selectedFloor || isReadOnly) {
+      return
+    }
+
+    try {
+      const compressedImage = await compressPlanImageFile(file)
+      await updateFloorPlan(selectedFloor.id, {
+        mapImageUrl: compressedImage.dataUrl,
+        mapWidth: compressedImage.width,
+        mapHeight: compressedImage.height,
+      })
+      setActiveTab('recognition')
+      message.success('Đã tải ảnh sơ đồ 2D cho tầng')
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Không thể tải ảnh sơ đồ')
+    }
+  }
+
   return (
     <Layout className="workspace manager-layout">
       <Sider width={292} theme="light" className="manager-sider">
@@ -71,6 +92,18 @@ export function ManagerLayout() {
           selectedFloorId={selectedFloor?.id}
           isBuildingLoading={isBuildingLoading}
           readOnly={isReadOnly}
+          secondaryAction={<Upload
+            accept="image/png,image/jpeg,image/webp"
+            showUploadList={false}
+            beforeUpload={(file) => {
+              void handlePlanUpload(file)
+              return Upload.LIST_IGNORE
+            }}
+          >
+            <Button icon={<UploadOutlined />} disabled={!selectedFloor || isReadOnly}>
+              Tải ảnh 2D
+            </Button>
+          </Upload>}
           primaryAction={<Button
             type="primary"
             icon={<ExperimentOutlined />}

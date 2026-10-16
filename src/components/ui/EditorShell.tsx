@@ -14,6 +14,7 @@ type EditorShellProps = {
   isBuildingLoading?: boolean
   readOnly?: boolean
   status?: 'saved' | 'saving' | 'dirty'
+  secondaryAction?: ReactNode
   primaryAction?: ReactNode
   children: ReactNode
   onBuildingChange: (buildingId: string) => void
@@ -28,7 +29,7 @@ const toolItems: Array<{ key: EditorTool; label: string; shortcut: string; icon:
   { key: 'delete', label: 'Xóa đối tượng', shortcut: 'Delete', icon: <DeleteOutlined /> },
 ]
 
-export function EditorShell({ buildings, buildingId, floors, selectedFloorId, isBuildingLoading = false, readOnly = false, status = 'saved', primaryAction, children, onBuildingChange, onFloorChange }: EditorShellProps) {
+export function EditorShell({ buildings, buildingId, floors, selectedFloorId, isBuildingLoading = false, readOnly = false, status = 'saved', secondaryAction, primaryAction, children, onBuildingChange, onFloorChange }: EditorShellProps) {
   const [activeTool, setActiveTool] = useState<EditorTool>('select')
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -50,7 +51,7 @@ export function EditorShell({ buildings, buildingId, floors, selectedFloorId, is
     </aside>
     <div className="editor-stage-column">
       <div className="editor-context-bar">
-        <div className="editor-context-main"><Select aria-label="Chọn tòa nhà" value={buildingId} loading={isBuildingLoading} placeholder="Chọn tòa nhà" options={buildings.map((building) => ({ value: building.id, label: building.name }))} onChange={onBuildingChange} /><div className="editor-floor-chips">{floors.map((floor) => <button key={floor.id} type="button" className={`editor-floor-chip${floor.id === selectedFloorId ? ' is-active' : ''}`} onClick={() => onFloorChange(floor.id)}><span className="editor-area-dot" />{floor.name}{floor.id === selectedFloorId && selectedFloor?.publishStatus === 'draft' ? <Tag color="gold">Nháp</Tag> : null}{readOnly ? <LockOutlined /> : null}</button>)}</div></div><Space wrap><Tag color={selectedFloor?.publishStatus === 'published' ? 'green' : 'gold'}>{selectedFloor?.publishStatus === 'published' ? 'Đã xuất bản' : 'Bản nháp'}</Tag><span className={`editor-save-state ${status}`}>{status === 'saving' ? <SaveOutlined /> : null} {statusLabel}</span>{primaryAction}</Space>
+        <div className="editor-context-main"><Select aria-label="Chọn tòa nhà" value={buildingId} loading={isBuildingLoading} placeholder="Chọn tòa nhà" options={buildings.map((building) => ({ value: building.id, label: building.name }))} onChange={onBuildingChange} /><div className="editor-floor-chips">{floors.map((floor) => <button key={floor.id} type="button" className={`editor-floor-chip${floor.id === selectedFloorId ? ' is-active' : ''}`} onClick={() => onFloorChange(floor.id)}><span className="editor-area-dot" />{floor.name}{floor.id === selectedFloorId && selectedFloor?.publishStatus === 'draft' ? <Tag color="gold">Nháp</Tag> : null}{readOnly ? <LockOutlined /> : null}</button>)}</div></div><Space wrap><Tag color={selectedFloor?.publishStatus === 'published' ? 'green' : 'gold'}>{selectedFloor?.publishStatus === 'published' ? 'Đã xuất bản' : 'Bản nháp'}</Tag><span className={`editor-save-state ${status}`}>{status === 'saving' ? <SaveOutlined /> : null} {statusLabel}</span>{secondaryAction}{primaryAction}</Space>
       </div>
       {readOnly ? <div className="editor-readonly-note">Tầng này chỉ đọc. Bạn có thể xem dữ liệu nhưng không thể chỉnh sửa.</div> : null}
       <div className="editor-canvas-region">{children}<div className="editor-zoom-controls"><Tooltip title="Thu nhỏ"><Button icon={<ZoomOutOutlined />} aria-label="Thu nhỏ" /></Tooltip><Tooltip title="Phóng to"><Button icon={<ZoomInOutlined />} aria-label="Phóng to" /></Tooltip><Tooltip title="Về mặc định"><Button icon={<AimOutlined />} aria-label="Về mặc định" /></Tooltip></div></div>
