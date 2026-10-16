@@ -8,15 +8,19 @@ import {
   Image,
   Space,
   Spin,
+  Select,
   Table,
   Tag,
   Typography,
 } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getFloors } from '../../api/floors'
+import { getFloors, updateFloor } from '../../api/floors'
+import { getBuildingAreas } from '../../api/areas'
 import { useBuildingStore } from '../../store/useBuildingStore'
 import type { Floor } from '../../types/floor'
+import type { Area } from '../../types/area'
+import { AreaManagementPanel } from './AreaManagementPanel'
 
 const { Text, Title } = Typography
 
@@ -24,6 +28,7 @@ export function BuildingDetailPage() {
   const { buildingId } = useParams<{ buildingId: string }>()
   const navigate = useNavigate()
   const [floors, setFloors] = useState<Floor[]>([])
+  const [areas, setAreas] = useState<Area[]>([])
   const [isFloorLoading, setIsFloorLoading] = useState(false)
   const [hasLoadedBuildings, setHasLoadedBuildings] = useState(false)
   const loadBuildings = useBuildingStore((state) => state.loadBuildings)
@@ -50,6 +55,10 @@ export function BuildingDetailPage() {
       .then(setFloors)
       .catch((error: Error) => message.error(error.message))
       .finally(() => setIsFloorLoading(false))
+  }, [buildingId, message])
+
+  useEffect(() => {
+    if (buildingId) getBuildingAreas(buildingId).then(setAreas).catch((error: Error) => message.error(error.message))
   }, [buildingId, message])
 
   if (!building && hasLoadedBuildings && !isBuildingLoading) {
@@ -131,6 +140,7 @@ export function BuildingDetailPage() {
             columns={[
               { title: 'Tên tầng', dataIndex: 'name' },
               { title: 'Tầng', dataIndex: 'level', width: 120 },
+              { title: 'Khu vực', dataIndex: 'areaId', width: 220, render: (areaId: string | null, floor) => <Select allowClear value={areaId ?? undefined} placeholder="Chọn khu vực" options={areas.map((area) => ({ value: area.id, label: area.name }))} onChange={(next: string | undefined) => updateFloor(floor.id, { areaId: next ?? null }).then((updated) => setFloors((current) => current.map((item) => item.id === updated.id ? updated : item))).catch((error: Error) => message.error(error.message))} /> },
               {
                 title: 'Trạng thái xuất bản',
                 dataIndex: 'publishStatus',
@@ -152,6 +162,7 @@ export function BuildingDetailPage() {
             </Space>
           ) : null}
         </Card>
+        {building ? <AreaManagementPanel buildingId={building.id} /> : null}
       </Spin>
     </main>
   )

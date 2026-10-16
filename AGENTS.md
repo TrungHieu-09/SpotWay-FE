@@ -16,6 +16,8 @@
 - Every protected MSW handler returns `{ code, message }` on authorization/business errors and scopes tenant data by authenticated `tenantId`.
 - Guest sees only active buildings, active tenants, and published floors. Writes require an authenticated role and an active tenant subscription.
 - `admin` manages `/api/admin/*` but does not read tenant map data; `building_owner` manages its tenant/staff/buildings/subscription; `building_manager` manages map data/stores; `store_owner` updates only stores assigned to that user and cannot create/delete/reassign stores.
+- Building Manager write access is area-scoped through `User.areaIds` and `Floor.areaId`; only the Building Owner manages areas, floor structure, managers, Store Owners, and subscription. `PERMISSIONS.ownerCanCreateBuilding` is the single FE/mock switch for Owner building creation.
+- New accounts carry `createdByUserId` and `mustChangePassword`; forced first-login password changes use `/change-password`. Plan limits are `maxBuildings`, `maxManagers`, and `maxStoreOwners`.
 
 ---
 

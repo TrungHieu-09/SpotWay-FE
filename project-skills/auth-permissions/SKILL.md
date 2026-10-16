@@ -19,8 +19,11 @@ The application uses four authenticated roles: `admin`, `building_owner`, `build
 - Guest reads only active buildings, active tenants, and published floors. Writes require an authenticated role and an active tenant subscription.
 - `admin` can manage `/api/admin/*` but cannot read tenant map data through ordinary building/floor endpoints.
 - `building_owner` can manage its tenant, staff, buildings, and subscription.
-- `building_manager` can manage map resources and stores in its tenant, but not staff or subscription.
+- `building_owner` may create buildings only when `PERMISSIONS.ownerCanCreateBuilding` is true; the current demo keeps it false.
+- `building_manager` can read tenant map resources but may write only floors whose `areaId` is in the authenticated user's `areaIds`. It cannot create/delete floors, manage areas, managers, or subscriptions.
 - `store_owner` can read and update only stores whose `ownerUserId` equals the authenticated user id. It cannot create, delete, move, or reassign stores.
+- New manager accounts receive `areaIds`; first-login accounts may be forced through `/change-password` via `mustChangePassword`.
+- Tenant writes require an active tenant and respect plan limits for buildings, managers, and store owners.
 
 ## Mock credentials
 
