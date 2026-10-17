@@ -26,6 +26,12 @@ Màu phòng, POI và lộ trình dùng `mapTokens` trong `src/theme/theme.ts`, �
 
 Các nút, liên kết và điều khiển biểu mẫu có focus ring rõ ràng để hỗ trợ điều hướng bằng bàn phím. Luồng tải dữ liệu dùng Spin hoặc loading state của Ant Design; trạng thái rỗng và lỗi dùng Empty/Alert hoặc message theo ngữ cảnh.
 
+## Chuyển động và popup
+
+- Không dùng selector `*` hoặc `.ant-*` để tắt animation/transition của Ant Design. Các popup cần giữ animation để trạng thái hiển thị không bị kẹt ở opacity 0.
+- Khi người dùng bật `prefers-reduced-motion: reduce`, `ConfigProvider` đặt token `motion: false` và lắng nghe thay đổi preference trong lúc ứng dụng đang chạy. Ở chế độ `no-preference`, motion của Ant Design được giữ nguyên.
+- Popup dùng portal mặc định ra `document.body`, có z-index chung cao hơn Modal. `AppSelect` là wrapper dùng chung cho Select và giữ option có màu chữ/nền tương phản, trạng thái loading và empty rõ ràng.
+
 ## Không được làm
 
 - Không thêm gradient làm nền chính.
