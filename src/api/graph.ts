@@ -21,7 +21,7 @@ export type GraphEdge = {
   accessible: boolean
   status: 'ACTIVE' | 'BLOCKED'
 }
-export type NavigationDraftNode = Omit<GraphNode, 'floorId' | 'name'> & { confidence: number; requiresConfirmation: boolean }
+export type NavigationDraftNode = Omit<GraphNode, 'floorId'> & { confidence: number; requiresConfirmation: boolean }
 export type NavigationDraftEdge = { id: string; fromNodeId: string; toNodeId: string; accessible: boolean; confidence: number; requiresConfirmation: boolean }
 export type NavigationDraft = { nodes: NavigationDraftNode[]; edges: NavigationDraftEdge[]; warnings: string[] }
 
@@ -30,7 +30,10 @@ export async function analyzeNavigationDraft(floorId: string) {
   return data
 }
 export async function applyNavigationDraft(floorId: string, draft: NavigationDraft) {
-  const { data } = await apiClient.post<{ nodesCreated: number; edgesCreated: number }>(`/floors/${floorId}/navigation-draft/apply`, { nodes: draft.nodes.map((node) => ({ ...node, confirmed: true })), edges: draft.edges.map((edge) => ({ ...edge, confirmed: true })) })
+  const { data } = await apiClient.post<{ nodesCreated: number; edgesCreated: number }>(`/floors/${floorId}/navigation-draft/apply`, {
+    nodes: draft.nodes.map(({ id, x, y, name, type, accessible }) => ({ id, x, y, name, type, accessible, confirmed: true })),
+    edges: draft.edges.map(({ id, fromNodeId, toNodeId, accessible }) => ({ id, fromNodeId, toNodeId, accessible, confirmed: true })),
+  })
   return data
 }
 

@@ -289,6 +289,9 @@ export function CanvasBoard() {
       message.success(`Đã áp dụng ${result.nodesCreated} Node và ${result.edgesCreated} đường đi.`)
     } catch (reason) { setGraphError((reason as Error).message) } finally { setIsGraphSaving(false) }
   }
+  function moveDraftNode(id: string, x: number, y: number) {
+    setNavigationDraft((draft) => draft && { ...draft, nodes: draft.nodes.map((node) => node.id === id ? { ...node, x, y } : node) })
+  }
 
   async function handleSaveWallsDraft() {
     if (!selectedFloor) return
@@ -896,7 +899,7 @@ export function CanvasBoard() {
                       {navigationDraft?.edges.map((edge) => {
                         const from = navigationDraft.nodes.find((node) => node.id === edge.fromNodeId); const to = navigationDraft.nodes.find((node) => node.id === edge.toNodeId)
                         if (!from || !to) return null
-                        return <Line key={edge.id} points={[from.x / 100 * stageSize.width, from.y / 100 * stageSize.height, to.x / 100 * stageSize.width, to.y / 100 * stageSize.height]} stroke="#f59e0b" dash={[8, 6]} strokeWidth={3} listening={false} />
+                        return <Line key={edge.id} points={[from.x / selectedFloor.mapWidth * stageSize.width, from.y / selectedFloor.mapHeight * stageSize.height, to.x / selectedFloor.mapWidth * stageSize.width, to.y / selectedFloor.mapHeight * stageSize.height]} stroke="#f59e0b" dash={[8, 6]} strokeWidth={3} listening={false} />
                       })}
                       {nodes.map((node) => {
                         const x = (node.x / selectedFloor.mapWidth) * stageSize.width
@@ -951,7 +954,7 @@ export function CanvasBoard() {
                           </React.Fragment>
                         )
                       })}
-                      {navigationDraft?.nodes.map((node) => <Circle key={node.id} x={node.x / 100 * stageSize.width} y={node.y / 100 * stageSize.height} radius={8} fill="#facc15" stroke="#854d0e" strokeWidth={2} />)}
+                      {navigationDraft?.nodes.map((node) => <Circle key={node.id} x={node.x / selectedFloor.mapWidth * stageSize.width} y={node.y / selectedFloor.mapHeight * stageSize.height} radius={10} fill="#facc15" stroke="#854d0e" strokeWidth={2} draggable onDragEnd={(event) => moveDraftNode(node.id, event.target.x() / stageSize.width * selectedFloor.mapWidth, event.target.y() / stageSize.height * selectedFloor.mapHeight)} />)}
                       {pois.map((poi) => {
                         const { pixelX, pixelY } = percentToPixel(
                           poi.x,
