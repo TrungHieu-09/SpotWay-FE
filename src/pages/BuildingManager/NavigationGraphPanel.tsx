@@ -7,13 +7,13 @@ import {
   Card,
   Empty,
   Input,
-  Select,
   Space,
   Spin,
   Switch,
   Tag,
   Typography,
 } from 'antd'
+import { AppSelect as Select } from '../../components/ui/AppSelect'
 import type Konva from 'konva'
 import {
   Circle,

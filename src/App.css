@@ -79,6 +79,28 @@
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
 }
 
+.admin-account-card {
+  margin-bottom: 20px;
+}
+
+.admin-account-filters {
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.admin-account-filters .ant-input-search {
+  max-width: 100%;
+}
+
+.admin-filter-select {
+  width: 190px;
+}
+
+.admin-filter-select-wide {
+  width: 220px;
+}
+
 .full-width {
   width: 100%;
 }
@@ -1282,6 +1304,16 @@
 
   .workspace {
     padding: 18px 14px;
+  }
+
+  .admin-account-filters > .ant-space-item {
+    max-width: 100%;
+  }
+
+  .admin-account-filters .ant-input-search,
+  .admin-account-filters .admin-filter-select,
+  .admin-account-filters .ant-btn {
+    width: 100% !important;
   }
 
   .page-heading {

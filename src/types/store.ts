@@ -14,7 +14,7 @@ export type Store = {
   galleryImageUrls: string[]
   description: string
   category: string
-  openingHours?: string
+  openingHours: string
   status: StoreStatus
 }
 

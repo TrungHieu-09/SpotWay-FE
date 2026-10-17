@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { App as AntApp, Avatar, Button, Empty, Form, Image, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd'
+import { App as AntApp, Avatar, Button, Empty, Form, Image, Input, Modal, Popconfirm, Space, Table, Tag, Typography } from 'antd'
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, ShopOutlined } from '@ant-design/icons'
 import { useFloorStore } from '../../store/useFloorStore'
 import { useStoreStore } from '../../store/useStoreStore'
 import { usePermissions } from '../../auth/usePermissions'
 import { getStoreOwners, type StoreOwnerSummary } from '../../api/storeOwners'
 import type { Store, StoreStatus } from '../../types/store'
+import { AppSelect as Select } from '../../components/ui/AppSelect'
 
 const { Paragraph, Text, Title } = Typography
 type StoreFormValues = { name: string; category: string; description: string; ownerUserId: string | null }
@@ -36,7 +37,7 @@ export function StoreListPanel({ readOnly = false }: { readOnly?: boolean }) {
     if (!selectedFloor) return
     form.resetFields()
     form.setFieldsValue({ category: 'Dịch vụ', description: '', ownerUserId: null })
-    setEditingStore({ id: '', ownerUserId: null, createdByUserId: '', buildingId: selectedFloor.buildingId, floorId: selectedFloor.id, name: '', logoUrl: null, galleryImageUrls: [], description: '', category: 'Dịch vụ', status: 'active' })
+    setEditingStore({ id: '', ownerUserId: null, createdByUserId: '', buildingId: selectedFloor.buildingId, floorId: selectedFloor.id, name: '', logoUrl: null, galleryImageUrls: [], description: '', category: 'Dịch vụ', openingHours: '', status: 'active' })
   }
   function openEdit(store: Store) { form.setFieldsValue({ name: store.name, category: store.category, description: store.description, ownerUserId: store.ownerUserId }); setEditingStore(store) }
   async function saveStore(values: StoreFormValues) {

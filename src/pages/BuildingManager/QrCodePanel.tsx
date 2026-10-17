@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { App as AntApp, Button, Card, Empty, Form, Input, Modal, Popconfirm, Select, Space, Spin, Table, Typography } from 'antd'
+import { App as AntApp, Button, Card, Empty, Form, Input, Modal, Popconfirm, Space, Spin, Table, Typography } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { QRCodeCanvas } from 'qrcode.react'
 import { useFloorStore } from '../../store/useFloorStore'
@@ -7,6 +7,7 @@ import { useNodeStore } from '../../store/useNodeStore'
 import { usePermissions } from '../../auth/usePermissions'
 import { createQrCode, deleteQrCode, getBuildingQrCodes } from '../../api/qr'
 import type { QrCode } from '../../types/qr'
+import { AppSelect as Select } from '../../components/ui/AppSelect'
 
 const { Text, Title } = Typography
 type QrForm = { label: string; floorId: string; nodeId: string }

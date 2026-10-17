@@ -16,6 +16,23 @@ button, input, textarea, select { font-family: inherit; }
 .ant-btn { font-weight: 500; transition: all 180ms ease-out; }
 .ant-btn-primary:hover { background: var(--blue-700) !important; border-color: var(--blue-700) !important; }
 .ant-input:focus, .ant-input-focused, .ant-select-focused .ant-select-selector { box-shadow: 0 0 0 2px var(--blue-200) !important; }
+
+.app-select-popup {
+  z-index: 1100 !important;
+  color: var(--ink-900) !important;
+  background: var(--surface) !important;
+}
+
+.app-select-popup .ant-select-item {
+  color: var(--ink-900);
+  background: var(--surface);
+}
+
+.app-select-popup .ant-select-item-option-active,
+.app-select-popup .ant-select-item-option-selected {
+  color: var(--blue-800);
+  background: var(--blue-100);
+}
 .ant-card { border-color: var(--border); box-shadow: none; }
 .ant-card-head { border-bottom-color: var(--border); }
 .ant-table-thead > tr > th { color: var(--ink-500); font-size: 13px; font-weight: 600; background: var(--surface-muted) !important; border-bottom: 1px solid var(--border) !important; }

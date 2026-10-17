@@ -8,11 +8,11 @@ import {
   Image,
   Space,
   Spin,
-  Select,
   Table,
   Tag,
   Typography,
 } from 'antd'
+import { AppSelect as Select } from '../../components/ui/AppSelect'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getFloors, updateFloor } from '../../api/floors'

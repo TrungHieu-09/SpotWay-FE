@@ -69,7 +69,8 @@ export const initialInvoicesSeed: Invoice[] = [
   { id: 'invoice-2', tenantId: 'tenant-2', planId: 'plan-basic', amountVnd: 23_880_000, months: 12, paidAt: '2026-09-02T08:00:00.000Z', status: 'paid' },
 ]
 
-export const plans = loadFromStorage(MOCK_STORAGE_KEYS.plans, initialPlansSeed)
+const storedPlans = loadFromStorage(MOCK_STORAGE_KEYS.plans, initialPlansSeed)
+export const plans = storedPlans.length > 0 ? storedPlans : initialPlansSeed
 export const tenants = loadFromStorage(MOCK_STORAGE_KEYS.tenants, initialTenantsSeed)
 export const users = loadFromStorage(MOCK_STORAGE_KEYS.users, initialUsersSeed)
 export const invoices = loadFromStorage(MOCK_STORAGE_KEYS.invoices, initialInvoicesSeed)

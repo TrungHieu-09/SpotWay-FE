@@ -1,6 +1,7 @@
-import { Button, Select, Space, Tag, Tooltip, Typography } from 'antd'
+import { Button, Space, Tag, Tooltip, Typography } from 'antd'
 import { AimOutlined, DeleteOutlined, EnvironmentOutlined, LinkOutlined, PlusOutlined, SaveOutlined, ReloadOutlined } from '@ant-design/icons'
 import { useEffect, useState, type ReactNode } from 'react'
+import { AppSelect as Select } from './AppSelect'
 import type { Building } from '../../types/building'
 import type { Floor } from '../../types/floor'
 

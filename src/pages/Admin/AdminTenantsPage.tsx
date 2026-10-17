@@ -10,7 +10,6 @@ import {
   InputNumber,
   Modal,
   Popconfirm,
-  Select,
   Space,
   Table,
   Tag,
@@ -35,6 +34,7 @@ import type { Plan, Tenant, User } from '../../types/auth'
 import type { TenantDetail } from '../../types/admin'
 import type { CreateBuildingFloorPayload } from '../../types/building'
 import { compressPlanImageFile } from '../../utils/planRecognition'
+import { AppSelect } from '../../components/ui/AppSelect'
 
 const { Text, Title } = Typography
 type TenantForm = { name: string; subdomain: string; planId: string; planExpiresAt: Dayjs; ownerName: string; ownerEmail: string }
@@ -234,7 +234,15 @@ export function AdminTenantsPage() {
           >
             <Input addonAfter=".indoor-spatial.vn" placeholder="saigon-retail" />
           </Form.Item>
-          <Form.Item name="planId" label="Gói dịch vụ" rules={[{ required: true }]}><Select options={plans.map((plan) => ({ value: plan.id, label: plan.name }))} /></Form.Item>
+          <Form.Item name="planId" label="Gói dịch vụ" rules={[{ required: true, message: 'Vui lòng chọn gói dịch vụ' }]}>
+            <AppSelect
+              className="full-width"
+              loading={loading && plans.length === 0}
+              placeholder="Chọn gói dịch vụ"
+              options={plans.map((plan) => ({ value: plan.id, label: plan.name }))}
+              notFoundContent={loading ? 'Đang tải...' : 'Không có dữ liệu'}
+            />
+          </Form.Item>
           <Form.Item name="planExpiresAt" label="Ngày hết hạn" initialValue={dayjs().add(1, 'year')} rules={[{ required: true }]}><DatePicker className="full-width" /></Form.Item>
           <Form.Item name="ownerName" label="Tên chủ tòa nhà" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="ownerEmail" label="Email chủ tòa nhà" rules={[{ required: true, type: 'email' }]}><Input /></Form.Item>

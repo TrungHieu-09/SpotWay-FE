@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { App as AntApp, Button, Card, Form, Input, Modal, Select, Space, Table, Tag, Typography } from 'antd'
+import { App as AntApp, Button, Card, Form, Input, Modal, Space, Table, Tag, Typography } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { createTenantUser, deleteTenantUser, getTenantAreas, getTenantUsers, updateTenantUser } from '../../api/tenant'
 import type { Role, User } from '../../types/auth'
 import type { Area } from '../../types/area'
 import { useLocation } from 'react-router-dom'
+import { AppSelect as Select } from '../../components/ui/AppSelect'
 
 const { Title } = Typography
 

@@ -4,13 +4,13 @@ import {
   Button,
   Card,
   Empty,
-  Select,
   Space,
   Spin,
   Table,
   Tag,
   Typography,
 } from 'antd'
+import { AppSelect as Select } from '../../components/ui/AppSelect'
 import { PlusOutlined } from '@ant-design/icons'
 import { useFloorStore } from '../../store/useFloorStore'
 import { useNodeStore } from '../../store/useNodeStore'

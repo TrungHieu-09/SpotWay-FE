@@ -9,7 +9,6 @@ import {
   Form,
   Input,
   InputNumber,
-  Select,
   Segmented,
   Slider,
   Space,
@@ -19,6 +18,7 @@ import {
   Typography,
   Upload,
 } from 'antd'
+import { AppSelect as Select } from '../../components/ui/AppSelect'
 import {
   CheckCircleOutlined,
   DeleteOutlined,

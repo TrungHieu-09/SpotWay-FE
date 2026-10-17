@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { App as AntApp, Button, Card, Form, InputNumber, Modal, Select, Space, Table, Tag, Typography } from 'antd'
+import { App as AntApp, Button, Card, Form, InputNumber, Modal, Space, Table, Tag, Typography } from 'antd'
 import { getTenantInvoices, getTenantOverview, getTenantPlans, renewTenantSubscription } from '../../api/tenant'
 import type { Invoice, Plan, TenantOverview } from '../../types/auth'
+import { AppSelect as Select } from '../../components/ui/AppSelect'
 
 const { Title } = Typography
 

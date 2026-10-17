@@ -43,6 +43,7 @@ export const initialStoresSeed: Store[] = [
     ],
     description: 'Thời trang công sở và casual wear cho khách mua sắm trong mall.',
     category: 'Thời trang',
+    openingHours: '09:00 - 22:00',
     status: 'active',
   },
   {
@@ -59,6 +60,7 @@ export const initialStoresSeed: Store[] = [
     ],
     description: 'Quầy ăn uống phục vụ món Việt nhanh, nước ép và cà phê.',
     category: 'Ăn uống',
+    openingHours: '08:00 - 22:00',
     status: 'active',
   },
   {
@@ -72,6 +74,7 @@ export const initialStoresSeed: Store[] = [
     galleryImageUrls: [storeImage('Tech', '#ede9fe', '#7c3aed')],
     description: 'Dịch vụ sửa chữa điện thoại, phụ kiện và bảo hành nhanh.',
     category: 'Dịch vụ',
+    openingHours: '09:00 - 21:00',
     status: 'inactive',
   },
   {
@@ -85,6 +88,7 @@ export const initialStoresSeed: Store[] = [
     galleryImageUrls: [storeImage('Home', '#d1fae5', '#059669')],
     description: 'Đồ gia dụng, trang trí nhà cửa và sản phẩm xanh.',
     category: 'Dịch vụ',
+    openingHours: '10:00 - 21:30',
     status: 'active',
   },
   {
@@ -98,12 +102,13 @@ export const initialStoresSeed: Store[] = [
     galleryImageUrls: [storeImage('Coffee', '#ffedd5', '#b45309')],
     description: 'Coffee corner dành cho nhân viên văn phòng và khách vãng lai.',
     category: 'Ăn uống',
+    openingHours: '07:00 - 19:00',
     status: 'active',
   },
 ]
 
-type StoredStore = Omit<Store, 'ownerUserId' | 'buildingId'> &
-  Partial<Pick<Store, 'ownerUserId' | 'buildingId'>> & {
+type StoredStore = Omit<Store, 'ownerUserId' | 'buildingId' | 'openingHours'> &
+  Partial<Pick<Store, 'ownerUserId' | 'buildingId' | 'openingHours'>> & {
     ownerId?: string | null
   createdByUserId?: string
   }
@@ -132,6 +137,7 @@ function normalizeStore(store: StoredStore): Store {
     createdByUserId: store.createdByUserId ?? 'user-owner-1',
     logoUrl: store.logoUrl?.trim() ? store.logoUrl : null,
     galleryImageUrls: store.galleryImageUrls.slice(0, 5),
+    openingHours: store.openingHours ?? '',
     status: store.status ?? 'inactive',
   }
 }

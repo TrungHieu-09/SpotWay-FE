@@ -5,13 +5,13 @@ import {
   Button,
   Card,
   Empty,
-  Select,
   Segmented,
   Space,
   Spin,
   Statistic,
   Typography,
 } from 'antd'
+import { AppSelect as Select } from '../../components/ui/AppSelect'
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,

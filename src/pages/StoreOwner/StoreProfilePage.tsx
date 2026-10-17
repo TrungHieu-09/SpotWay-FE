@@ -9,7 +9,6 @@ import {
   Image,
   Input,
   Modal,
-  Select,
   Space,
   Spin,
   Switch,
@@ -18,6 +17,7 @@ import {
   Typography,
   Upload,
 } from 'antd'
+import { AppSelect as Select } from '../../components/ui/AppSelect'
 import type { RcFile, UploadFile } from 'antd/es/upload/interface'
 import {
   PlusOutlined,
@@ -41,6 +41,7 @@ type StoreProfileFormValues = {
   name: string
   category: string
   description: string
+  openingHours: string
   isActive: boolean
 }
 
@@ -65,6 +66,8 @@ function uploadFileFromUrl(uid: string, url: string, name: string): UploadFile {
 function isRcFile(file: RcFile | undefined): file is RcFile {
   return Boolean(file)
 }
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024
 
 export function StoreProfilePage() {
   const [form] = Form.useForm<StoreProfileFormValues>()
@@ -179,6 +182,7 @@ export function StoreProfilePage() {
       name: currentStore.name,
       category: currentStore.category,
       description: currentStore.description,
+      openingHours: currentStore.openingHours ?? '',
       isActive: currentStore.status === 'active',
     })
     setLogoFileList(
@@ -196,6 +200,11 @@ export function StoreProfilePage() {
   function validateImage(file: RcFile) {
     if (!file.type.startsWith('image/')) {
       message.error('File upload phải là ảnh')
+      return Upload.LIST_IGNORE
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      message.error('Ảnh không được vượt quá 5 MB')
       return Upload.LIST_IGNORE
     }
 
@@ -219,6 +228,7 @@ export function StoreProfilePage() {
     try {
       await updateStore(currentStore.id, {
         description: values.description,
+        openingHours: values.openingHours.trim(),
         status: values.isActive ? 'active' : 'inactive',
         logoUrl: retainedLogoUrl,
         logoFile,
@@ -242,6 +252,7 @@ export function StoreProfilePage() {
     createForm.setFieldsValue({
       buildingId: defaultBuildingId,
       description: '',
+      openingHours: '',
       isActive: true,
     })
     setCreateLogoFileList([])
@@ -278,6 +289,7 @@ export function StoreProfilePage() {
         name: values.name,
         category: values.category,
         description: values.description,
+        openingHours: values.openingHours.trim(),
         status: values.isActive ? 'active' : 'inactive',
         logoFile,
         galleryFiles,
@@ -492,6 +504,14 @@ export function StoreProfilePage() {
                   </Form.Item>
 
                   <Form.Item
+                    label="Giờ mở cửa"
+                    name="openingHours"
+                    extra="Ví dụ: 08:00 - 22:00"
+                  >
+                    <Input placeholder="08:00 - 22:00" />
+                  </Form.Item>
+
+                  <Form.Item
                     label="Trạng thái hoạt động"
                     name="isActive"
                     valuePropName="checked"
@@ -592,6 +612,9 @@ export function StoreProfilePage() {
               </Space>
             </Space>
             <Text>{detailStore.description}</Text>
+            {detailStore.openingHours ? (
+              <Text type="secondary">Giờ mở cửa: {detailStore.openingHours}</Text>
+            ) : null}
             {detailStore.galleryImageUrls.length > 0 ? (
               <Image.PreviewGroup>
                 <div className="store-gallery-grid">
@@ -683,6 +706,14 @@ export function StoreProfilePage() {
             rules={[{ required: true, message: 'Vui lòng nhập mô tả' }]}
           >
             <TextArea rows={4} placeholder="Mô tả dịch vụ của gian hàng" />
+          </Form.Item>
+
+          <Form.Item
+            label="Giờ mở cửa"
+            name="openingHours"
+            extra="Ví dụ: 08:00 - 22:00"
+          >
+            <Input placeholder="08:00 - 22:00" />
           </Form.Item>
 
           <Form.Item
