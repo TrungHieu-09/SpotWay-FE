@@ -36,9 +36,21 @@ Các nút, liên kết và điều khiển biểu mẫu có focus ring rõ ràng
 
 ## Chuyển động và popup
 
-- Không dùng selector `*` hoặc `.ant-*` để tắt animation/transition của Ant Design. Các popup cần giữ animation để trạng thái hiển thị không bị kẹt ở opacity 0.
-- Khi người dùng bật `prefers-reduced-motion: reduce`, `ConfigProvider` đặt token `motion: false` và lắng nghe thay đổi preference trong lúc ứng dụng đang chạy. Ở chế độ `no-preference`, motion của Ant Design được giữ nguyên.
-- Popup dùng portal mặc định ra `document.body`, có z-index chung cao hơn Modal. `AppSelect` là wrapper dùng chung cho Select và giữ option có màu chữ/nền tương phản, trạng thái loading và empty rõ ràng.
+Không dùng selector `*` hoặc `.ant-*` để tắt animation. Khi người dùng chọn giảm chuyển động, `ThemeProvider` lắng nghe media query và truyền `motion: false` vào ConfigProvider; CSS chỉ giảm hiệu ứng của lớp tự viết. Popup AntD giữ portal mặc định ra `document.body`, `zIndexPopupBase` là 1100 để Select, DatePicker, Dropdown, Tooltip, Popover và Modal không bị cắt.
+
+## Route coverage
+
+| Khu vực | Route | Thành phần giao diện chính |
+| --- | --- | --- |
+| Public | `/` | Hero Aurora, minh họa sàn isometric, bốn role card |
+| Auth | `/login` | Form đăng nhập, chọn role demo, theme dùng chung |
+| Admin | `/admin`, `/admin/tenants`, `/admin/accounts`, `/admin/plans` | PageHeader, bảng glass, filter/select portal, trạng thái tải/rỗng |
+| Chủ tòa nhà | `/owner/*` | PageHeader, StatStrip, bảng tài sản/nhân sự/gói dịch vụ |
+| Quản lý tòa nhà | `/manager` | EditorShell, tab canvas/geometry/3D/graph và sidebar responsive |
+| Chủ gian hàng | `/store/profile`, `/store/promotions` | Chọn gian hàng, form upload, bảng khuyến mãi và trạng thái |
+| Khách | `/guest` | Bản đồ 2D/3D, tìm đường, panel chỉ dẫn ưu tiên mobile |
+
+Kiểm tra contrast tự động bằng `npm run contrast`. Chạy `npm run build` và `npm run lint`; kiểm tra giảm chuyển động bằng DevTools Rendering > Emulate CSS media feature `prefers-reduced-motion` ở cả `reduce` và `no-preference`, sau đó mở Select/DatePicker/Dropdown/Tooltip/Popover/Modal/Drawer để xác nhận popup vẫn nhìn thấy và tương tác được.
 
 ## Không được làm
 

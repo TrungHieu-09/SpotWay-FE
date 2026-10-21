@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { App as AntApp, Button, Card, DatePicker, Empty, Form, Input, Modal, Popconfirm, Space, Table, Tag, Typography } from 'antd'
+import { App as AntApp, Button, Card, DatePicker, Empty, Form, Input, Modal, Popconfirm, Space, Table, Tag } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useStoreStore } from '../../store/useStoreStore'
@@ -7,8 +7,8 @@ import { useAuthStore } from '../../auth/store'
 import { getStorePromotions, createStorePromotion, updatePromotion, deletePromotion } from '../../api/promotions'
 import type { Promotion, PromotionPayload } from '../../types/promotion'
 import { AppSelect as Select } from '../../components/ui/AppSelect'
+import { PageHeader } from '../../components/ui/PageHeader'
 
-const { Title } = Typography
 type PromotionForm = Omit<PromotionPayload, 'startDate' | 'endDate'> & { dates: [Dayjs, Dayjs] }
 
 export function StorePromotionsPage() {
@@ -87,12 +87,7 @@ export function StorePromotionsPage() {
 
   return (
     <main className="workspace">
-      <section className="page-heading">
-        <div>
-          <Typography.Text type="secondary">Chủ gian hàng</Typography.Text>
-          <Title level={1}>Khuyến mãi</Title>
-        </div>
-      </section>
+      <PageHeader eyebrow="Chủ gian hàng" title="Khuyến mãi" description="Tạo và quản lý ưu đãi hiển thị trong bản đồ khách tham quan." />
       <Card className="tool-card">
         <Space className="full-width" style={{ justifyContent: 'space-between', marginBottom: 16 }} wrap>
           <Select

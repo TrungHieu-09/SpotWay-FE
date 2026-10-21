@@ -35,8 +35,9 @@ import type { TenantDetail } from '../../types/admin'
 import type { CreateBuildingFloorPayload } from '../../types/building'
 import { compressPlanImageFile } from '../../utils/planRecognition'
 import { AppSelect } from '../../components/ui/AppSelect'
+import { PageHeader } from '../../components/ui/PageHeader'
 
-const { Text, Title } = Typography
+const { Text } = Typography
 type TenantForm = { name: string; subdomain: string; planId: string; planExpiresAt: Dayjs; ownerName: string; ownerEmail: string }
 type OwnerForm = { name: string; email: string }
 type LoginCredentials = { email: string; temporaryPassword: string }
@@ -176,10 +177,7 @@ export function AdminTenantsPage() {
 
   return (
     <main className="workspace">
-      <div className="page-heading">
-        <Title level={1}>Doanh nghiệp</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>Thêm doanh nghiệp và chủ tòa nhà</Button>
-      </div>
+      <PageHeader eyebrow="Quản trị hệ thống" title="Doanh nghiệp" description="Quản lý tenant, chủ tòa nhà và các tòa nhà trực thuộc." actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>Thêm doanh nghiệp và chủ tòa nhà</Button>} />
 
       <Card className="tool-card">
         <Table<Tenant>

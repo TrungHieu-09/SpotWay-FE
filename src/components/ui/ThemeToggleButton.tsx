@@ -1,6 +1,6 @@
 import { MoonOutlined, SunOutlined } from '@ant-design/icons'
 import { Button, Tooltip } from 'antd'
-import { useTheme } from '../../theme/ThemeProvider'
+import { useTheme } from '../../theme/useTheme'
 
 export function ThemeToggleButton() {
   const { mode, toggleMode } = useTheme()

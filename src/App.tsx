@@ -5,7 +5,8 @@ import { useEffect } from 'react'
 import { useAuthStore } from './auth/store'
 import { router } from './routes'
 import './App.css'
-import { ThemeProvider, useAppTheme, useReducedMotionPreference } from './theme/ThemeProvider'
+import { ThemeProvider } from './theme/ThemeProvider'
+import { useAppTheme, useReducedMotionPreference } from './theme/useTheme'
 import './styles/global.css'
 
 export default function App() {

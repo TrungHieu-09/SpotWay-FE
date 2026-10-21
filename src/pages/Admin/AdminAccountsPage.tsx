@@ -8,7 +8,6 @@ import {
   Space,
   Table,
   Tag,
-  Typography,
 } from 'antd'
 import { ClearOutlined, SearchOutlined } from '@ant-design/icons'
 import {
@@ -20,8 +19,7 @@ import {
 import type { AdminUser } from '../../types/admin'
 import type { Role } from '../../types/auth'
 import { AppSelect } from '../../components/ui/AppSelect'
-
-const { Title } = Typography
+import { PageHeader } from '../../components/ui/PageHeader'
 
 const roleLabels: Record<Role, string> = {
   admin: 'Quản trị viên',
@@ -124,15 +122,7 @@ export function AdminAccountsPage() {
 
   return (
     <main className="workspace">
-      <div className="page-heading">
-        <div>
-          <Typography.Text type="secondary">Quản trị hệ thống</Typography.Text>
-          <Title level={1}>Tài khoản</Title>
-        </div>
-        <Typography.Text type="secondary">
-          {visibleUsers.length}/{users.length} tài khoản
-        </Typography.Text>
-      </div>
+      <PageHeader eyebrow="Quản trị hệ thống" title="Tài khoản" description={`${visibleUsers.length}/${users.length} tài khoản`} />
 
       <Card className="tool-card admin-account-card">
         <Space className="admin-account-filters" size="middle" wrap>

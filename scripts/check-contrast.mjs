@@ -1,10 +1,31 @@
-const colors = {
-  ink900: '#0E2238', ink700: '#2C4259', ink500: '#5B6F84', white: '#FFFFFF', blue600: '#2F76B8', blue100: '#E3EFFA', success: '#2F8F74', successBg: '#E6F4EF', warning: '#B7791F', warningBg: '#FBF1DD', danger: '#BF4540', dangerBg: '#FBEAE9',
+const themes = {
+  dark: { text: '#E2E8F0', muted: '#A8B2C5', surface: '#12112B', primary: '#7C3AED', onPrimary: '#FFFFFF', accent: '#22D3EE' },
+  light: { text: '#2C4259', muted: '#5B6F84', surface: '#FFFFFF', primary: '#2F76B8', onPrimary: '#FFFFFF', accent: '#1C4A76' },
 }
 
-function channel(value) { const n = Number.parseInt(value, 16) / 255; return n <= 0.03928 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4 }
-function luminance(hex) { const rgb = hex.slice(1).match(/.{2}/g).map(channel); return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2] }
-function contrast(foreground, background) { const a = luminance(foreground); const b = luminance(background); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) }
+function channel(value) {
+  const normalized = value / 255
+  return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4
+}
 
-const pairs = [['ink900 trên trắng', colors.ink900, colors.white], ['ink700 trên trắng', colors.ink700, colors.white], ['ink500 trên trắng', colors.ink500, colors.white], ['chữ nút chính', colors.white, colors.blue600], ['chữ success tag', colors.ink700, colors.successBg], ['chữ warning tag', colors.ink700, colors.warningBg], ['chữ danger tag', colors.ink700, colors.dangerBg]]
-for (const [label, foreground, background] of pairs) process.stdout.write(`${label}: ${contrast(foreground, background).toFixed(2)}:1\n`)
+function luminance(hex) {
+  const rgb = [0, 2, 4].map((offset) => Number.parseInt(hex.slice(offset + 1, offset + 3), 16))
+  return 0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2])
+}
+
+function ratio(first, second) {
+  const [bright, dark] = [luminance(first), luminance(second)].sort((a, b) => b - a)
+  return (bright + 0.05) / (dark + 0.05)
+}
+
+let failed = false
+for (const [name, palette] of Object.entries(themes)) {
+  const pairs = [['text/surface', palette.text, palette.surface], ['muted/surface', palette.muted, palette.surface], ['onPrimary/primary', palette.onPrimary, palette.primary], ['accent/surface', palette.accent, palette.surface]]
+  for (const [label, foreground, background] of pairs) {
+    const value = ratio(foreground, background)
+    const pass = value >= 4.5
+    if (!pass) failed = true
+    process.stdout.write(`${name} ${label}: ${value.toFixed(2)} ${pass ? 'PASS' : 'FAIL'}\n`)
+  }
+}
+if (failed) process.exitCode = 1
