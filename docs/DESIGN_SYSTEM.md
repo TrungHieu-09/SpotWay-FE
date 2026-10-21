@@ -1,5 +1,13 @@
 # Indoor Spatial Design System
 
+## Aurora theme
+
+Aurora là theme mặc định: nền indigo tối, lưới không gian mờ, ánh sáng violet/cyan và bề mặt glass. Theme sáng vẫn được hỗ trợ; `ThemeProvider` lưu lựa chọn tại `ui:theme`, không tự suy ra từ hệ điều hành. `ThemeToggleButton` là điểm chuyển đổi dùng chung.
+
+Mọi token Ant Design nằm trong `src/theme/theme.ts`, token CSS semantic nằm trong `src/styles/global.css`. Page chỉ dùng biến semantic hoặc primitive trong `src/components/ui/`. Font chính là Plus Jakarta Sans, Be Vietnam Pro là fallback.
+
+Primitive Aurora gồm `GlassCard`, `SectionLabel`, `GradientText`, `StatusTag`, `EmptyState`, `ConfirmDelete`, `FormSection`, `DataTableToolbar`, `KeyValueList`, `FloatingChip` và `IsometricFloors`.
+
 ## Nguyên tắc
 
 - Giao diện tiếng Việt, rõ ràng và hướng nghiệp vụ.

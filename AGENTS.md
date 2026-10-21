@@ -11,6 +11,8 @@
 - Dùng `src/theme/theme.ts` làm nguồn token Ant Design và `src/styles/global.css` làm nguồn token CSS.
 - Giao diện tiếng Việt, dùng Be Vietnam Pro/Cormorant Garamond, ưu tiên nền sáng xanh nhạt và bố cục responsive.
 - Tái sử dụng component trong `src/components/ui/`; không rải mã màu hex, emoji hoặc style tuỳ ý trong page.
+- Theme mặc định là Aurora tối; dùng `ThemeProvider`, `useTheme` và `ThemeToggleButton` để chuyển sáng/tối, không đọc theme từ hệ điều hành.
+- Token AntD đặt trong `src/theme/theme.ts`, token CSS semantic đặt trong `src/styles/global.css`; ưu tiên primitive chung như `GlassCard`, `PageHeader`, `StatStrip` và `DataTableToolbar`.
 - Xem đầy đủ tại `docs/DESIGN_SYSTEM.md` và `project-skills/ui-design-system/SKILL.md`.
 
 <!-- ===== SKILL: auth-permissions ===== -->
