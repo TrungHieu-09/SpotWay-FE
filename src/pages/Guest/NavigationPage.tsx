@@ -29,7 +29,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { DemoSimulationToolbar } from '../../components/navigation/DemoSimulationToolbar'
 import { RouteMap } from '../../components/navigation/RouteMap'
 import { useNavigationStore } from '../../store/useNavigationStore'
-import type { RouteStep } from '../../types/navigation'
+import type { Maneuver, RouteStep } from '../../types/navigation'
 import './NavigationPage.css'
 
 const formatDistance = (distance: number) =>
@@ -40,7 +40,24 @@ const formatDistance = (distance: number) =>
 const formatDuration = (seconds: number) =>
   `${Math.max(1, Math.ceil(seconds / 60))} phút`
 
-function getTurnArrow(instruction: string, transition?: string) {
+const MANEUVER_ARROW: Record<Maneuver, string> = {
+  START: '↑',
+  STRAIGHT: '↑',
+  SLIGHT_LEFT: '↖',
+  SLIGHT_RIGHT: '↗',
+  TURN_LEFT: '↰',
+  TURN_RIGHT: '↱',
+  U_TURN_LEFT: '↶',
+  U_TURN_RIGHT: '↷',
+  ELEVATOR: '🛗',
+  STAIR: '🪜',
+  ESCALATOR: '↗',
+  ARRIVE: '📍',
+  ARRIVE_AT_SAFE_EXIT: '🚪',
+}
+
+function getTurnArrow(instruction: string, transition?: string, maneuver?: Maneuver) {
+  if (maneuver) return MANEUVER_ARROW[maneuver]
   if (transition === 'ELEVATOR') return '🛗'
   const text = instruction.toLowerCase()
   if (text.includes('phải') || text.includes('right')) return '↱'
@@ -68,6 +85,8 @@ export function NavigationPage() {
     clearRoute,
     routeTargetName,
     activeFireNodeIds,
+    interactiveFireMode,
+    toggleFireNode,
   } = useNavigationStore()
 
   const [selectedFloorId, setSelectedFloorId] = useState<string>()
@@ -117,6 +136,11 @@ export function NavigationPage() {
   const nextStep: RouteStep | undefined = route?.steps[stepIndex + 1]
   const effectiveFromNodeId = fromNodeId ?? sourceOptions[0]?.value
   const displayedFloorId = currentStep?.floorId ?? selectedFloorId ?? floors[0]?.id
+
+  const handleSelectNode = (nodeId: string) => {
+    if (interactiveFireMode) toggleFireNode(nodeId, currentStep?.nodeId)
+    else setFromNodeId(nodeId)
+  }
 
   const destinationObj = destinations.find((d) => d.id === destinationId)
   const destinationName = routeTargetName ?? destinationObj?.name ?? 'Lecture Hall 301'
@@ -247,11 +271,17 @@ export function NavigationPage() {
                 <div className="phone-turn-banner">
                   <div className="turn-banner__main">
                     <div className="turn-banner__arrow">
-                      {getTurnArrow(currentStep.instruction, currentStep.transition)}
+                      {getTurnArrow(currentStep.instruction, currentStep.transition, currentStep.maneuver)}
                     </div>
                     <div className="turn-banner__details">
                       <div className="turn-banner__distance">
-                        {currentStep.transition ? 'Chuyển tầng' : 'Đi thẳng 15 m'}
+                        {currentStep.transition
+                          ? currentStep.waitSeconds
+                            ? `Chuyển tầng · chờ ~${Math.round(currentStep.waitSeconds)} s`
+                            : 'Chuyển tầng'
+                          : currentStep.distanceMeters !== undefined
+                            ? formatDistance(currentStep.distanceMeters)
+                            : `Bước ${stepIndex + 1}/${route.steps.length}`}
                       </div>
                       <div className="turn-banner__instruction">
                         {currentStep.instruction}
@@ -268,7 +298,7 @@ export function NavigationPage() {
                     <div className="turn-banner__next">
                       <span>Sau đó</span>
                       <span style={{ color: '#2563eb', fontWeight: 700 }}>
-                        {getTurnArrow(nextStep.instruction, nextStep.transition)}
+                        {getTurnArrow(nextStep.instruction, nextStep.transition, nextStep.maneuver)}
                       </span>
                       <span>{nextStep.instruction}</span>
                     </div>
@@ -365,7 +395,8 @@ export function NavigationPage() {
                   activeStep={currentStep}
                   destinationName={destinationName}
                   hazardNodeIds={activeFireNodeIds}
-                  onSelectNode={setFromNodeId}
+                  interactiveFireMode={interactiveFireMode}
+                  onSelectNode={handleSelectNode}
                 />
               </div>
 
@@ -436,7 +467,8 @@ export function NavigationPage() {
               activeStep={currentStep}
               destinationName={destinationName}
               hazardNodeIds={activeFireNodeIds}
-              onSelectNode={setFromNodeId}
+              interactiveFireMode={interactiveFireMode}
+              onSelectNode={handleSelectNode}
             />
           </section>
 

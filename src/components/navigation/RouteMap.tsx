@@ -8,6 +8,7 @@ type RouteMapProps = {
   activeStep?: RouteStep
   destinationName?: string
   hazardNodeIds?: string[]
+  interactiveFireMode?: boolean
   onSelectNode: (nodeId: string) => void
 }
 
@@ -17,6 +18,7 @@ export function RouteMap({
   activeStep,
   destinationName,
   hazardNodeIds = [],
+  interactiveFireMode = false,
   onSelectNode,
 }: RouteMapProps) {
   if (!map) return <Empty description="Không có dữ liệu tầng này" />
@@ -35,7 +37,10 @@ export function RouteMap({
     : undefined
 
   return (
-    <div className="route-map" aria-label={`Bản đồ ${map.floor.name}`}>
+    <div
+      className={`route-map${interactiveFireMode ? ' route-map--fire-mode' : ''}`}
+      aria-label={`Bản đồ ${map.floor.name}`}
+    >
       <svg
         viewBox={`0 0 ${width} ${height}`}
         role="img"
@@ -174,7 +179,7 @@ export function RouteMap({
         {map.nodes
           .filter((node) => hazardNodeIds.includes(node.id))
           .map((node) => (
-            <g key={`hazard-${node.id}`} className="route-map__hazard">
+            <g key={`hazard-${node.id}`} className="route-map__hazard" onClick={() => onSelectNode(node.id)}>
               <circle cx={node.x} cy={node.y} r="22" />
               <text x={node.x} y={node.y + 8} textAnchor="middle" fontSize="22">
                 🔥

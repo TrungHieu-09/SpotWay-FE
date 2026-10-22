@@ -1,8 +1,11 @@
 import type {
   IndoorRoute,
+  Maneuver,
   NodeHazardType,
+  RouteInstruction,
   RouteStep,
   VerticalLink,
+  VerticalLinkDirection,
   VerticalLinkKind,
 } from '../types/navigation'
 
@@ -27,24 +30,90 @@ export type PathfindingEdge = {
   hazard?: NodeHazardType
 }
 
+export type VerticalTiming = { waitSeconds: number; travelSecondsPerFloor: number }
+
 export type PathfindingOptions = {
   wheelchairMode?: boolean
   emergencyMode?: 'NONE' | 'FIRE'
-  blockedNodeIds?: Set<string>
-  blockedEdgeIds?: Set<string>
-  /** floorId -> floorNumber, dùng để tính số tầng của vertical link và chọn cửa ra tầng trệt */
+  blockedNodeIds?: ReadonlySet<string>
+  blockedEdgeIds?: ReadonlySet<string>
+  /** floorId -> floorNumber: số tầng của vertical link, chiều thang cuốn, tầng trệt */
   floorLevels?: Record<string, number>
   /** floorId -> tên hiển thị trong chỉ dẫn */
   floorNames?: Record<string, string>
+  /** floorId -> số đơn vị bản đồ trên 1 mét (calibration theo tầng) */
+  mapUnitsPerMeter?: Record<string, number>
+  /** floorId -> bearing thật của hướng "lên trên" của bản đồ */
+  northOffsetDegrees?: Record<string, number>
+  /** Chỉ cho phép một số loại chuyển tầng (demo thang máy/thang bộ/thang cuốn) */
+  allowedTransitions?: ReadonlySet<VerticalLinkKind>
+  /** Chiều mặc định cho thang cuốn không khai báo direction */
+  defaultEscalatorDirection?: VerticalLinkDirection
+  /** Bán kính vùng nguy hiểm quanh điểm cháy (mét), dùng cho định tuyến ưu tiên an toàn */
+  hazardSafetyRadiusMeters?: number
+  timing?: Partial<Record<VerticalLinkKind, VerticalTiming>>
+  walkingSpeedMps?: number
 }
 
-export type RouteTarget = string | { findNearestExit: boolean }
+export type RouteTarget = string | { findNearestExit: boolean } | { nodeIds: string[] }
+
+export const DEFAULT_MAP_UNITS_PER_METER = 10
+export const DEFAULT_WALKING_SPEED_MPS = 1.2
+export const DEFAULT_HAZARD_SAFETY_RADIUS_METERS = 8
+export const DEFAULT_VERTICAL_TIMING: Record<VerticalLinkKind, VerticalTiming> = {
+  ELEVATOR: { waitSeconds: 30, travelSecondsPerFloor: 4 },
+  STAIR: { waitSeconds: 0, travelSecondsPerFloor: 18 },
+  ESCALATOR: { waitSeconds: 0, travelSecondsPerFloor: 12 },
+}
+/** Ngưỡng phân loại maneuver theo |delta bearing| (độ) */
+export const MANEUVER_THRESHOLDS = { straight: 15, slight: 45, turn: 135 }
 
 const EXIT_TYPES = new Set(['EXIT', 'EMERGENCY_EXIT'])
 const SMOKE_PENALTY = 3
-const WALKING_SPEED = 1.2
+const RISK_EPSILON = 1e-9
 
-type Adjacent = { to: string; cost: number; distance: number; transition?: VerticalLinkKind }
+// ── Bearing & maneuver ────────────────────────────────────────────────────────
+
+type Point = { x: number; y: number }
+
+export const normalize360 = (angle: number) => ((angle % 360) + 360) % 360
+
+/** Bearing trên bản đồ canvas (x sang phải, y hướng xuống): 0° = lên trên, tăng theo chiều kim đồng hồ */
+export const mapBearing = (from: Point, to: Point) =>
+  normalize360((Math.atan2(to.x - from.x, -(to.y - from.y)) * 180) / Math.PI)
+
+/** Kết quả thuộc [-180, 180): dương = rẽ phải, âm = rẽ trái */
+export const deltaBearing = (incoming: number, outgoing: number) => ((outgoing - incoming + 540) % 360) - 180
+
+export function classifyManeuver(delta: number): Maneuver {
+  const magnitude = Math.abs(delta)
+  const right = delta >= 0
+  if (magnitude < MANEUVER_THRESHOLDS.straight) return 'STRAIGHT'
+  if (magnitude < MANEUVER_THRESHOLDS.slight) return right ? 'SLIGHT_RIGHT' : 'SLIGHT_LEFT'
+  if (magnitude < MANEUVER_THRESHOLDS.turn) return right ? 'TURN_RIGHT' : 'TURN_LEFT'
+  return right ? 'U_TURN_RIGHT' : 'U_TURN_LEFT'
+}
+
+const MANEUVER_TEXT: Partial<Record<Maneuver, string>> = {
+  STRAIGHT: 'Đi thẳng',
+  SLIGHT_LEFT: 'Chếch trái',
+  SLIGHT_RIGHT: 'Chếch phải',
+  TURN_LEFT: 'Rẽ trái',
+  TURN_RIGHT: 'Rẽ phải',
+  U_TURN_LEFT: 'Quay đầu (bên trái)',
+  U_TURN_RIGHT: 'Quay đầu (bên phải)',
+}
+
+const TRANSITION_LABEL: Record<VerticalLinkKind, string> = {
+  ELEVATOR: 'thang máy',
+  STAIR: 'thang bộ',
+  ESCALATOR: 'thang cuốn',
+}
+
+const round2 = (value: number) => Math.round(value * 100) / 100
+const formatMeters = (meters: number) => `${meters < 10 ? round2(meters).toFixed(1) : Math.round(meters)} m`
+
+// ── Graph helpers ─────────────────────────────────────────────────────────────
 
 export function isExitNode(node: PathfindingNode) {
   return EXIT_TYPES.has(node.type)
@@ -55,12 +124,6 @@ export function isNodePassable(node: PathfindingNode, options: PathfindingOption
   if (node.hazard === 'FIRE' || node.hazard === 'BLOCKED') return false
   if (options.wheelchairMode && node.accessible === false) return false
   return true
-}
-
-function verticalCost(kind: VerticalLinkKind, floorsCrossed: number) {
-  if (kind === 'ELEVATOR') return 25 + 5 * floorsCrossed
-  if (kind === 'STAIR') return 18 * floorsCrossed
-  return 12 * floorsCrossed
 }
 
 /**
@@ -77,61 +140,15 @@ export function getExitCandidates(nodes: PathfindingNode[], floorLevels: Record<
   )
 }
 
-function buildAdjacency(
-  nodeById: Map<string, PathfindingNode>,
-  edges: PathfindingEdge[],
-  verticalLinks: VerticalLink[],
-  options: PathfindingOptions,
-) {
-  const adjacency = new Map<string, Adjacent[]>()
-  const push = (from: string, item: Adjacent) => {
-    const list = adjacency.get(from)
-    if (list) list.push(item)
-    else adjacency.set(from, [item])
-  }
-
-  for (const edge of edges) {
-    if (edge.status === 'BLOCKED' || edge.hazard === 'FIRE' || edge.hazard === 'BLOCKED') continue
-    if (options.blockedEdgeIds?.has(edge.id)) continue
-    if (options.wheelchairMode && edge.accessible === false) continue
-    const from = nodeById.get(edge.fromNodeId)
-    const to = nodeById.get(edge.toNodeId)
-    if (!from || !to) continue
-    const distance = Math.hypot(to.x - from.x, to.y - from.y)
-    const smoky = edge.hazard === 'SMOKE' || from.hazard === 'SMOKE' || to.hazard === 'SMOKE'
-    const cost = smoky ? distance * SMOKE_PENALTY : distance
-    push(from.id, { to: to.id, cost, distance })
-    push(to.id, { to: from.id, cost, distance })
-  }
-
-  for (const link of verticalLinks) {
-    if (options.emergencyMode === 'FIRE' && link.kind === 'ELEVATOR') continue
-    if (options.wheelchairMode && link.kind !== 'ELEVATOR') continue
-    const from = nodeById.get(link.nodeIdFrom)
-    const to = nodeById.get(link.nodeIdTo)
-    if (!from || !to) continue
-    const levels = options.floorLevels ?? {}
-    const fromLevel = levels[from.floorId]
-    const toLevel = levels[to.floorId]
-    const floorsCrossed =
-      fromLevel !== undefined && toLevel !== undefined ? Math.max(1, Math.abs(toLevel - fromLevel)) : 1
-    const cost = verticalCost(link.kind, floorsCrossed)
-    push(from.id, { to: to.id, cost, distance: 0, transition: link.kind })
-    push(to.id, { to: from.id, cost, distance: 0, transition: link.kind })
-  }
-
-  return adjacency
-}
-
 /**
- * Nối các node STAIR/ESCALATOR/ELEVATOR cùng loại ở 2 tầng liền kề (gần vị trí nhất)
- * khi backend chưa trả vertical link tương ứng.
+ * Nối các node thang khi backend chưa trả vertical link: thang máy nối thẳng tới mọi tầng trong cùng trục
+ * (chỉ chờ thang 1 lần), thang bộ/cuốn chỉ nối tầng liền kề.
  */
 export function inferVerticalLinks(
   nodes: PathfindingNode[],
   floorLevels: Record<string, number>,
   existing: VerticalLink[] = [],
-  maxOffset = 15,
+  maxOffset = 150,
 ) {
   const linked = new Set(existing.flatMap((link) => [link.nodeIdFrom, link.nodeIdTo]))
   const inferred: VerticalLink[] = []
@@ -142,7 +159,6 @@ export function inferVerticalLinks(
     for (const from of candidates) {
       if (linked.has(from.id)) continue
       const fromLevel = floorLevels[from.floorId]
-      // Thang máy đi thẳng tới mọi tầng trong cùng trục (chỉ chờ thang 1 lần), thang bộ/cuốn chỉ nối tầng liền kề
       const bestByFloor = new Map<string, { node: PathfindingNode; offset: number }>()
       for (const to of candidates) {
         const toLevel = floorLevels[to.floorId]
@@ -159,85 +175,335 @@ export function inferVerticalLinks(
   return inferred
 }
 
-function bearingBetween(from: PathfindingNode, to: PathfindingNode) {
-  // Hệ toạ độ ảnh: y hướng xuống, 0° = hướng lên trên sơ đồ
-  const degrees = (Math.atan2(to.x - from.x, -(to.y - from.y)) * 180) / Math.PI
-  return (degrees + 360) % 360
+type Arc = {
+  to: string
+  kind: 'WALK' | VerticalLinkKind
+  /** Chi phí tìm kiếm (giây, đã nhân phạt khói) */
+  cost: number
+  /** Thời gian thực tế (giây) */
+  seconds: number
+  meters: number
+  waitSeconds: number
 }
+
+type Context = {
+  nodeById: Map<string, PathfindingNode>
+  unitsPerMeter: (floorId: string) => number
+  walkingSpeed: number
+  timing: Record<VerticalLinkKind, VerticalTiming>
+}
+
+function createContext(nodes: PathfindingNode[], options: PathfindingOptions): Context {
+  return {
+    nodeById: new Map(nodes.map((node) => [node.id, node])),
+    unitsPerMeter: (floorId) => {
+      const value = options.mapUnitsPerMeter?.[floorId]
+      return value !== undefined && Number.isFinite(value) && value > 0 ? value : DEFAULT_MAP_UNITS_PER_METER
+    },
+    walkingSpeed: options.walkingSpeedMps ?? DEFAULT_WALKING_SPEED_MPS,
+    timing: { ...DEFAULT_VERTICAL_TIMING, ...options.timing },
+  }
+}
+
+function linkAllowed(link: VerticalLink, options: PathfindingOptions) {
+  if (link.status === 'BLOCKED') return false
+  if (options.allowedTransitions && !options.allowedTransitions.has(link.kind)) return false
+  if (options.emergencyMode === 'FIRE') {
+    if (link.kind === 'ELEVATOR') return false
+    if (!(link.emergencyAllowed ?? link.kind === 'STAIR')) return false
+  }
+  if (options.wheelchairMode && (link.kind !== 'ELEVATOR' || link.accessible === false)) return false
+  return true
+}
+
+function buildAdjacency(
+  context: Context,
+  edges: PathfindingEdge[],
+  verticalLinks: VerticalLink[],
+  options: PathfindingOptions,
+) {
+  const { nodeById, unitsPerMeter, walkingSpeed, timing } = context
+  const adjacency = new Map<string, Arc[]>()
+  const push = (from: string, arc: Arc) => {
+    const list = adjacency.get(from)
+    if (list) list.push(arc)
+    else adjacency.set(from, [arc])
+  }
+
+  for (const edge of edges) {
+    if (edge.status === 'BLOCKED' || edge.hazard === 'FIRE' || edge.hazard === 'BLOCKED') continue
+    if (options.blockedEdgeIds?.has(edge.id)) continue
+    if (options.wheelchairMode && edge.accessible === false) continue
+    const from = nodeById.get(edge.fromNodeId)
+    const to = nodeById.get(edge.toNodeId)
+    if (!from || !to || from.floorId !== to.floorId) continue
+    const meters = Math.hypot(to.x - from.x, to.y - from.y) / unitsPerMeter(from.floorId)
+    const seconds = meters / walkingSpeed
+    const smoky = edge.hazard === 'SMOKE' || from.hazard === 'SMOKE' || to.hazard === 'SMOKE'
+    const arc = { kind: 'WALK' as const, cost: smoky ? seconds * SMOKE_PENALTY : seconds, seconds, meters, waitSeconds: 0 }
+    push(from.id, { ...arc, to: to.id })
+    push(to.id, { ...arc, to: from.id })
+  }
+
+  const levels = options.floorLevels ?? {}
+  for (const link of verticalLinks) {
+    if (!linkAllowed(link, options)) continue
+    const from = nodeById.get(link.nodeIdFrom)
+    const to = nodeById.get(link.nodeIdTo)
+    if (!from || !to || from.floorId === to.floorId) continue
+    const fromLevel = levels[from.floorId]
+    const toLevel = levels[to.floorId]
+    const known = fromLevel !== undefined && toLevel !== undefined
+    const floorsCrossed = known ? Math.max(1, Math.abs(toLevel - fromLevel)) : 1
+    const { waitSeconds, travelSecondsPerFloor } = timing[link.kind]
+    const seconds = waitSeconds + travelSecondsPerFloor * floorsCrossed
+    const arc = { kind: link.kind, cost: seconds, seconds, meters: 0, waitSeconds }
+
+    const direction =
+      link.kind === 'ESCALATOR' ? (link.direction ?? options.defaultEscalatorDirection ?? 'BIDIRECTIONAL') : 'BIDIRECTIONAL'
+    // UP: chỉ đi từ tầng thấp lên tầng cao; DOWN: ngược lại
+    const fromIsLower = known ? fromLevel < toLevel : true
+    const allowForward = direction === 'BIDIRECTIONAL' || !known || (direction === 'UP') === fromIsLower
+    const allowBackward = direction === 'BIDIRECTIONAL' || !known || (direction === 'UP') !== fromIsLower
+    if (allowForward) push(from.id, { ...arc, to: to.id })
+    if (allowBackward) push(to.id, { ...arc, to: from.id })
+  }
+
+  return adjacency
+}
+
+/** Mức rủi ro khi đi qua 1 node: tổng mức gần các điểm cháy cùng tầng trong bán kính an toàn */
+export function nodeRisk(
+  node: PathfindingNode,
+  hazards: PathfindingNode[],
+  radiusMeters: number,
+  unitsPerMeter: number,
+) {
+  if (radiusMeters <= 0) return 0
+  let risk = 0
+  for (const hazard of hazards) {
+    if (hazard.floorId !== node.floorId) continue
+    const meters = Math.hypot(hazard.x - node.x, hazard.y - node.y) / unitsPerMeter
+    if (meters < radiusMeters) risk += 1 - meters / radiusMeters
+  }
+  return Math.round(risk * 1e6) / 1e6
+}
+
+// ── Min-priority queue với khoá (risk, cost, nodeId) ─────────────────────────
+
+type QueueItem = { id: string; risk: number; cost: number }
+
+function compareItems(a: QueueItem, b: QueueItem) {
+  if (Math.abs(a.risk - b.risk) > RISK_EPSILON) return a.risk - b.risk
+  if (a.cost !== b.cost) return a.cost - b.cost
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+}
+
+class MinHeap {
+  private items: QueueItem[] = []
+  get size() {
+    return this.items.length
+  }
+  push(item: QueueItem) {
+    const items = this.items
+    items.push(item)
+    let index = items.length - 1
+    while (index > 0) {
+      const parent = (index - 1) >> 1
+      if (compareItems(items[index], items[parent]) >= 0) break
+      ;[items[index], items[parent]] = [items[parent], items[index]]
+      index = parent
+    }
+  }
+  pop() {
+    const items = this.items
+    const top = items[0]
+    const last = items.pop()
+    if (items.length > 0 && last) {
+      items[0] = last
+      let index = 0
+      for (;;) {
+        const left = index * 2 + 1
+        const right = left + 1
+        let smallest = index
+        if (left < items.length && compareItems(items[left], items[smallest]) < 0) smallest = left
+        if (right < items.length && compareItems(items[right], items[smallest]) < 0) smallest = right
+        if (smallest === index) break
+        ;[items[index], items[smallest]] = [items[smallest], items[index]]
+        index = smallest
+      }
+    }
+    return top
+  }
+}
+
+// ── Turn-by-turn ──────────────────────────────────────────────────────────────
 
 function nodeLabel(node: PathfindingNode) {
   if (node.name) return node.name
-  if (node.type === 'EMERGENCY_EXIT') return 'Cửa thoát hiểm'
-  if (node.type === 'EXIT') return 'Cửa ra'
+  if (node.type === 'EMERGENCY_EXIT') return 'cửa thoát hiểm'
+  if (node.type === 'EXIT') return 'cửa ra'
   return 'điểm đến'
 }
 
-const TRANSITION_LABEL: Record<VerticalLinkKind, string> = {
-  ELEVATOR: 'thang máy',
-  STAIR: 'thang bộ',
-  ESCALATOR: 'thang cuốn',
-}
-
-/** Sinh chỉ dẫn turn-by-turn từ chuỗi node của tuyến đường. */
-export function buildTurnByTurnSteps(
+/**
+ * Gom các đoạn WALK cùng hướng thành instruction, tách riêng chuyển tầng,
+ * và gắn chỉ dẫn tương ứng cho từng node (steps) để vẽ bản đồ.
+ */
+export function buildTurnByTurn(
   path: PathfindingNode[],
-  transitions: Array<VerticalLinkKind | undefined>,
-  options: Pick<PathfindingOptions, 'floorLevels' | 'floorNames' | 'emergencyMode'> = {},
-): RouteStep[] {
-  const steps: RouteStep[] = []
-  let previousBearing: number | null = null
+  arcs: Arc[],
+  options: Pick<PathfindingOptions, 'floorLevels' | 'floorNames' | 'emergencyMode' | 'northOffsetDegrees'> = {},
+): { instructions: RouteInstruction[]; steps: RouteStep[] } {
+  const instructions: RouteInstruction[] = []
+  const stepMeta: Array<{ maneuver: Maneuver; text: string; distanceMeters?: number; waitSeconds?: number }> = []
+  const evacuation = options.emergencyMode === 'FIRE'
+  const trueBearing = (bearing: number, floorId: string) =>
+    normalize360(bearing + (options.northOffsetDegrees?.[floorId] ?? 0))
 
-  path.forEach((node, index) => {
-    const next = path[index + 1]
-    const transition = transitions[index]
-    const isVertical = transition !== undefined
-    const bearing = next && !isVertical ? bearingBetween(node, next) : previousBearing
-    let instruction: string
+  let incoming: number | null = null
+  let afterTransition: VerticalLinkKind | undefined
+  let current: RouteInstruction | undefined
+  let groupStart = 0
 
-    if (!next) {
-      instruction =
-        options.emergencyMode === 'FIRE'
-          ? `Đã tới ${nodeLabel(node)} — rời khỏi tòa nhà ngay`
-          : `Đã đến ${nodeLabel(node)}`
-    } else if (isVertical) {
-      const fromLevel = options.floorLevels?.[node.floorId]
-      const toLevel = options.floorLevels?.[next.floorId]
+  const closeGroup = (endIndex: number) => {
+    if (!current) return
+    current.distanceMeters = round2(current.distanceMeters)
+    current.durationSeconds = round2(current.durationSeconds)
+    const verb = current.text
+    current.text = `${verb} ${formatMeters(current.distanceMeters)}`
+    // Node trung gian trong cùng nhóm: "tiếp tục đi thẳng" với quãng còn lại
+    let remaining = current.distanceMeters
+    for (let index = groupStart; index < endIndex; index += 1) {
+      if (index === groupStart) {
+        stepMeta[index] = { maneuver: current.maneuver, text: current.text, distanceMeters: current.distanceMeters }
+      } else {
+        stepMeta[index] = { maneuver: 'STRAIGHT', text: `Tiếp tục đi thẳng ${formatMeters(remaining)}`, distanceMeters: round2(remaining) }
+      }
+      remaining = Math.max(0, remaining - arcs[index].meters)
+    }
+    instructions.push(current)
+    current = undefined
+  }
+
+  arcs.forEach((arc, index) => {
+    const from = path[index]
+    const to = path[index + 1]
+
+    if (arc.kind !== 'WALK') {
+      closeGroup(index)
+      const fromLevel = options.floorLevels?.[from.floorId]
+      const toLevel = options.floorLevels?.[to.floorId]
       const direction = fromLevel !== undefined && toLevel !== undefined && toLevel < fromLevel ? 'xuống' : 'lên'
-      const target = options.floorNames?.[next.floorId] ?? (toLevel !== undefined ? `Tầng ${toLevel}` : 'tầng tiếp theo')
-      instruction = `Đi ${TRANSITION_LABEL[transition]} ${direction} ${target}`
-    } else if (index === 0) {
-      instruction = options.emergencyMode === 'FIRE' ? 'Bình tĩnh, di chuyển theo lối thoát hiểm' : 'Bắt đầu di chuyển'
-    } else if (previousBearing === null || bearing === null) {
-      instruction = 'Đi thẳng'
-    } else {
-      const delta = ((bearing - previousBearing + 540) % 360) - 180
-      if (delta > 135 || delta < -135) instruction = 'Quay đầu'
-      else if (delta > 30) instruction = 'Rẽ phải'
-      else if (delta < -30) instruction = 'Rẽ trái'
-      else instruction = 'Đi thẳng'
+      const target = options.floorNames?.[to.floorId] ?? (toLevel !== undefined ? `Tầng ${toLevel}` : 'tầng tiếp theo')
+      const wait = arc.waitSeconds > 0 ? ` (chờ ~${Math.round(arc.waitSeconds)} s, tổng ~${Math.round(arc.seconds)} s)` : ` (~${Math.round(arc.seconds)} s)`
+      const text = `Đi ${TRANSITION_LABEL[arc.kind]} ${direction} ${target}${wait}`
+      instructions.push({
+        maneuver: arc.kind,
+        floorId: from.floorId,
+        fromNodeId: from.id,
+        toNodeId: to.id,
+        distanceMeters: 0,
+        bearing: null,
+        deltaBearing: null,
+        durationSeconds: round2(arc.seconds),
+        waitSeconds: arc.waitSeconds > 0 ? arc.waitSeconds : undefined,
+        targetFloorId: to.floorId,
+        text,
+      })
+      stepMeta[index] = { maneuver: arc.kind, text, waitSeconds: arc.waitSeconds || undefined }
+      incoming = null
+      afterTransition = arc.kind
+      return
     }
 
-    steps.push({
+    const zeroLength = arc.meters === 0
+    const bearing = zeroLength ? incoming : mapBearing(from, to)
+    let maneuver: Maneuver
+    let delta: number | null = null
+    if (index === 0) maneuver = 'START'
+    else if (incoming === null || bearing === null) maneuver = 'STRAIGHT'
+    else {
+      delta = deltaBearing(incoming, bearing)
+      maneuver = classifyManeuver(delta)
+    }
+
+    if (current && maneuver === 'STRAIGHT' && !afterTransition) {
+      current.distanceMeters += arc.meters
+      current.durationSeconds += arc.seconds
+      current.toNodeId = to.id
+    } else {
+      closeGroup(index)
+      groupStart = index
+      let verb: string
+      if (maneuver === 'START') verb = evacuation ? 'Bình tĩnh, theo lối thoát hiểm đi thẳng' : 'Xuất phát, đi thẳng'
+      else if (afterTransition) verb = `Ra khỏi ${TRANSITION_LABEL[afterTransition]}, đi thẳng`
+      else verb = maneuver === 'STRAIGHT' ? 'Đi thẳng' : `${MANEUVER_TEXT[maneuver]} rồi đi`
+      current = {
+        maneuver,
+        floorId: from.floorId,
+        fromNodeId: from.id,
+        toNodeId: to.id,
+        distanceMeters: arc.meters,
+        bearing: bearing === null ? null : round2(trueBearing(bearing, from.floorId)),
+        deltaBearing: delta === null ? null : round2(delta),
+        durationSeconds: arc.seconds,
+        text: verb,
+      }
+      afterTransition = undefined
+    }
+    if (bearing !== null) incoming = bearing
+  })
+  closeGroup(arcs.length)
+
+  const last = path[path.length - 1]
+  const arriveManeuver: Maneuver = evacuation ? 'ARRIVE_AT_SAFE_EXIT' : 'ARRIVE'
+  const arriveText = evacuation
+    ? `Đã tới ${nodeLabel(last)} — rời khỏi tòa nhà ngay`
+    : `Đã đến ${nodeLabel(last)}`
+  instructions.push({
+    maneuver: arriveManeuver,
+    floorId: last.floorId,
+    fromNodeId: last.id,
+    toNodeId: last.id,
+    distanceMeters: 0,
+    bearing: null,
+    deltaBearing: null,
+    durationSeconds: 0,
+    text: arriveText,
+  })
+  stepMeta[path.length - 1] = { maneuver: arriveManeuver, text: arriveText }
+
+  const steps: RouteStep[] = path.map((node, index) => {
+    const arc = arcs[index]
+    const next = path[index + 1]
+    const isVertical = arc !== undefined && arc.kind !== 'WALK'
+    const meta = stepMeta[index]
+    return {
       nodeId: node.id,
       floorId: node.floorId,
       x: node.x,
       y: node.y,
-      bearing,
-      transition,
-      targetFloorId: isVertical ? next?.floorId : undefined,
-      instruction,
-    })
-    if (!isVertical && next) previousBearing = bearing
-    if (isVertical) previousBearing = null
+      bearing: next && !isVertical && arc.meters > 0 ? round2(mapBearing(node, next)) : null,
+      transition: isVertical ? (arc.kind as VerticalLinkKind) : undefined,
+      targetFloorId: isVertical ? next.floorId : undefined,
+      instruction: meta.text,
+      maneuver: meta.maneuver,
+      distanceMeters: meta.distanceMeters,
+      waitSeconds: meta.waitSeconds,
+    }
   })
 
-  return steps
+  return { instructions, steps }
 }
+
+// ── Dijkstra ──────────────────────────────────────────────────────────────────
 
 /**
  * Dijkstra đa tầng có tính an toàn PCCC.
- * - target là nodeId: tìm đường tới node đó.
- * - target là { findNearestExit: true }: tìm lối thoát an toàn gần nhất (bỏ qua lối thoát bị chặn).
+ * - Cost chính là thời gian (giây); khi có điểm cháy, so sánh (risk, cost, nodeId) để ưu tiên an toàn trước.
+ * - target là nodeId: tới node đó; { nodeIds }: tới node gần nhất theo chi phí graph;
+ *   { findNearestExit: true }: tới lối thoát an toàn gần nhất (bỏ qua lối thoát bị chặn).
  */
 export function findIndoorRoute(
   startNodeId: string,
@@ -247,31 +513,50 @@ export function findIndoorRoute(
   verticalLinks: VerticalLink[],
   options: PathfindingOptions = {},
 ): IndoorRoute | null {
-  const nodeById = new Map(nodes.map((node) => [node.id, node]))
+  const context = createContext(nodes, options)
+  const { nodeById } = context
   const start = nodeById.get(startNodeId)
   if (!start || !isNodePassable(start, options)) return null
 
-  const targetIds =
+  const candidateIds =
     typeof target === 'string'
-      ? new Set([target])
-      : new Set(
-          getExitCandidates(nodes, options.floorLevels)
-            .filter((node) => isNodePassable(node, options))
-            .map((node) => node.id),
-        )
+      ? [target]
+      : 'nodeIds' in target
+        ? target.nodeIds
+        : getExitCandidates(nodes, options.floorLevels).map((node) => node.id)
+  const targetIds = new Set(
+    candidateIds.filter((id) => {
+      const node = nodeById.get(id)
+      return node !== undefined && isNodePassable(node, options)
+    }),
+  )
   if (targetIds.size === 0) return null
 
-  const adjacency = buildAdjacency(nodeById, edges, verticalLinks, options)
-  const cost = new Map<string, number>([[startNodeId, 0]])
-  const previous = new Map<string, { from: string; distance: number; transition?: VerticalLinkKind }>()
+  const hazards = nodes.filter(
+    (node) => options.blockedNodeIds?.has(node.id) || node.hazard === 'FIRE' || node.hazard === 'BLOCKED',
+  )
+  const radius = options.hazardSafetyRadiusMeters ?? DEFAULT_HAZARD_SAFETY_RADIUS_METERS
+  const riskCache = new Map<string, number>()
+  const riskOf = (node: PathfindingNode) => {
+    if (hazards.length === 0) return 0
+    let risk = riskCache.get(node.id)
+    if (risk === undefined) {
+      risk = nodeRisk(node, hazards, radius, context.unitsPerMeter(node.floorId))
+      riskCache.set(node.id, risk)
+    }
+    return risk
+  }
+
+  const adjacency = buildAdjacency(context, edges, verticalLinks, options)
+  const best = new Map<string, QueueItem>([[startNodeId, { id: startNodeId, risk: riskOf(start), cost: 0 }]])
+  const previous = new Map<string, { from: string; arc: Arc }>()
   const visited = new Set<string>()
-  const queue: Array<{ id: string; cost: number }> = [{ id: startNodeId, cost: 0 }]
+  const queue = new MinHeap()
+  queue.push(best.get(startNodeId) as QueueItem)
   let reached: string | undefined
 
-  while (queue.length > 0) {
-    let minIndex = 0
-    for (let i = 1; i < queue.length; i += 1) if (queue[i].cost < queue[minIndex].cost) minIndex = i
-    const [current] = queue.splice(minIndex, 1)
+  while (queue.size > 0) {
+    const current = queue.pop()
     if (visited.has(current.id)) continue
     visited.add(current.id)
     if (targetIds.has(current.id)) {
@@ -279,14 +564,15 @@ export function findIndoorRoute(
       break
     }
 
-    for (const next of adjacency.get(current.id) ?? []) {
-      const nextNode = nodeById.get(next.to)
-      if (!nextNode || visited.has(next.to) || !isNodePassable(nextNode, options)) continue
-      const nextCost = current.cost + next.cost
-      if (nextCost < (cost.get(next.to) ?? Infinity)) {
-        cost.set(next.to, nextCost)
-        previous.set(next.to, { from: current.id, distance: next.distance, transition: next.transition })
-        queue.push({ id: next.to, cost: nextCost })
+    for (const arc of adjacency.get(current.id) ?? []) {
+      const nextNode = nodeById.get(arc.to)
+      if (!nextNode || visited.has(arc.to) || !isNodePassable(nextNode, options)) continue
+      const candidate = { id: arc.to, risk: current.risk + riskOf(nextNode), cost: current.cost + arc.cost }
+      const known = best.get(arc.to)
+      if (!known || compareItems(candidate, known) < 0) {
+        best.set(arc.to, candidate)
+        previous.set(arc.to, { from: current.id, arc })
+        queue.push(candidate)
       }
     }
   }
@@ -294,24 +580,30 @@ export function findIndoorRoute(
   if (!reached) return null
 
   const nodeIds: string[] = [reached]
-  const transitions: Array<VerticalLinkKind | undefined> = [undefined]
-  let totalDistance = 0
+  const arcs: Arc[] = []
   let cursor = reached
   while (cursor !== startNodeId) {
     const link = previous.get(cursor)
     if (!link) return null
-    totalDistance += link.distance
+    arcs.unshift(link.arc)
     nodeIds.unshift(link.from)
-    transitions.unshift(link.transition)
     cursor = link.from
   }
 
   const path = nodeIds.map((id) => nodeById.get(id) as PathfindingNode)
-  const totalCost = cost.get(reached) ?? 0
+  const { instructions, steps } = buildTurnByTurn(path, arcs, options)
+  const walkArcs = arcs.filter((arc) => arc.kind === 'WALK')
+  const walkingDurationSeconds = Math.round(walkArcs.reduce((sum, arc) => sum + arc.seconds, 0))
+  const transitionDurationSeconds = Math.round(
+    arcs.filter((arc) => arc.kind !== 'WALK').reduce((sum, arc) => sum + arc.seconds, 0),
+  )
   return {
-    totalDistance,
-    estimatedDurationSeconds: Math.round(totalCost / WALKING_SPEED),
+    totalDistance: round2(walkArcs.reduce((sum, arc) => sum + arc.meters, 0)),
+    estimatedDurationSeconds: walkingDurationSeconds + transitionDurationSeconds,
+    walkingDurationSeconds,
+    transitionDurationSeconds,
     nodeIds,
-    steps: buildTurnByTurnSteps(path, transitions, options),
+    steps,
+    instructions,
   }
 }

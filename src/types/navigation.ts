@@ -6,17 +6,54 @@ export type PublicFloor = {
   mapImageUrl: string | null
   mapWidth: number | null
   mapHeight: number | null
+  mapUnitsPerMeter?: number | null
+  northOffsetDegrees?: number | null
 }
 
 export type NodeHazardType = 'NONE' | 'FIRE' | 'SMOKE' | 'BLOCKED'
 
 export type VerticalLinkKind = 'ELEVATOR' | 'STAIR' | 'ESCALATOR'
 
+export type VerticalLinkDirection = 'UP' | 'DOWN' | 'BIDIRECTIONAL'
+
 export type VerticalLink = {
   id?: string
   nodeIdFrom: string
   nodeIdTo: string
   kind: VerticalLinkKind
+  direction?: VerticalLinkDirection
+  accessible?: boolean
+  emergencyAllowed?: boolean
+  status?: 'ACTIVE' | 'BLOCKED'
+}
+
+export type Maneuver =
+  | 'START'
+  | 'STRAIGHT'
+  | 'SLIGHT_LEFT'
+  | 'SLIGHT_RIGHT'
+  | 'TURN_LEFT'
+  | 'TURN_RIGHT'
+  | 'U_TURN_LEFT'
+  | 'U_TURN_RIGHT'
+  | 'ELEVATOR'
+  | 'STAIR'
+  | 'ESCALATOR'
+  | 'ARRIVE'
+  | 'ARRIVE_AT_SAFE_EXIT'
+
+export type RouteInstruction = {
+  maneuver: Maneuver
+  floorId: string
+  fromNodeId: string
+  toNodeId: string
+  distanceMeters: number
+  bearing: number | null
+  deltaBearing: number | null
+  durationSeconds: number
+  waitSeconds?: number
+  targetFloorId?: string
+  text: string
 }
 
 export type PublicNode = {
@@ -81,6 +118,9 @@ export type RouteStep = {
   transition?: VerticalLinkKind
   targetFloorId?: string
   instruction: string
+  maneuver?: Maneuver
+  distanceMeters?: number
+  waitSeconds?: number
 }
 
 export type IndoorRoute = {
@@ -88,4 +128,7 @@ export type IndoorRoute = {
   estimatedDurationSeconds: number
   nodeIds: string[]
   steps: RouteStep[]
+  instructions?: RouteInstruction[]
+  walkingDurationSeconds?: number
+  transitionDurationSeconds?: number
 }

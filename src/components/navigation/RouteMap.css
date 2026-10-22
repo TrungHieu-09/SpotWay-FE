@@ -156,3 +156,8 @@
   from { opacity: 0.45; }
   to { opacity: 1; }
 }
+
+.route-map--fire-mode .route-map__node,
+.route-map--fire-mode .route-map__hazard {
+  cursor: crosshair;
+}
