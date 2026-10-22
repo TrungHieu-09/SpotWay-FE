@@ -583,6 +583,8 @@ export function CanvasBoard() {
                     { value: 'ELEVATOR', label: 'Thang máy' },
                     { value: 'STAIR', label: 'Cầu thang bộ' },
                     { value: 'ESCALATOR', label: 'Thang cuốn' },
+                    { value: 'EXIT', label: 'Cửa thoát hiểm' },
+                    { value: 'EMERGENCY_EXIT', label: 'Thang thoát hiểm PCCC' },
                   ]}
                 />
                 <Input
@@ -929,7 +931,9 @@ export function CanvasBoard() {
                                   ? '#a855f7'
                                   : node.type === 'DOOR'
                                     ? '#f59e0b'
-                                    : '#0ea5e9'
+                                    : node.type === 'EXIT' || node.type === 'EMERGENCY_EXIT'
+                                      ? '#10b981'
+                                      : '#0ea5e9'
                               }
                               stroke="#ffffff"
                               strokeWidth={isPendingEdgeStart || isSelected ? 4 : 3}
@@ -1055,7 +1059,9 @@ export function CanvasBoard() {
                                 ? 'purple'
                                 : node.type === 'DOOR'
                                   ? 'orange'
-                                  : 'cyan'
+                                  : node.type === 'EXIT' || node.type === 'EMERGENCY_EXIT'
+                                    ? 'green'
+                                    : 'cyan'
                             }
                           >
                             {node.type}

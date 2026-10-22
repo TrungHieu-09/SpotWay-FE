@@ -26,6 +26,7 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
+import { DemoSimulationToolbar } from '../../components/navigation/DemoSimulationToolbar'
 import { RouteMap } from '../../components/navigation/RouteMap'
 import { useNavigationStore } from '../../store/useNavigationStore'
 import type { RouteStep } from '../../types/navigation'
@@ -65,6 +66,8 @@ export function NavigationPage() {
     search,
     findRoute,
     clearRoute,
+    routeTargetName,
+    activeFireNodeIds,
   } = useNavigationStore()
 
   const [selectedFloorId, setSelectedFloorId] = useState<string>()
@@ -74,6 +77,14 @@ export function NavigationPage() {
   const [stepIndex, setStepIndex] = useState(0)
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile')
   const [stepsDrawerOpen, setStepsDrawerOpen] = useState(false)
+  const [trackedRoute, setTrackedRoute] = useState(route)
+
+  // Tuyến mới (tìm đường, demo, tái định tuyến khi cháy) luôn bắt đầu lại từ bước đầu
+  if (route !== trackedRoute) {
+    setTrackedRoute(route)
+    setStepIndex(0)
+    if (route?.steps[0]) setSelectedFloorId(route.steps[0].floorId)
+  }
 
   useEffect(() => {
     if (buildingId) void load(buildingId)
@@ -108,7 +119,7 @@ export function NavigationPage() {
   const displayedFloorId = currentStep?.floorId ?? selectedFloorId ?? floors[0]?.id
 
   const destinationObj = destinations.find((d) => d.id === destinationId)
-  const destinationName = destinationObj?.name ?? 'Lecture Hall 301'
+  const destinationName = routeTargetName ?? destinationObj?.name ?? 'Lecture Hall 301'
 
   const beginRoute = async (targetDestId?: string, targetFromId?: string) => {
     const from = targetFromId ?? effectiveFromNodeId
@@ -200,6 +211,8 @@ export function NavigationPage() {
           )}
         </Space>
       </header>
+
+      <DemoSimulationToolbar currentNodeId={currentStep?.nodeId} />
 
       {error && (
         <Alert
@@ -351,6 +364,7 @@ export function NavigationPage() {
                   routeSteps={route?.steps ?? []}
                   activeStep={currentStep}
                   destinationName={destinationName}
+                  hazardNodeIds={activeFireNodeIds}
                   onSelectNode={setFromNodeId}
                 />
               </div>
@@ -421,6 +435,7 @@ export function NavigationPage() {
               routeSteps={route?.steps ?? []}
               activeStep={currentStep}
               destinationName={destinationName}
+              hazardNodeIds={activeFireNodeIds}
               onSelectNode={setFromNodeId}
             />
           </section>

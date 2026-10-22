@@ -7,6 +7,7 @@ type RouteMapProps = {
   routeSteps: RouteStep[]
   activeStep?: RouteStep
   destinationName?: string
+  hazardNodeIds?: string[]
   onSelectNode: (nodeId: string) => void
 }
 
@@ -15,6 +16,7 @@ export function RouteMap({
   routeSteps,
   activeStep,
   destinationName,
+  hazardNodeIds = [],
   onSelectNode,
 }: RouteMapProps) {
   if (!map) return <Empty description="Không có dữ liệu tầng này" />
@@ -167,6 +169,18 @@ export function RouteMap({
             <circle cx="0" cy="-2" r="7" className="destination-pin-dot" />
           </g>
         )}
+
+        {/* Simulated fire / blocked nodes */}
+        {map.nodes
+          .filter((node) => hazardNodeIds.includes(node.id))
+          .map((node) => (
+            <g key={`hazard-${node.id}`} className="route-map__hazard">
+              <circle cx={node.x} cy={node.y} r="22" />
+              <text x={node.x} y={node.y + 8} textAnchor="middle" fontSize="22">
+                🔥
+              </text>
+            </g>
+          ))}
 
         {/* Current User Location Arrow with Radar Wave (matching the photo) */}
         {activeStep && (

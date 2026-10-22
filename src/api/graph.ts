@@ -1,6 +1,16 @@
 import { apiClient } from './client'
 
-export type GraphNodeType = 'NORMAL' | 'DOOR' | 'ELEVATOR' | 'STAIR' | 'ESCALATOR' | 'JUNCTION'
+export type GraphNodeType =
+  | 'NORMAL'
+  | 'DOOR'
+  | 'ELEVATOR'
+  | 'STAIR'
+  | 'ESCALATOR'
+  | 'JUNCTION'
+  | 'EXIT'
+  | 'EMERGENCY_EXIT'
+
+export type NodeHazardType = 'NONE' | 'FIRE' | 'SMOKE' | 'BLOCKED'
 
 export type GraphNode = {
   id: string
@@ -10,6 +20,7 @@ export type GraphNode = {
   name: string | null
   type: GraphNodeType
   accessible: boolean
+  hazard?: NodeHazardType
 }
 
 export type GraphEdge = {
@@ -20,6 +31,7 @@ export type GraphEdge = {
   weight: number
   accessible: boolean
   status: 'ACTIVE' | 'BLOCKED'
+  hazard?: NodeHazardType
 }
 export type NavigationDraftNode = Omit<GraphNode, 'floorId'> & { confidence: number; requiresConfirmation: boolean }
 export type NavigationDraftEdge = { id: string; fromNodeId: string; toNodeId: string; accessible: boolean; confidence: number; requiresConfirmation: boolean }

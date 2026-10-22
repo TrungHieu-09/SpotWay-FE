@@ -144,3 +144,15 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   font-size: 12px;
 }
+
+.route-map__hazard circle {
+  fill: rgba(239, 68, 68, 0.35);
+  stroke: #dc2626;
+  stroke-width: 2;
+  animation: route-map-hazard-pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes route-map-hazard-pulse {
+  from { opacity: 0.45; }
+  to { opacity: 1; }
+}

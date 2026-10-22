@@ -88,8 +88,10 @@ function getNodeColor(type: string, isSelected: boolean) {
     case 'STAIR':
       return '#fbbf24'
     case 'ENTRANCE':
-    case 'EXIT':
       return '#f87171'
+    case 'EXIT':
+    case 'EMERGENCY_EXIT':
+      return '#10b981'
     default:
       return '#38bdf8'
   }
