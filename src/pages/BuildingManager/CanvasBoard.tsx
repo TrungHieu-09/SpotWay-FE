@@ -11,7 +11,6 @@ import {
   Radio,
   Select,
   Space,
-  Spin,
   Tabs,
   Tag,
   Typography,
@@ -32,6 +31,7 @@ import {
   BuildOutlined,
   DeleteOutlined,
   LinkOutlined,
+  LoadingOutlined,
   NodeIndexOutlined,
   PushpinOutlined,
   SaveOutlined,
@@ -50,6 +50,7 @@ import {
   type GraphNodeType,
   type NavigationDraft,
 } from '../../api/graph'
+import { buildCorridorDraft } from '../../utils/navigationDraft'
 
 export interface WallSegment {
   id: string
@@ -70,6 +71,8 @@ import {
 import { detectWallsFromFloorPlanImage } from '../../utils/wallDetection'
 
 const { Text: AntText } = Typography
+
+const makeLocalId = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
 type ImageStatus = 'idle' | 'loading' | 'loaded' | 'failed'
 
@@ -165,31 +168,45 @@ export function CanvasBoard() {
   const [isSavingWalls, setIsSavingWalls] = useState(false)
   const [graphError, setGraphError] = useState<string>()
   const [navigationDraft, setNavigationDraft] = useState<NavigationDraft>()
+  // Số thao tác node/edge đang lưu ngầm; không chặn canvas, chỉ hiện chỉ báo nhỏ ở toolbar
+  const [pendingOps, setPendingOps] = useState(0)
+  const floorIdRef = useRef(selectedFloorId)
+  // tempId -> Promise<realId>: thao tác phụ thuộc node tạm phải đợi node thật được tạo xong
+  const pendingNodeIdsRef = useRef(new Map<string, Promise<string>>())
   const mapImageUrl = selectedFloor?.mapImageUrl?.trim() || null
   const mapImage = useImage(mapImageUrl)
 
   useEffect(() => {
-    if (!selectedFloorId) {
-      setNodes([])
-      setEdges([])
-      setWalls([])
-      return
-    }
+    // Reset ngay khi đổi tầng để dữ liệu tầng cũ không bao giờ lọt sang tầng mới
+    floorIdRef.current = selectedFloorId
+    setNodes([])
+    setEdges([])
+    setWalls([])
+    setNavigationDraft(undefined)
+    setSelectedNodeId(undefined)
+    setEdgeStartNodeId(undefined)
+    setRouteAnchorNodeId(undefined)
+    setGraphError(undefined)
+    if (!selectedFloorId) return
+
+    // Đổi tầng nhanh (1 -> 2 -> 3): response của tầng cũ bị bỏ qua
+    let cancelled = false
     getGraph(selectedFloorId)
       .then(({ nodes: nextNodes, edges: nextEdges }) => {
-        setNodes(nextNodes)
-        setEdges(nextEdges)
-        setEdgeStartNodeId(undefined)
-        setSelectedNodeId(undefined)
-        setRouteAnchorNodeId(undefined)
+        if (cancelled) return
+        setNodes(nextNodes.filter((node) => node.floorId === selectedFloorId))
+        setEdges(nextEdges.filter((edge) => edge.floorId === selectedFloorId))
       })
-      .catch((reason: Error) => setGraphError(reason.message))
+      .catch((reason: Error) => {
+        if (!cancelled) setGraphError(reason.message)
+      })
 
     // Only a persisted server revision may initialize the editor.  Restoring
     // browser-local walls made a newly uploaded, unanalyzed plan look as if
     // it had already been processed by the AI.
     getLatestFloorPlanRevision(selectedFloorId)
       .then((revision) => {
+        if (cancelled) return
         const draftWalls = revision?.editorState?.walls
         if (Array.isArray(draftWalls) && draftWalls.length > 0) {
           const loaded: WallSegment[] = draftWalls.map((w) => ({
@@ -201,11 +218,16 @@ export function CanvasBoard() {
         }
         setWalls([])
       })
-      .catch(() => setWalls([]))
+      .catch(() => {
+        if (!cancelled) setWalls([])
+      })
 
     setWallStart(null)
     setPreviewPointer(null)
     setSelectedWallId(undefined)
+    return () => {
+      cancelled = true
+    }
   }, [selectedFloorId])
 
   function saveWalls(nextWalls: WallSegment[]) {
@@ -273,19 +295,33 @@ export function CanvasBoard() {
 
   async function handleAnalyzeNavigation() {
     if (!selectedFloor) return
+    const floor = selectedFloor
     setIsGraphSaving(true); setGraphError(undefined)
     try {
-      const draft = await analyzeNavigationDraft(selectedFloor.id)
+      const draft = await analyzeNavigationDraft(floor.id)
+      if (floorIdRef.current !== floor.id) return
+      if (draft.nodes.length === 0) {
+        setNavigationDraft(buildCorridorDraft(floor.mapWidth, floor.mapHeight, draft.warnings))
+        message.warning('AI không nhận diện được node nào. Đã tạo bản nháp mẫu dọc hành lang — hãy kéo các điểm vàng cho khớp sơ đồ rồi bấm Áp dụng nháp.', 6)
+        return
+      }
       setNavigationDraft(draft)
       message.info(`Đã tạo ${draft.nodes.length} node và ${draft.edges.length} đường đi nháp. Hãy kiểm tra trước khi áp dụng.`)
-    } catch (reason) { setGraphError((reason as Error).message) } finally { setIsGraphSaving(false) }
+    } catch (reason) {
+      if (floorIdRef.current !== floor.id) return
+      setNavigationDraft(buildCorridorDraft(floor.mapWidth, floor.mapHeight))
+      message.warning(`Analyze điều hướng chưa trả về node (${(reason as Error).message}). Đã tạo bản nháp mẫu dọc hành lang để bạn chỉnh sửa ngay.`, 6)
+    } finally { setIsGraphSaving(false) }
   }
   async function handleApplyNavigationDraft() {
     if (!selectedFloor || !navigationDraft) return
     setIsGraphSaving(true)
     try {
-      const result = await applyNavigationDraft(selectedFloor.id, navigationDraft)
-      const graph = await getGraph(selectedFloor.id); setNodes(graph.nodes); setEdges(graph.edges); setNavigationDraft(undefined)
+      const floorId = selectedFloor.id
+      const result = await applyNavigationDraft(floorId, navigationDraft)
+      const graph = await getGraph(floorId)
+      if (floorIdRef.current !== floorId) return
+      setNodes(graph.nodes.filter((node) => node.floorId === floorId)); setEdges(graph.edges.filter((edge) => edge.floorId === floorId)); setNavigationDraft(undefined)
       message.success(`Đã áp dụng ${result.nodesCreated} Node và ${result.edgesCreated} đường đi.`)
     } catch (reason) { setGraphError((reason as Error).message) } finally { setIsGraphSaving(false) }
   }
@@ -327,6 +363,10 @@ export function CanvasBoard() {
   }, [selectedFloor, stageHostSize.height, stageHostSize.width])
 
   const canRenderStage = stageSize.width > 0 && stageSize.height > 0
+
+  // Chỉ node/edge thuộc tầng đang chọn mới được vẽ và liệt kê
+  const currentFloorNodes = useMemo(() => nodes.filter((node) => node.floorId === selectedFloorId), [nodes, selectedFloorId])
+  const currentFloorEdges = useMemo(() => edges.filter((edge) => edge.floorId === selectedFloorId), [edges, selectedFloorId])
 
   if (!selectedFloor) {
     return (
@@ -375,7 +415,7 @@ export function CanvasBoard() {
       } else {
         if (wallStart.x !== roundedX || wallStart.y !== roundedY) {
           const newWall: WallSegment = {
-            id: `wall_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            id: makeLocalId('wall'),
             floorId: selectedFloor.id,
             x1: wallStart.x,
             y1: wallStart.y,
@@ -396,29 +436,14 @@ export function CanvasBoard() {
       return
     }
 
-    setIsGraphSaving(true)
-    setGraphError(undefined)
-    try {
-      const node = await createGraphNode(selectedFloor.id, {
-        x: (position.x / stageSize.width) * selectedFloor.mapWidth,
-        y: (position.y / stageSize.height) * selectedFloor.mapHeight,
-        name: nodeName.trim() || null,
-        type: nodeType,
-        accessible: true,
-      })
-      setNodes((current) => [...current, node])
-      if (routeAnchorNodeId) {
-        const edge = await createGraphEdge(selectedFloor.id, routeAnchorNodeId, node.id)
-        setEdges((current) => [...current, edge])
-      }
-      setRouteAnchorNodeId(node.id)
-      setSelectedNodeId(node.id)
-      setNodeName('')
-    } catch (reason) {
-      setGraphError((reason as Error).message)
-    } finally {
-      setIsGraphSaving(false)
-    }
+    createNodeOptimistic({
+      x: (position.x / stageSize.width) * selectedFloor.mapWidth,
+      y: (position.y / stageSize.height) * selectedFloor.mapHeight,
+      name: nodeName.trim() || null,
+      type: nodeType,
+      accessible: true,
+    })
+    setNodeName('')
   }
 
   function handleStageMouseMove(event: Konva.KonvaEventObject<MouseEvent>) {
@@ -445,17 +470,8 @@ export function CanvasBoard() {
         setEdgeStartNodeId(undefined)
         return
       }
-      setIsGraphSaving(true)
-      setGraphError(undefined)
-      try {
-        const edge = await createGraphEdge(selectedFloor.id, edgeStartNodeId, nodeId)
-        setEdges((current) => [...current, edge])
-        setEdgeStartNodeId(undefined)
-      } catch (reason) {
-        setGraphError((reason as Error).message)
-      } finally {
-        setIsGraphSaving(false)
-      }
+      createEdgeOptimistic(edgeStartNodeId, nodeId)
+      setEdgeStartNodeId(undefined)
       return
     }
 
@@ -463,36 +479,142 @@ export function CanvasBoard() {
     setSelectedNodeId((current) => (current === nodeId ? undefined : nodeId))
   }
 
-  async function handleDeleteNode(nodeId: string) {
-    if (!selectedFloor) return
-    setIsGraphSaving(true)
-    setGraphError(undefined)
-    try {
-      await deleteGraphNode(nodeId)
-      setNodes((current) => current.filter((n) => n.id !== nodeId))
-      setEdges((current) => current.filter((e) => e.fromNodeId !== nodeId && e.toNodeId !== nodeId))
-      if (selectedNodeId === nodeId) setSelectedNodeId(undefined)
-      if (routeAnchorNodeId === nodeId) setRouteAnchorNodeId(undefined)
-      if (edgeStartNodeId === nodeId) setEdgeStartNodeId(undefined)
-    } catch (reason) {
-      setGraphError((reason as Error).message)
-    } finally {
-      setIsGraphSaving(false)
-    }
+  const realNodeId = (id: string) => pendingNodeIdsRef.current.get(id) ?? Promise.resolve(id)
+
+  function trackSaving<T>(task: Promise<T>) {
+    setPendingOps((count) => count + 1)
+    return task.finally(() => setPendingOps((count) => Math.max(0, count - 1)))
   }
 
-  async function handleDeleteEdge(edgeId: string) {
+  function reportGraphFailure(reason: unknown, prefix: string) {
+    const text = reason instanceof Error ? reason.message : 'Lỗi không xác định'
+    setGraphError(`${prefix}: ${text}`)
+    message.error(`${prefix}: ${text}`)
+  }
+
+  /** Hiện node ngay (id tạm), gọi API ngầm, thay bằng node server; lỗi thì rollback. */
+  function createNodeOptimistic(input: Omit<GraphNode, 'id' | 'floorId'>) {
     if (!selectedFloor) return
-    setIsGraphSaving(true)
+    const floorId = selectedFloor.id
+    const tempId = makeLocalId('tmp-node')
+    const anchorId = routeAnchorNodeId
+    const previousSelected = selectedNodeId
+    const tempNode: GraphNode = { ...input, id: tempId, floorId }
+    const tempEdgeId = anchorId ? makeLocalId('tmp-edge') : undefined
     setGraphError(undefined)
-    try {
-      await deleteGraphEdge(edgeId)
-      setEdges((current) => current.filter((e) => e.id !== edgeId))
-    } catch (reason) {
-      setGraphError((reason as Error).message)
-    } finally {
-      setIsGraphSaving(false)
+    setNodes((current) => [...current, tempNode])
+    if (anchorId && tempEdgeId) {
+      const pending = nodes.find((node) => node.id === anchorId)
+      const weight = pending ? Math.hypot(pending.x - input.x, pending.y - input.y) : 0
+      setEdges((current) => [
+        ...current,
+        { id: tempEdgeId, floorId, fromNodeId: anchorId, toNodeId: tempId, weight, accessible: true, status: 'ACTIVE' },
+      ])
     }
+    setRouteAnchorNodeId(tempId)
+    setSelectedNodeId(tempId)
+
+    const creation = createGraphNode(floorId, input)
+    pendingNodeIdsRef.current.set(tempId, creation.then((node) => node.id))
+    const swapSelection = (from: string, to: string | undefined) => {
+      setRouteAnchorNodeId((current) => (current === from ? to : current))
+      setSelectedNodeId((current) => (current === from ? to : current))
+      setEdgeStartNodeId((current) => (current === from ? to : current))
+    }
+    void trackSaving(
+      creation
+        .then(async (node) => {
+          setNodes((current) => current.map((item) => (item.id === tempId ? node : item)))
+          setEdges((current) => current.map((edge) => (edge.toNodeId === tempId ? { ...edge, toNodeId: node.id } : edge)))
+          swapSelection(tempId, node.id)
+          if (anchorId && tempEdgeId) {
+            try {
+              const edge = await createGraphEdge(floorId, await realNodeId(anchorId), node.id)
+              setEdges((current) => current.map((item) => (item.id === tempEdgeId ? edge : item)))
+            } catch (reason) {
+              setEdges((current) => current.filter((item) => item.id !== tempEdgeId))
+              reportGraphFailure(reason, 'Không thể nối đường đi')
+            }
+          }
+        })
+        .catch((reason) => {
+          setNodes((current) => current.filter((item) => item.id !== tempId))
+          setEdges((current) => current.filter((edge) => edge.id !== tempEdgeId && edge.toNodeId !== tempId && edge.fromNodeId !== tempId))
+          swapSelection(tempId, anchorId)
+          setSelectedNodeId((current) => current ?? previousSelected)
+          reportGraphFailure(reason, 'Không thể tạo node')
+        })
+        .finally(() => pendingNodeIdsRef.current.delete(tempId)),
+    )
+  }
+
+  function createEdgeOptimistic(fromId: string, toId: string) {
+    if (!selectedFloor) return
+    const floorId = selectedFloor.id
+    const from = nodes.find((node) => node.id === fromId)
+    const to = nodes.find((node) => node.id === toId)
+    const tempEdgeId = makeLocalId('tmp-edge')
+    setGraphError(undefined)
+    setEdges((current) => [
+      ...current,
+      {
+        id: tempEdgeId,
+        floorId,
+        fromNodeId: fromId,
+        toNodeId: toId,
+        weight: from && to ? Math.hypot(from.x - to.x, from.y - to.y) : 0,
+        accessible: true,
+        status: 'ACTIVE',
+      },
+    ])
+    void trackSaving(
+      Promise.all([realNodeId(fromId), realNodeId(toId)])
+        .then(([realFrom, realTo]) => createGraphEdge(floorId, realFrom, realTo))
+        .then((edge) => setEdges((current) => current.map((item) => (item.id === tempEdgeId ? edge : item))))
+        .catch((reason) => {
+          setEdges((current) => current.filter((item) => item.id !== tempEdgeId))
+          reportGraphFailure(reason, 'Không thể tạo đường đi')
+        }),
+    )
+  }
+
+  /** Xoá node + edge liên quan ngay lập tức; API lỗi thì khôi phục. */
+  function handleDeleteNode(nodeId: string) {
+    const node = nodes.find((item) => item.id === nodeId)
+    if (!node) return
+    const removedEdges = edges.filter((edge) => edge.fromNodeId === nodeId || edge.toNodeId === nodeId)
+    setGraphError(undefined)
+    setNodes((current) => current.filter((item) => item.id !== nodeId))
+    setEdges((current) => current.filter((edge) => edge.fromNodeId !== nodeId && edge.toNodeId !== nodeId))
+    if (selectedNodeId === nodeId) setSelectedNodeId(undefined)
+    if (routeAnchorNodeId === nodeId) setRouteAnchorNodeId(undefined)
+    if (edgeStartNodeId === nodeId) setEdgeStartNodeId(undefined)
+    void trackSaving(
+      realNodeId(nodeId)
+        .then((id) => deleteGraphNode(id))
+        .catch((reason) => {
+          if (floorIdRef.current === node.floorId) {
+            setNodes((current) => (current.some((item) => item.id === node.id) ? current : [...current, node]))
+            setEdges((current) => [...current, ...removedEdges.filter((edge) => !current.some((item) => item.id === edge.id))])
+          }
+          reportGraphFailure(reason, 'Không thể xoá node')
+        }),
+    )
+  }
+
+  function handleDeleteEdge(edgeId: string) {
+    const edge = edges.find((item) => item.id === edgeId)
+    if (!edge) return
+    setGraphError(undefined)
+    setEdges((current) => current.filter((item) => item.id !== edgeId))
+    void trackSaving(
+      deleteGraphEdge(edgeId).catch((reason) => {
+        if (floorIdRef.current === edge.floorId) {
+          setEdges((current) => (current.some((item) => item.id === edge.id) ? current : [...current, edge]))
+        }
+        reportGraphFailure(reason, 'Không thể xoá đường đi')
+      }),
+    )
   }
 
   async function handlePoiDragEnd(
@@ -513,7 +635,7 @@ export function CanvasBoard() {
     })
   }
 
-  const selectedNode = nodes.find((n) => n.id === selectedNodeId)
+  const selectedNode = currentFloorNodes.find((n) => n.id === selectedNodeId)
 
   return (
     <div className="canvas-workspace">
@@ -530,8 +652,13 @@ export function CanvasBoard() {
               </span>
             </div>
             <Space size="middle">
-              <span>{nodes.length} Node</span>
-              <span>{edges.length} Edge</span>
+              {(pendingOps > 0 || isPoiSaving || isGraphSaving) && (
+                <Tag icon={<LoadingOutlined spin />} color="processing">
+                  Đang lưu...
+                </Tag>
+              )}
+              <span>{currentFloorNodes.length} Node</span>
+              <span>{currentFloorEdges.length} Edge</span>
               <span>{pois.length} POI</span>
               <span>{walls.length} Tường</span>
             </Space>
@@ -735,7 +862,6 @@ export function CanvasBoard() {
             />
           ) : null}
 
-          <Spin spinning={isPoiSaving || isGraphSaving}>
             <div className="stage-host" ref={stageHostRef}>
               {canRenderStage ? (
                 <div
@@ -875,9 +1001,9 @@ export function CanvasBoard() {
                           />
                         )
                       })}
-                      {edges.map((edge) => {
-                        const from = nodes.find((node) => node.id === edge.fromNodeId)
-                        const to = nodes.find((node) => node.id === edge.toNodeId)
+                      {currentFloorEdges.map((edge) => {
+                        const from = currentFloorNodes.find((node) => node.id === edge.fromNodeId)
+                        const to = currentFloorNodes.find((node) => node.id === edge.toNodeId)
                         if (!from || !to) return null
                         const fromPoint = {
                           x: (from.x / selectedFloor.mapWidth) * stageSize.width,
@@ -903,7 +1029,7 @@ export function CanvasBoard() {
                         if (!from || !to) return null
                         return <Line key={edge.id} points={[from.x / selectedFloor.mapWidth * stageSize.width, from.y / selectedFloor.mapHeight * stageSize.height, to.x / selectedFloor.mapWidth * stageSize.width, to.y / selectedFloor.mapHeight * stageSize.height]} stroke="#f59e0b" dash={[8, 6]} strokeWidth={3} listening={false} />
                       })}
-                      {nodes.map((node) => {
+                      {currentFloorNodes.map((node) => {
                         const x = (node.x / selectedFloor.mapWidth) * stageSize.width
                         const y = (node.y / selectedFloor.mapHeight) * stageSize.height
                         const isPendingEdgeStart = edgeStartNodeId === node.id
@@ -993,7 +1119,6 @@ export function CanvasBoard() {
                 </div>
               )}
             </div>
-          </Spin>
 
           {selectedFloor.publishStatus === 'draft' ? (
             <Typography.Paragraph
@@ -1016,11 +1141,11 @@ export function CanvasBoard() {
           items={[
             {
               key: 'nodes',
-              label: `Node (${nodes.length})`,
+              label: `Node (${currentFloorNodes.length})`,
               children: (
                 <List
                   size="small"
-                  dataSource={nodes}
+                  dataSource={currentFloorNodes}
                   locale={{ emptyText: 'Chưa có Node. Click lên bản đồ để thêm' }}
                   style={{ maxHeight: 520, overflowY: 'auto' }}
                   renderItem={(node) => (
@@ -1036,7 +1161,7 @@ export function CanvasBoard() {
                         <div key="delete" onClick={(e) => e.stopPropagation()}>
                           <Popconfirm
                             title="Xác nhận xóa Node?"
-                            onConfirm={() => void handleDeleteNode(node.id)}
+                            onConfirm={() => handleDeleteNode(node.id)}
                             okText="Xóa"
                             cancelText="Hủy"
                             okButtonProps={{ danger: true }}
@@ -1082,11 +1207,11 @@ export function CanvasBoard() {
             },
             {
               key: 'edges',
-              label: `Edge (${edges.length})`,
+              label: `Edge (${currentFloorEdges.length})`,
               children: (
                 <List
                   size="small"
-                  dataSource={edges}
+                  dataSource={currentFloorEdges}
                   locale={{ emptyText: 'Chưa có Edge. Nối 2 Node ở chế độ Edge' }}
                   style={{ maxHeight: 520, overflowY: 'auto' }}
                   renderItem={(edge) => (
@@ -1096,7 +1221,7 @@ export function CanvasBoard() {
                         <Popconfirm
                           key="delete"
                           title="Xác nhận xóa Edge?"
-                          onConfirm={() => void handleDeleteEdge(edge.id)}
+                          onConfirm={() => handleDeleteEdge(edge.id)}
                           okText="Xóa"
                           cancelText="Hủy"
                           okButtonProps={{ danger: true }}
