@@ -18,6 +18,8 @@ const HomePage = lazy(() =>
     default: module.HomePage,
   })),
 )
+
+// ── Building Owner pages ──
 const BuildingListPage = lazy(() =>
   import('../pages/BuildingOwner/BuildingListPage').then((module) => ({
     default: module.BuildingListPage,
@@ -26,31 +28,6 @@ const BuildingListPage = lazy(() =>
 const BuildingDetailPage = lazy(() =>
   import('../pages/BuildingOwner/BuildingDetailPage').then((module) => ({
     default: module.BuildingDetailPage,
-  })),
-)
-const ManagerLayout = lazy(() =>
-  import('../pages/BuildingManager/ManagerLayout').then((module) => ({
-    default: module.ManagerLayout,
-  })),
-)
-const StoreOwnerManagementPage = lazy(() =>
-  import('../pages/BuildingManager/BuildingManager/StoreOwnerManagementPage').then((module) => ({
-    default: module.StoreOwnerManagementPage,
-  })),
-)
-const GuestMapPage = lazy(() =>
-  import('../pages/Guest/GuestMapPage').then((module) => ({
-    default: module.GuestMapPage,
-  })),
-)
-const StoreProfilePage = lazy(() =>
-  import('../pages/StoreOwner/StoreProfilePage').then((module) => ({
-    default: module.StoreProfilePage,
-  })),
-)
-const StorePromotionsPage = lazy(() =>
-  import('../pages/StoreOwner/StorePromotionsPage').then((module) => ({
-    default: module.StorePromotionsPage,
   })),
 )
 const OwnerDashboardPage = lazy(() =>
@@ -68,6 +45,39 @@ const OwnerSubscriptionPage = lazy(() =>
     default: module.OwnerSubscriptionPage,
   })),
 )
+
+// ── Building Manager pages ──
+const ManagerLayout = lazy(() =>
+  import('../pages/BuildingManager/ManagerLayout').then((module) => ({
+    default: module.ManagerLayout,
+  })),
+)
+const StoreOwnerManagementPage = lazy(() =>
+  import('../pages/BuildingManager/BuildingManager/StoreOwnerManagementPage').then((module) => ({
+    default: module.StoreOwnerManagementPage,
+  })),
+)
+
+// ── Guest ──
+const GuestMapPage = lazy(() =>
+  import('../pages/Guest/Guest/GuestMapPage').then((module) => ({
+    default: module.GuestMapPage,
+  })),
+)
+
+// ── Store Owner ──
+const StoreProfilePage = lazy(() =>
+  import('../pages/StoreOwner/StoreProfilePage').then((module) => ({
+    default: module.StoreProfilePage,
+  })),
+)
+const StorePromotionsPage = lazy(() =>
+  import('../pages/StoreOwner/StorePromotionsPage').then((module) => ({
+    default: module.StorePromotionsPage,
+  })),
+)
+
+// ── Admin ──
 const AdminOverviewPage = lazy(() =>
   import('../pages/Admin/AdminOverviewPage').then((module) => ({
     default: module.AdminOverviewPage,
@@ -107,7 +117,7 @@ export const router = createBrowserRouter([
   // ── SpotWay Premium Landing Page ──
   { path: '/', element: <LandingPage /> },
 
-  // ── Building Owner section with sidebar layout ──
+  // ── Building Owner section with sidebar ──
   {
     element: <ProtectedRoute allowedRoles={['building_owner']} />,
     children: [
