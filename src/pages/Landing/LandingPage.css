@@ -386,8 +386,8 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 40px;
   align-items: center;
   max-width: 1280px;
   margin: 0 auto;
@@ -467,150 +467,446 @@
   flex-shrink: 0;
 }
 
-/* ── Isometric Building Visualization ── */
+/* ── Hero Visual Container ── */
 .lp-hero__visual {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   animation: fadeInUp .6s ease-out .25s both;
 }
 
-.lp-iso-wrapper {
+/* ═══════════════════════════════════════════════════
+   STACKED FLOOR MAP VISUALIZATION
+═══════════════════════════════════════════════════ */
+
+/* Outer scene container */
+.lp-floormap-scene {
   position: relative;
-  width: 440px;
-  height: 440px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 600px;
+  height: 560px;
+  flex-shrink: 0;
+  margin-top: -20px;
+  cursor: crosshair;
 }
 
-/* Outer ambient glow ring */
-.lp-iso-wrapper::before {
+/* ── Ambient glow behind stack ── */
+.lp-floormap-scene::before {
   content: '';
   position: absolute;
-  inset: 40px;
+  left: 50%;
+  top: 28%;  /* pushed toward upper stack area */
+  transform: translate(-40%, -50%);
+  width: 360px;
+  height: 180px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%);
-  filter: blur(30px);
-  animation: glowPulse 4s ease-in-out infinite;
-}
-
-.lp-iso {
-  position: relative;
-  width: 320px;
-  height: 340px;
-  perspective: 1200px;
-  transform-style: preserve-3d;
-}
-
-/* Each floor */
-.lp-iso__floor {
-  position: absolute;
-  left: 0; right: 0;
-  height: 90px;
-  transform: rotateX(58deg) rotateZ(-36deg);
-  transform-style: preserve-3d;
-  border-radius: 12px;
-  background: var(--sw-surface-2);
-  border: 1px solid var(--sw-border);
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 10px;
-  transition: transform .6s cubic-bezier(.16,1,.3,1);
-  overflow: hidden;
-}
-
-.lp-iso__floor::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255,255,255,0.03), transparent);
+  background: radial-gradient(ellipse, rgba(139,92,246,0.28) 0%, rgba(100,60,220,0.10) 45%, transparent 72%);
+  filter: blur(38px);
   pointer-events: none;
+  animation: glowPulse 4s ease-in-out infinite;
+  z-index: 0;
 }
 
-.lp-iso__floor--3 { bottom: 220px; z-index: 3; border-color: rgba(139,92,246,0.35); background: rgba(28,27,59,0.9); }
-.lp-iso__floor--2 { bottom: 120px; z-index: 2; }
-.lp-iso__floor--1 { bottom: 20px;  z-index: 1; }
-
-.lp-iso__floor:hover {
-  transform: rotateX(54deg) rotateZ(-34deg) translateY(-6px);
+/* ── Level selector ── */
+.lp-floormap-levels {
+  position: absolute;
+  top: 60px;
+  left: 0;
+  z-index: 10;
+  background: rgba(14,14,35,0.82);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 14px;
+  padding: 14px 16px;
+  backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  animation: fadeInUp .5s ease-out .4s both;
 }
 
-.lp-iso__room {
-  border-radius: 6px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.07);
+.lp-floormap-levels__label {
+  font-family: 'Space Grotesk', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.lp-floormap-level {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.lp-floormap-level:hover {
+  background: rgba(139,92,246,0.08);
+}
+.lp-floormap-level--active {
+  background: rgba(139,92,246,0.15);
+  border: 1px solid rgba(139,92,246,0.3);
+}
+
+.lp-floormap-level__badge {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sw-violet);
+  min-width: 20px;
+}
+.lp-floormap-level__badge--dim { color: rgba(255,255,255,0.3); }
+
+.lp-floormap-level__name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--sw-text-primary);
+  white-space: nowrap;
+}
+.lp-floormap-level__name--dim { color: rgba(255,255,255,0.28); }
+
+/* ── HUD callouts ── */
+.lp-floormap-hud {
+  position: absolute;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 6px 28px rgba(0,0,0,0.45);
+  z-index: 10;
+  max-width: 220px;
+}
+
+.lp-floormap-hud--dest {
+  top: 50px;
+  right: 0;
+  background: rgba(14,14,35,0.88);
+  border-color: rgba(34,211,238,0.2);
+  animation: fadeInUp .5s ease-out .5s both;
+}
+
+.lp-floormap-hud--beacon {
+  bottom: 20px;
+  right: 0;
+  background: rgba(14,14,35,0.88);
+  border-color: rgba(139,92,246,0.2);
+  animation: fadeInUp .5s ease-out .65s both;
+}
+
+.lp-floormap-hud__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(34,211,238,0.12);
+  border: 1px solid rgba(34,211,238,0.25);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--sw-cyan);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.lp-floormap-hud__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lp-floormap-hud__title {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--sw-text-secondary);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.lp-iso__room--a { background: rgba(139,92,246,0.10); border-color: rgba(139,92,246,0.2); color: #c4b5fd; }
-.lp-iso__room--b { background: rgba(34,211,238,0.07); border-color: rgba(34,211,238,0.15); color: #67e8f9; }
-.lp-iso__room--c { background: rgba(232,121,249,0.07); }
-.lp-iso__room--e { background: rgba(52,211,153,0.07); }
-.lp-iso__room--f { background: rgba(139,92,246,0.08); }
-
-/* POI dots on floors */
-.lp-iso__poi {
-  position: absolute;
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  border: 2px solid #fff;
-}
-.lp-iso__poi--1 { top: 20px; right: 20px; background: var(--sw-violet); box-shadow: 0 0 8px var(--sw-violet); animation: dotPulse 2s infinite; }
-.lp-iso__poi--2 { bottom: 14px; left: 30px; background: var(--sw-cyan);   box-shadow: 0 0 8px var(--sw-cyan);   animation: dotPulse 2s infinite .5s; }
-
-/* Route line */
-.lp-iso__route {
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    90deg,
-    var(--sw-cyan) 0,
-    var(--sw-cyan) 6px,
-    transparent 6px,
-    transparent 12px
-  );
-  height: 1px;
-  top: 50%;
-  left: 10%;
-  right: 10%;
-  width: 80%;
-  opacity: 0.5;
-  animation: shimmerGradient 2s linear infinite;
-  background-size: 400% 100%;
-}
-
-/* HUD callouts */
-.lp-hud {
-  position: absolute;
+  color: var(--sw-text-primary);
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  background: var(--sw-surface-2);
-  border: 1px solid var(--sw-border);
-  backdrop-filter: blur(12px);
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--sw-text-primary);
   white-space: nowrap;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 
-.lp-hud--tl { top: 40px; left: 10px; animation: fadeInUp .4s ease-out .6s both; }
-.lp-hud--br { bottom: 40px; right: 10px; animation: fadeInUp .4s ease-out .7s both; }
+.lp-floormap-hud__title--beacon {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--sw-violet);
+  text-transform: uppercase;
+}
+
+.lp-floormap-hud__sub {
+  font-size: 11px;
+  color: var(--sw-text-muted);
+  white-space: nowrap;
+}
+
+.lp-floormap-beacon-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(139,92,246,0.12);
+  border: 1px solid rgba(139,92,246,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sw-violet);
+  flex-shrink: 0;
+  margin-top: 1px;
+  animation: dotPulse 2s ease-in-out infinite;
+}
+
+
+/* ── ISO perspective wrapper ── */
+.lp-iso-perspective {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  /* perspective applied here creates the 3D context for the child */
+  perspective: 1200px;
+  perspective-origin: 50% 40%;
+}
+
+/* ── ISO container: THE parent isometric transform ── */
+.lp-iso-container {
+  position: relative;
+  width: 340px;
+  height: 340px;
+  /* True isometric angles matching SpaceLumi reference */
+  transform: rotateX(58deg) rotateZ(-38deg) skewX(2deg);
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: fadeInUp .7s ease-out .2s both;
+  cursor: default;
+}
+
+/* ── Each floor: absolutely stacked, offset inside the transformed container ── */
+.lp-iso-floor {
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  padding: 16px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.35s ease;
+  cursor: pointer;
+}
+
+/* Floor L1 — base (no offset) */
+.lp-iso-floor--l1 {
+  background: rgba(26, 24, 46, 0.50);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+  transform: translateZ(0);
+}
+.lp-iso-floor--l1:hover {
+  transform: translateZ(0) translateY(-6px) translateX(-2px);
+  box-shadow: 0 28px 60px rgba(0,0,0,0.9);
+}
+
+/* Floor L2 — mid */
+.lp-iso-floor--l2 {
+  background: rgba(26, 24, 50, 0.60);
+  border: 1px solid rgba(34,211,238,0.30);
+  box-shadow: 0 25px 60px rgba(0,0,0,0.8);
+  transform: translateY(-80px) translateX(-20px);
+}
+.lp-iso-floor--l2:hover {
+  transform: translateY(-90px) translateX(-22px);
+  border-color: rgba(34,211,238,0.55);
+  box-shadow: 0 0 20px rgba(34,211,238,0.2), 0 30px 70px rgba(0,0,0,0.9);
+}
+
+/* Floor L3 — top/active */
+.lp-iso-floor--l3 {
+  background: rgba(12, 10, 30, 0.85);
+  border: 2px solid var(--sw-violet);
+  box-shadow:
+    0 0 40px rgba(139,92,246,0.35),
+    0 20px 60px rgba(0,0,0,0.8);
+  transform: translateY(-160px) translateX(-40px);
+}
+.lp-iso-floor--l3:hover {
+  transform: translateY(-172px) translateX(-43px);
+  box-shadow:
+    0 0 60px rgba(139,92,246,0.55),
+    0 0 100px rgba(139,92,246,0.25),
+    0 30px 80px rgba(0,0,0,0.9);
+}
+
+/* ── Inner content area of each floor ── */
+.lp-iso-floor__inner {
+  width: 100%;
+  height: 100%;
+  border: 1px dashed rgba(255,255,255,0.12);
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 60%);
+}
+
+.lp-iso-floor__inner--l2 {
+  border-color: rgba(34,211,238,0.18);
+  background: linear-gradient(135deg, rgba(34,211,238,0.04) 0%, transparent 60%);
+}
+
+.lp-iso-floor__inner--l3 {
+  border: 1px solid rgba(255,255,255,0.18);
+  background: linear-gradient(120deg, rgba(139,92,246,0.12) 0%, rgba(12,10,30,0) 50%, rgba(34,211,238,0.07) 100%);
+}
+
+/* ── Grid partition lines ── */
+.lp-iso-grid-h {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+}
+
+.lp-iso-grid-v {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: rgba(255,255,255,0.08);
+}
+
+/* ── Heat glow blobs ── */
+.lp-iso-heat {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(28px);
+  pointer-events: none;
+}
+
+.lp-iso-heat--cyan {
+  top: 20px;
+  left: 28px;
+  width: 80px;
+  height: 80px;
+  background: rgba(34,211,238,0.20);
+}
+
+.lp-iso-heat--fuchsia {
+  bottom: 30px;
+  right: 40px;
+  width: 100px;
+  height: 100px;
+  background: rgba(232,121,249,0.25);
+}
+
+/* ── Architectural wall lines on L3 ── */
+.lp-iso-wall {
+  position: absolute;
+  background: rgba(139,92,246,0.30);
+  pointer-events: none;
+}
+
+.lp-iso-wall--h {
+  left: 32px;
+  right: 32px;
+  height: 1px;
+}
+
+.lp-iso-wall--v {
+  top: 32px;
+  bottom: 32px;
+  width: 1px;
+}
+
+/* ── Elevator core pillar ── */
+.lp-iso-elevator {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translateX(-50%) translateY(calc(-50% - 32px)) translateX(-16px);
+  width: 44px;
+  height: 44px;
+  border: 2px solid rgba(139,92,246,0.40);
+  background: rgba(139,92,246,0.08);
+  border-radius: 8px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* ── SVG nav path ── */
+.lp-iso-navpath {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.lp-iso-navpath__line {
+  animation: isoBeamFlow 2s linear infinite;
+}
+
+@keyframes isoBeamFlow {
+  from { stroke-dashoffset: 56; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* ── Active room badge ── */
+.lp-iso-room-badge {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(34,211,238,0.12);
+  border: 1px solid var(--sw-cyan);
+  color: var(--sw-cyan);
+  font-family: monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  z-index: 2;
+}
+
+/* ── Floor labels ── */
+.lp-iso-floor__label {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  font-family: monospace;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.28);
+}
+
+.lp-iso-floor__label--cyan   { color: rgba(34,211,238,0.65); }
+.lp-iso-floor__label--violet {
+  color: rgba(139,92,246,0.85);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lp-iso-floor__label-dot {
+  display: inline-flex;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sw-violet);
+  flex-shrink: 0;
+  animation: dotPulse 2s ease-in-out infinite;
+}
+
 
 /* ═══════════════════════════════════════════════════
    LOGOS SECTION

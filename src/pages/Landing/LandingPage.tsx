@@ -1,9 +1,31 @@
+import { useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useScrollReveal } from '../../hooks/useScrollReveal'
 import './LandingPage.css'
 
 export function LandingPage() {
   const pageRef = useScrollReveal()
+  const isoRef = useRef<HTMLDivElement>(null)
+
+  const handleIsoMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isoRef.current) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    const dx = (e.clientX - cx) / (rect.width / 2)   // -1 to 1
+    const dy = (e.clientY - cy) / (rect.height / 2)  // -1 to 1
+    // Parallax: base rotateX=58 ±6, rotateZ=-38 ±6
+    const rotX = 58 - dy * 6
+    const rotZ = -38 + dx * 6
+    isoRef.current.style.transition = 'transform 0.1s ease-out'
+    isoRef.current.style.transform = `rotateX(${rotX}deg) rotateZ(${rotZ}deg) skewX(2deg)`
+  }, [])
+
+  const handleIsoMouseLeave = useCallback(() => {
+    if (!isoRef.current) return
+    isoRef.current.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
+    isoRef.current.style.transform = 'rotateX(58deg) rotateZ(-38deg) skewX(2deg)'
+  }, [])
 
   return (
     <div className="lp-root" ref={pageRef}>
@@ -88,28 +110,131 @@ export function LandingPage() {
           </div>
         </div>
 
-        {/* 3D Isometric Building */}
+        {/* 3D Stacked Floor Map — SpaceLumi ISO style */}
         <div className="lp-hero__visual" data-reveal="fade-left" data-reveal-delay="200">
-          <div className="lp-iso-wrapper">
-            <div className="lp-iso">
-              <div className="lp-iso__floor lp-iso__floor--3">
-                <div className="lp-iso__room lp-iso__room--a">Office A</div>
-                <div className="lp-iso__room lp-iso__room--b">Atrium</div>
-                <div className="lp-iso__poi lp-iso__poi--1" />
+          <div className="lp-floormap-scene" onMouseMove={handleIsoMouseMove} onMouseLeave={handleIsoMouseLeave}>
+
+            {/* ── Level selector panel ── */}
+            <div className="lp-floormap-levels">
+              <div className="lp-floormap-levels__label">LEVELS</div>
+              <div className="lp-floormap-level lp-floormap-level--active">
+                <span className="lp-floormap-level__badge">L3</span>
+                <span className="lp-floormap-level__name">Exec Suites</span>
+                <span className="lp-dot lp-dot--violet" />
               </div>
-              <div className="lp-iso__floor lp-iso__floor--2">
-                <div className="lp-iso__room lp-iso__room--c">Meeting</div>
-                <div className="lp-iso__room lp-iso__room--d">Studio</div>
-                <div className="lp-iso__route" />
+              <div className="lp-floormap-level">
+                <span className="lp-floormap-level__badge lp-floormap-level__badge--dim">L2</span>
+                <span className="lp-floormap-level__name lp-floormap-level__name--dim">Retail Hub</span>
               </div>
-              <div className="lp-iso__floor lp-iso__floor--1">
-                <div className="lp-iso__room lp-iso__room--e">Cafe</div>
-                <div className="lp-iso__room lp-iso__room--f">Lobby</div>
-                <div className="lp-iso__poi lp-iso__poi--2" />
+              <div className="lp-floormap-level">
+                <span className="lp-floormap-level__badge lp-floormap-level__badge--dim">L1</span>
+                <span className="lp-floormap-level__name lp-floormap-level__name--dim">Concourse</span>
               </div>
             </div>
-            <div className="lp-hud lp-hud--tl"><span className="lp-dot lp-dot--cyan" />Floor 3 — Live</div>
-            <div className="lp-hud lp-hud--br"><span className="lp-dot lp-dot--violet" />2 POI Active</div>
+
+            {/* ── Top-right HUD: destination callout ── */}
+            <div className="lp-floormap-hud lp-floormap-hud--dest">
+              <div className="lp-floormap-hud__icon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+              </div>
+              <div className="lp-floormap-hud__text">
+                <div className="lp-floormap-hud__title">Room 3.12 · 2 min walk <span className="lp-dot lp-dot--green" /></div>
+                <div className="lp-floormap-hud__sub">Optimal elevator route via Core North</div>
+              </div>
+            </div>
+
+            {/* ── 3D Isometric container — parent transform approach (SpaceLumi) ── */}
+            <div className="lp-iso-perspective">
+              <div className="lp-iso-container" ref={isoRef}>
+
+                {/* Floor L1 — Concourse (base) */}
+                <div className="lp-iso-floor lp-iso-floor--l1">
+                  <div className="lp-iso-floor__inner">
+                    <div className="lp-iso-grid-h" />
+                    <div className="lp-iso-grid-v" />
+                    <div className="lp-iso-heat lp-iso-heat--cyan" />
+                    <span className="lp-iso-floor__label">L1 Concourse (Arrivals / Metro Link)</span>
+                  </div>
+                </div>
+
+                {/* Elevator core pillar */}
+                <div className="lp-iso-elevator" />
+
+                {/* Floor L2 — Retail Hub */}
+                <div className="lp-iso-floor lp-iso-floor--l2">
+                  <div className="lp-iso-floor__inner lp-iso-floor__inner--l2">
+                    <div className="lp-iso-grid-h" style={{ top: '33%' }} />
+                    <div className="lp-iso-grid-v" style={{ left: '65%' }} />
+                    <div className="lp-iso-heat lp-iso-heat--fuchsia" />
+                    <span className="lp-iso-floor__label lp-iso-floor__label--cyan">L2 Retail Hub (Duty Free &amp; Lounges)</span>
+                  </div>
+                </div>
+
+                {/* Floor L3 — Executive Suites (active, highest) */}
+                <div className="lp-iso-floor lp-iso-floor--l3">
+                  <div className="lp-iso-floor__inner lp-iso-floor__inner--l3">
+                    {/* Architectural wall lines */}
+                    <div className="lp-iso-wall lp-iso-wall--h" style={{ top: 32 }} />
+                    <div className="lp-iso-wall lp-iso-wall--v" style={{ left: 80 }} />
+
+                    {/* Animated neon nav path */}
+                    <svg className="lp-iso-navpath" viewBox="0 0 360 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <defs>
+                        <linearGradient id="neonPathGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#8B5CF6" />
+                          <stop offset="100%" stopColor="#22D3EE" />
+                        </linearGradient>
+                      </defs>
+                      {/* Path */}
+                      <path
+                        className="lp-iso-navpath__line"
+                        d="M 60 280 L 140 240 L 140 110 L 280 80"
+                        stroke="url(#neonPathGrad)"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeDasharray="8 6"
+                        fill="none"
+                      />
+                      {/* Destination pin with ping */}
+                      <circle cx="280" cy="80" r="8" fill="#22D3EE" />
+                      <circle cx="280" cy="80" r="8" fill="none" stroke="#22D3EE" strokeWidth="1.5" opacity="0.5">
+                        <animate attributeName="r" values="10;22;10" dur="2s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" values="0.7;0;0.7" dur="2s" repeatCount="indefinite" />
+                      </circle>
+                      {/* Origin dot */}
+                      <circle cx="60" cy="280" r="6" fill="#8B5CF6" />
+                    </svg>
+
+                    {/* Active room badge */}
+                    <div className="lp-iso-room-badge">SUITE 3.12 (ACTIVE)</div>
+
+                    {/* Floor label */}
+                    <span className="lp-iso-floor__label lp-iso-floor__label--violet">
+                      <span className="lp-iso-floor__label-dot" />
+                      L3 Executive Suites &amp; Medical Center
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* ── Bottom-right HUD: beacon status ── */}
+            <div className="lp-floormap-hud lp-floormap-hud--beacon">
+              <div className="lp-floormap-beacon-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5.64 5.64a9 9 0 0 0 0 12.73M18.36 5.64a9 9 0 0 1 0 12.73"/>
+                  <path d="M8.46 8.46a5 5 0 0 0 0 7.07M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                  <circle cx="12" cy="12" r="1" fill="currentColor"/>
+                </svg>
+              </div>
+              <div className="lp-floormap-hud__text">
+                <div className="lp-floormap-hud__title lp-floormap-hud__title--beacon">GATE B14 BEACON SYNCED</div>
+                <div className="lp-floormap-hud__sub">±0.4m precision · UMB Channel 5</div>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
