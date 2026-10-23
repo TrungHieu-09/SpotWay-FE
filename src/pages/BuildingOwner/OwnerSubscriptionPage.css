@@ -1,0 +1,265 @@
+/* ============================================================
+   OwnerSubscriptionPage — Scoped Styles
+   ============================================================ */
+
+.subp-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ── Header ── */
+.subp-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  animation: fadeInDown 0.5s ease-out;
+}
+
+.subp-header__eyebrow {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--sw-violet);
+  margin-bottom: 6px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.subp-header__title {
+  margin: 0 0 6px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #fff 0%, var(--sw-violet) 55%, var(--sw-cyan) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subp-header__sub {
+  margin: 0;
+  color: var(--sw-text-secondary);
+  font-size: 14px;
+}
+
+/* ── Loading / empty ── */
+.subp-loading { display: flex; justify-content: center; padding: 60px; }
+
+.subp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px;
+  color: var(--sw-text-muted);
+  text-align: center;
+}
+
+.subp-empty__icon { font-size: 40px; color: var(--sw-border-hover); }
+
+/* ── Top row ── */
+.subp-top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  animation: fadeInUp 0.5s ease-out 0.08s both;
+}
+
+/* ── Current plan card ── */
+.subp-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--sw-text-primary);
+  margin-bottom: 10px;
+}
+
+.subp-plan-expire {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--sw-text-secondary);
+  margin: 0 0 20px;
+}
+
+.subp-plan-limits {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.subp-limit__header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--sw-text-secondary);
+  margin-bottom: 5px;
+}
+
+.subp-limit__count {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  color: var(--sw-text-primary);
+}
+
+.subp-limit__track {
+  height: 6px;
+  background: var(--sw-surface-2);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.subp-limit__fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--sw-violet), var(--sw-cyan));
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.subp-upgrade-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--sw-radius-md);
+  background: linear-gradient(135deg, var(--sw-violet), #6d28d9);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Space Grotesk', sans-serif;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.subp-upgrade-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+/* ── Stats ── */
+.subp-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.subp-stat {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--sw-border);
+  border-radius: var(--sw-radius-xl);
+  background: var(--sw-surface-1);
+  backdrop-filter: blur(20px);
+  transition: border-color 0.25s ease, transform 0.25s ease;
+}
+
+.subp-stat:hover { transform: translateY(-2px); }
+.subp-stat--violet:hover { border-color: rgba(139,92,246,0.4); }
+.subp-stat--cyan:hover   { border-color: rgba(34,211,238,0.4); }
+.subp-stat--fuchsia:hover{ border-color: rgba(232,121,249,0.4); }
+
+.subp-stat__icon {
+  font-size: 22px;
+}
+
+.subp-stat--violet .subp-stat__icon { color: var(--sw-violet); }
+.subp-stat--cyan .subp-stat__icon   { color: var(--sw-cyan); }
+.subp-stat--fuchsia .subp-stat__icon{ color: var(--sw-fuchsia); }
+
+.subp-stat__value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--sw-text-primary);
+}
+
+.subp-stat__label {
+  font-size: 12px;
+  color: var(--sw-text-secondary);
+  margin-top: 2px;
+}
+
+/* ── Invoice table ── */
+.subp-invoice-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subp-invoice-table__head {
+  display: grid;
+  grid-template-columns: 1.5fr 1.5fr 1fr 1.5fr 1fr;
+  gap: 12px;
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sw-text-muted);
+  border-bottom: 1px solid var(--sw-border-subtle);
+  margin-bottom: 4px;
+}
+
+.subp-invoice-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1.5fr 1fr 1.5fr 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: var(--sw-radius-md);
+  border: 1px solid transparent;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  animation: fadeInUp 0.35s ease-out both;
+}
+
+.subp-invoice-row:hover {
+  background: rgba(139, 92, 246, 0.04);
+  border-color: var(--sw-border-subtle);
+}
+
+.subp-invoice-row__date { font-size: 13px; color: var(--sw-text-secondary); }
+.subp-invoice-row__plan { font-size: 13px; font-weight: 600; color: var(--sw-text-primary); }
+.subp-invoice-row__months { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--sw-cyan); }
+.subp-invoice-row__amount { font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: var(--sw-text-primary); }
+
+.subp-paid-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: rgba(74, 222, 128, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  color: #4ade80;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Modal */
+.subp-modal__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .subp-top-row { grid-template-columns: 1fr; }
+  .subp-header  { flex-direction: column; align-items: stretch; }
+  .subp-header__title { font-size: 26px; }
+  .subp-invoice-table__head,
+  .subp-invoice-row { grid-template-columns: 1fr 1fr; }
+}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { App as AntApp, Button } from 'antd'
+import { App as AntApp, Button, Form, Input, Modal, Popconfirm } from 'antd'
 import {
   ApartmentOutlined,
   EditOutlined,
@@ -7,6 +7,7 @@ import {
   PlusOutlined,
   AppstoreOutlined,
   BuildOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { CreateBuildingModal } from './CreateBuildingModal'
@@ -17,10 +18,15 @@ import './BuildingListPage.css'
 
 export function BuildingListPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [editingBuilding, setEditingBuilding] = useState<Building | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [editForm] = Form.useForm<{ name: string; address: string }>()
   const navigate = useNavigate()
   const buildings = useBuildingStore((state) => state.buildings)
   const isLoading = useBuildingStore((state) => state.isLoading)
   const loadBuildings = useBuildingStore((state) => state.loadBuildings)
+  const updateBuilding = useBuildingStore((state) => state.updateBuilding)
+  const deleteBuilding = useBuildingStore((state) => state.deleteBuilding)
   const { message } = AntApp.useApp()
 
   useEffect(() => {
@@ -32,6 +38,34 @@ export function BuildingListPage() {
     [buildings],
   )
   const activeCount = buildings.filter((b) => b.status === 'active').length
+
+  function openEdit(building: Building) {
+    setEditingBuilding(building)
+    editForm.setFieldsValue({ name: building.name, address: building.address })
+  }
+
+  async function submitEdit(values: { name: string; address: string }) {
+    if (!editingBuilding) return
+    setIsSaving(true)
+    try {
+      await updateBuilding(editingBuilding.id, values)
+      message.success('Đã cập nhật tòa nhà')
+      setEditingBuilding(null)
+    } catch (error) {
+      message.error((error as Error).message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleDelete(buildingId: string) {
+    try {
+      await deleteBuilding(buildingId)
+      message.success('Đã xóa tòa nhà')
+    } catch (error) {
+      message.error((error as Error).message)
+    }
+  }
 
   return (
     <main className="workspace blp-workspace">
@@ -98,6 +132,8 @@ export function BuildingListPage() {
               building={building}
               delay={idx * 0.06}
               onView={() => navigate(`/owner/buildings/${building.id}`)}
+              onEdit={() => openEdit(building)}
+              onDelete={() => handleDelete(building.id)}
             />
           ))}
 
@@ -117,6 +153,34 @@ export function BuildingListPage() {
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
       />
+
+      {/* ── Edit modal ── */}
+      <Modal
+        title="Chỉnh sửa tòa nhà"
+        open={Boolean(editingBuilding)}
+        confirmLoading={isSaving}
+        onCancel={() => setEditingBuilding(null)}
+        onOk={() => editForm.submit()}
+        okText="Lưu"
+        cancelText="Hủy"
+      >
+        <Form form={editForm} layout="vertical" onFinish={submitEdit}>
+          <Form.Item
+            name="name"
+            label="Tên tòa nhà"
+            rules={[{ required: true, message: 'Nhập tên tòa nhà' }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="address"
+            label="Địa chỉ"
+            rules={[{ required: true, message: 'Nhập địa chỉ' }]}
+          >
+            <Input />
+          </Form.Item>
+        </Form>
+      </Modal>
     </main>
   )
 }
@@ -126,9 +190,11 @@ type BuildingCardProps = {
   building: Building
   delay: number
   onView: () => void
+  onEdit: () => void
+  onDelete: () => void
 }
 
-function BuildingCard({ building, delay, onView }: BuildingCardProps) {
+function BuildingCard({ building, delay, onView, onEdit, onDelete }: BuildingCardProps) {
   const initial = building.name.slice(0, 2).toUpperCase()
 
   return (
@@ -185,9 +251,24 @@ function BuildingCard({ building, delay, onView }: BuildingCardProps) {
         <Button
           icon={<EditOutlined />}
           className="blp-card__action-btn"
+          onClick={onEdit}
         >
           Sửa
         </Button>
+        <Popconfirm
+          title="Xóa tòa nhà này?"
+          description="Các tầng, POI và dữ liệu bản đồ sẽ bị xóa."
+          okText="Xóa"
+          cancelText="Hủy"
+          okButtonProps={{ danger: true }}
+          onConfirm={onDelete}
+        >
+          <Button
+            icon={<DeleteOutlined />}
+            danger
+            className="blp-card__action-btn"
+          />
+        </Popconfirm>
       </div>
     </article>
   )

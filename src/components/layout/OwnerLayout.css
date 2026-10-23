@@ -1,0 +1,332 @@
+/* ============================================================
+   OwnerLayout — Premium Sidebar Navigation
+   ============================================================ */
+
+.ol-root {
+  display: flex;
+  min-height: 100svh;
+  background: transparent;
+}
+
+/* ── Sidebar ── */
+.ol-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--sw-border);
+  background: var(--sw-surface-1);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 50;
+  overflow: hidden;
+}
+
+.ol-sidebar--collapsed {
+  width: 64px;
+}
+
+/* ── Brand ── */
+.ol-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 18px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--sw-border-subtle);
+  flex-shrink: 0;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.ol-brand__logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--sw-violet), var(--sw-cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.35);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.ol-brand:hover .ol-brand__logo {
+  box-shadow: 0 0 28px rgba(139, 92, 246, 0.6);
+  transform: scale(1.05);
+}
+
+.ol-brand__name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--sw-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* ── Toggle button ── */
+.ol-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--sw-border);
+  background: var(--sw-surface-2);
+  color: var(--sw-text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  position: absolute;
+  top: 20px;
+  right: 14px;
+  transition: border-color 0.2s ease, color 0.2s ease;
+  z-index: 10;
+}
+
+.ol-toggle:hover {
+  border-color: var(--sw-violet);
+  color: var(--sw-violet);
+}
+
+/* ── Navigation ── */
+.ol-nav {
+  flex: 1;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.ol-nav__label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--sw-text-muted);
+  padding: 4px 8px 8px;
+  white-space: nowrap;
+}
+
+.ol-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--sw-radius-md);
+  color: var(--sw-text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'Space Grotesk', sans-serif;
+  transition: background 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  position: relative;
+}
+
+.ol-nav-item:hover {
+  background: rgba(139, 92, 246, 0.08);
+  color: var(--sw-text-primary);
+}
+
+.ol-nav-item--active {
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--sw-violet) !important;
+}
+
+.ol-nav-item--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 99px;
+  background: var(--sw-violet);
+}
+
+.ol-nav-item__icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ol-nav-item__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── User / bottom section ── */
+.ol-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 18px;
+  border-top: 1px solid var(--sw-border-subtle);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.ol-user__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--sw-violet), var(--sw-cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.ol-user__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ol-user__name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sw-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ol-user__role {
+  font-size: 11px;
+  color: var(--sw-text-muted);
+  white-space: nowrap;
+}
+
+.ol-logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--sw-border);
+  background: transparent;
+  color: var(--sw-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.ol-logout-btn:hover {
+  border-color: #f87171;
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
+}
+
+/* ── Main content area ── */
+.ol-main {
+  flex: 1;
+  margin-left: 240px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  transition: margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ol-sidebar--collapsed ~ .ol-main,
+.ol-root:has(.ol-sidebar--collapsed) .ol-main {
+  margin-left: 64px;
+}
+
+/* ── Top bar ── */
+.ol-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--sw-border);
+  background: rgba(10, 10, 20, 0.8);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.ol-topbar__breadcrumb {
+  display: flex;
+  align-items: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sw-text-secondary);
+}
+
+.ol-topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ol-live-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sw-cyan);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.ol-live-badge__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sw-cyan);
+  animation: dotPulse 2s ease-in-out infinite;
+}
+
+.ol-topbar__user {
+  font-size: 12px;
+  color: var(--sw-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* ── Content ── */
+.ol-content {
+  flex: 1;
+  overflow: auto;
+}
+
+/* ── Responsive (mobile) ── */
+@media (max-width: 768px) {
+  .ol-sidebar {
+    transform: translateX(-100%);
+    z-index: 200;
+    width: 240px !important;
+  }
+
+  .ol-sidebar.ol-sidebar--mobile-open {
+    transform: translateX(0);
+  }
+
+  .ol-main {
+    margin-left: 0 !important;
+  }
+}

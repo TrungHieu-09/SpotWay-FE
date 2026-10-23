@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import {
   createBuilding as createBuildingRequest,
   getBuildings,
+  updateBuilding as updateBuildingRequest,
+  deleteBuilding as deleteBuildingRequest,
 } from '../api/buildings'
 import type { Building, CreateBuildingPayload } from '../types/building'
 
@@ -11,6 +13,8 @@ type BuildingState = {
   error: string | null
   loadBuildings: () => Promise<void>
   createBuilding: (payload: CreateBuildingPayload) => Promise<Building>
+  updateBuilding: (buildingId: string, payload: Partial<Pick<Building, 'name' | 'address' | 'status'>>) => Promise<Building>
+  deleteBuilding: (buildingId: string) => Promise<void>
   getBuildingById: (buildingId: string) => Building | undefined
 }
 
@@ -38,8 +42,24 @@ export const useBuildingStore = create<BuildingState>((set, get) => ({
     return building
   },
 
+  async updateBuilding(buildingId, payload) {
+    const building = await updateBuildingRequest(buildingId, payload)
+    set((state) => ({
+      buildings: state.buildings.map((item) =>
+        item.id === buildingId ? building : item,
+      ),
+    }))
+    return building
+  },
+
+  async deleteBuilding(buildingId) {
+    await deleteBuildingRequest(buildingId)
+    set((state) => ({
+      buildings: state.buildings.filter((item) => item.id !== buildingId),
+    }))
+  },
+
   getBuildingById(buildingId) {
     return get().buildings.find((building) => building.id === buildingId)
   },
 }))
-
