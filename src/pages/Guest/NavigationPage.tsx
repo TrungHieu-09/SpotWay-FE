@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Button,
@@ -25,11 +25,12 @@ import {
   SwapOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { resolvePublicQrToken } from '../../api/publicNavigation'
 import { DemoSimulationToolbar } from '../../components/navigation/DemoSimulationToolbar'
 import { RouteMap } from '../../components/navigation/RouteMap'
 import { useNavigationStore } from '../../store/useNavigationStore'
-import type { Maneuver, RouteStep } from '../../types/navigation'
+import type { Maneuver, PublicQrResolution, RouteStep } from '../../types/navigation'
 import './NavigationPage.css'
 
 const formatDistance = (distance: number) =>
@@ -68,8 +69,19 @@ function getTurnArrow(instruction: string, transition?: string, maneuver?: Maneu
 }
 
 export function NavigationPage() {
-  const { buildingId } = useParams<{ buildingId: string }>()
+  const { buildingId: routeBuildingId } = useParams<{ buildingId: string }>()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const qrToken = searchParams.get('qr')
+  const paramFromNodeId = searchParams.get('fromNodeId') ?? undefined
+  const paramFloorId = searchParams.get('floorId') ?? undefined
+  const paramToStoreId = searchParams.get('toStoreId') ?? undefined
+  const [qr, setQr] = useState<PublicQrResolution>()
+  const [qrLoading, setQrLoading] = useState(Boolean(qrToken))
+  const [qrError, setQrError] = useState<string>()
+  const [qrLocked, setQrLocked] = useState(true)
+  const autoRoutedRef = useRef(false)
+  const buildingId = routeBuildingId ?? qr?.buildingId ?? searchParams.get('buildingId') ?? undefined
 
   const {
     floors,
@@ -84,6 +96,8 @@ export function NavigationPage() {
     findRoute,
     clearRoute,
     routeTargetName,
+    routeWarning,
+    routeSource,
     activeFireNodeIds,
     interactiveFireMode,
     toggleFireNode,
@@ -108,6 +122,35 @@ export function NavigationPage() {
   useEffect(() => {
     if (buildingId) void load(buildingId)
   }, [buildingId, load])
+
+  useEffect(() => {
+    if (!qrToken) return
+    let cancelled = false
+    resolvePublicQrToken(qrToken, () => {
+      // Mock khi backend chưa sẵn sàng: token "demo*" xuất phát từ node đầu tiên của tòa nhà đã tải
+      const { floors: loadedFloors, mapsByFloorId: maps } = useNavigationStore.getState()
+      const ground = [...loadedFloors].sort((a, b) => a.floorNumber - b.floorNumber)[0]
+      const node = ground && maps[ground.id]?.nodes[0]
+      return qrToken.startsWith('demo') && node && routeBuildingId
+        ? { nodeId: node.id, floorId: node.floorId, buildingId: routeBuildingId, x: node.x, y: node.y, label: 'Điểm quét QR (demo)' }
+        : undefined
+    })
+      .then((resolved) => {
+        if (cancelled) return
+        setQr(resolved)
+        setSelectedFloorId(resolved.floorId)
+        setQrLocked(true)
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setQrError(error instanceof Error ? error.message : 'Không thể xác thực mã QR.')
+      })
+      .finally(() => {
+        if (!cancelled) setQrLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [qrToken, routeBuildingId])
 
   const sortedFloors = useMemo(() => {
     return [...floors].sort((a, b) => b.floorNumber - a.floorNumber) // Descending for vertical stack
@@ -134,12 +177,15 @@ export function NavigationPage() {
 
   const currentStep: RouteStep | undefined = route?.steps[stepIndex]
   const nextStep: RouteStep | undefined = route?.steps[stepIndex + 1]
-  const effectiveFromNodeId = fromNodeId ?? sourceOptions[0]?.value
-  const displayedFloorId = currentStep?.floorId ?? selectedFloorId ?? floors[0]?.id
+  const fromLocked = Boolean(qr) && qrLocked
+  const effectiveFromNodeId =
+    (fromLocked ? qr?.nodeId : undefined) ?? fromNodeId ?? qr?.nodeId ?? paramFromNodeId ?? sourceOptions[0]?.value
+  const displayedFloorId =
+    currentStep?.floorId ?? selectedFloorId ?? qr?.floorId ?? paramFloorId ?? floors[0]?.id
 
   const handleSelectNode = (nodeId: string) => {
     if (interactiveFireMode) toggleFireNode(nodeId, currentStep?.nodeId)
-    else setFromNodeId(nodeId)
+    else if (!fromLocked) setFromNodeId(nodeId)
   }
 
   const destinationObj = destinations.find((d) => d.id === destinationId)
@@ -154,9 +200,21 @@ export function NavigationPage() {
       toStoreId: dest,
       wheelchairMode,
     })
+    if (!result) return
     setStepIndex(0)
     setSelectedFloorId(result.steps[0]?.floorId)
   }
+
+  // Deep-link ?toStoreId=: tự chỉ đường khi đã có điểm xuất phát và dữ liệu điểm đến
+  useEffect(() => {
+    if (autoRoutedRef.current || !paramToStoreId || isLoading || !effectiveFromNodeId) return
+    if (!destinations.some((item) => item.id === paramToStoreId)) return
+    autoRoutedRef.current = true
+    setDestinationId(paramToStoreId)
+    void beginRoute(paramToStoreId, effectiveFromNodeId).catch(() => undefined)
+    // beginRoute phụ thuộc state cục bộ; chỉ cần chạy 1 lần khi đủ dữ liệu
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paramToStoreId, isLoading, effectiveFromNodeId, destinations])
 
   // Quick Demo Route (Lecture Hall 301 as in Reference Photo)
   const handleLoadDemoRoute = () => {
@@ -188,7 +246,21 @@ export function NavigationPage() {
     }
   }
 
-  if (!buildingId) return <Empty description="Thiếu mã tòa nhà" />
+  if (!buildingId) {
+    if (qrLoading) return <Skeleton active paragraph={{ rows: 6 }} style={{ padding: 24 }} />
+    if (qrError) {
+      return (
+        <Alert
+          type="error"
+          showIcon
+          style={{ margin: 24 }}
+          message="Mã QR không hợp lệ hoặc đã hết hiệu lực"
+          description={qrError}
+        />
+      )
+    }
+    return <Empty description="Thiếu mã tòa nhà" />
+  }
 
   return (
     <main className="navigation-page">
@@ -236,7 +308,59 @@ export function NavigationPage() {
         </Space>
       </header>
 
+      {qr && (
+        <Alert
+          type="success"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={`Vị trí quét QR: ${qr.label}`}
+          description={`Tầng ${floors.find((floor) => floor.id === qr.floorId)?.floorNumber ?? ''} · ${qrLocked ? 'điểm xuất phát đã được khóa theo mã QR' : 'bạn đang tự chọn điểm xuất phát'}`}
+          action={
+            <Button size="small" onClick={() => setQrLocked((locked) => !locked)}>
+              {qrLocked ? 'Đổi vị trí' : 'Dùng vị trí QR'}
+            </Button>
+          }
+        />
+      )}
+      {qrError && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="Không xác thực được mã QR — hãy chọn điểm xuất phát thủ công"
+          description={qrError}
+        />
+      )}
+
       <DemoSimulationToolbar currentNodeId={currentStep?.nodeId} />
+
+      {routeWarning && (
+        <Alert
+          type={routeWarning.severity === 'CRITICAL' ? 'error' : 'warning'}
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={routeWarning.code === 'DESTINATION_IN_HAZARD' ? '🚨 Điểm đến đang bị cháy — đã huỷ điểm đến' : routeWarning.code}
+          description={
+            <>
+              {routeWarning.message}
+              {routeWarning.requestedDestinationName && <div>Điểm đến bị huỷ: {routeWarning.requestedDestinationName}</div>}
+              {routeWarning.destinationCancelled && routeTargetName && (
+                <div>
+                  Đang dẫn tới lối thoát hiểm: <b>{routeTargetName}</b>
+                </div>
+              )}
+            </>
+          }
+        />
+      )}
+      {route && routeSource === 'offline' && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="Chế độ ngoại tuyến: tuyến đường được tính ngay trên thiết bị"
+        />
+      )}
 
       {error && (
         <Alert
@@ -316,6 +440,7 @@ export function NavigationPage() {
                       value={effectiveFromNodeId}
                       options={sourceOptions}
                       onChange={setFromNodeId}
+                      disabled={fromLocked}
                       style={{ width: '100%' }}
                     />
                     <Select
@@ -481,6 +606,7 @@ export function NavigationPage() {
               value={effectiveFromNodeId}
               options={sourceOptions}
               onChange={setFromNodeId}
+              disabled={fromLocked}
               placeholder="Chạm một điểm trên bản đồ"
               showSearch
               optionFilterProp="label"

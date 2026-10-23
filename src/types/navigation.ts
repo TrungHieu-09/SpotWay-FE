@@ -56,6 +56,15 @@ export type RouteInstruction = {
   text: string
 }
 
+export type PublicQrResolution = {
+  nodeId: string
+  floorId: string
+  buildingId: string
+  x: number
+  y: number
+  label: string
+}
+
 export type PublicNode = {
   id: string
   floorId: string
@@ -123,7 +132,22 @@ export type RouteStep = {
   waitSeconds?: number
 }
 
+export type RouteWarningPayload = {
+  code: string
+  severity: 'CRITICAL' | 'WARNING' | 'INFO'
+  message: string
+}
+
+export type RouteDestinationRef = { type: string; id: string; nodeId: string }
+
 export type IndoorRoute = {
+  requestedMode?: 'NORMAL' | 'EVACUATION'
+  effectiveMode?: 'NORMAL' | 'EVACUATION'
+  routeReason?: string
+  destinationCancelled?: boolean
+  requestedDestination?: RouteDestinationRef | null
+  resolvedDestination?: RouteDestinationRef | null
+  warnings?: RouteWarningPayload[]
   totalDistance: number
   estimatedDurationSeconds: number
   nodeIds: string[]

@@ -14,6 +14,7 @@ export const router = createBrowserRouter([
   // ── Landing page (no layout wrapper) ──
   { path: '/', element: <LandingPage /> },
   { path: '/login', element: <LoginPage /> },
+  { path: '/navigate', element: <NavigationPage /> },
   { path: '/navigate/:buildingId', element: <NavigationPage /> },
 
   // ── App shell with sticky header & role switcher ──

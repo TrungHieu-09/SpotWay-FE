@@ -18,6 +18,7 @@ import type {
 } from '../types/navigation'
 import {
   findIndoorRoute,
+  findRouteWithHazardPolicy,
   getExitCandidates,
   inferVerticalLinks,
   type RouteTarget,
@@ -46,7 +47,7 @@ export type FireScenarioId =
 export type DemoScenarioId = HappyScenarioId | FireScenarioId | 'reset'
 
 export type RouteWarning = {
-  code: 'DESTINATION_IN_HAZARD' | 'NO_SAFE_EXIT_FOUND' | 'SOURCE_IN_HAZARD'
+  code: string
   severity: 'CRITICAL' | 'WARNING'
   message: string
   destinationCancelled?: boolean
@@ -74,6 +75,7 @@ type NavigationSimulationState = {
   routeTargetName?: string
   simulationMessage?: string
   routeWarning?: RouteWarning
+  routeSource?: 'api' | 'offline'
   interactiveFireMode: boolean
   triggerFireAlarm: (initialFireNodeId?: string, currentNodeId?: string) => void
   blockExitWithFire: (exitNodeId: string) => void
@@ -95,7 +97,7 @@ type NavigationState = NavigationSimulationState & {
   error?: string
   load: (buildingId: string) => Promise<void>
   search: (query: string) => Promise<void>
-  findRoute: (input: { fromNodeId: string; toStoreId: string; wheelchairMode: boolean }) => Promise<IndoorRoute>
+  findRoute: (input: { fromNodeId: string; toStoreId: string; wheelchairMode: boolean }) => Promise<IndoorRoute | undefined>
   clearRoute: () => void
 }
 
@@ -110,6 +112,7 @@ const INITIAL_SIMULATION = {
   routeTargetName: undefined,
   simulationMessage: undefined,
   routeWarning: undefined,
+  routeSource: undefined,
   interactiveFireMode: false,
 }
 
@@ -163,10 +166,14 @@ function neighborsOf(mapsByFloorId: Record<string, PublicFloorMap>, nodeId: stri
 }
 
 export const useNavigationStore = create<NavigationState>((set, get) => {
-  const routeOnGraph = (startNodeId: string, target: RouteTarget, request: RouteRequest = {}) => {
+  const graphInput = (request: RouteRequest) => {
     const { floors, mapsByFloorId, verticalLinks, emergencyMode, activeFireNodeIds, blockedEdgeIds } = get()
     const maps = Object.values(mapsByFloorId)
-    return findIndoorRoute(startNodeId, target, maps.flatMap((map) => map.nodes), maps.flatMap((map) => map.edges), verticalLinks, {
+    return {
+      nodes: maps.flatMap((map) => map.nodes),
+      edges: maps.flatMap((map) => map.edges),
+      verticalLinks,
+      options: {
       wheelchairMode: request.wheelchairMode,
       emergencyMode,
       blockedNodeIds: new Set(activeFireNodeIds),
@@ -177,7 +184,13 @@ export const useNavigationStore = create<NavigationState>((set, get) => {
       floorNames: floorNamesOf(floors),
       mapUnitsPerMeter: calibrationOf(floors, 'mapUnitsPerMeter'),
       northOffsetDegrees: calibrationOf(floors, 'northOffsetDegrees'),
-    })
+      },
+    }
+  }
+
+  const routeOnGraph = (startNodeId: string, target: RouteTarget, request: RouteRequest = {}) => {
+    const { nodes, edges, verticalLinks, options } = graphInput(request)
+    return findIndoorRoute(startNodeId, target, nodes, edges, verticalLinks, options)
   }
 
   const exitName = (nodeId: string | undefined) => {
@@ -187,28 +200,29 @@ export const useNavigationStore = create<NavigationState>((set, get) => {
 
   /** Tính tuyến và ghi vào store; tự huỷ điểm đến đang cháy và chuyển sang thoát hiểm. */
   const applyRoute = (startNodeId: string, target: RouteTarget, request: RouteRequest = {}) => {
-    const { activeFireNodeIds } = get()
     const wheelchairMode = request.wheelchairMode ?? false
     set({ simulationStartNodeId: startNodeId, simulationWheelchairMode: wheelchairMode })
 
-    if (activeFireNodeIds.includes(startNodeId)) {
-      set({
-        route: undefined,
-        routeTargetName: undefined,
-        routeWarning: {
-          code: 'SOURCE_IN_HAZARD',
-          severity: 'CRITICAL',
-          message: 'Vị trí hiện tại nằm trong vùng cháy — không thể tính tuyến an toàn từ điểm này.',
-        },
-      })
-      return undefined
-    }
+    const { nodes, edges, verticalLinks, options } = graphInput({ ...request, wheelchairMode })
+    const outcome = findRouteWithHazardPolicy(startNodeId, target, nodes, edges, verticalLinks, options)
+    if (outcome.effectiveMode === 'EVACUATION') set({ emergencyMode: 'FIRE' })
 
-    let effectiveTarget = target
     let routeWarning: RouteWarning | undefined
-    if (typeof target === 'string' && activeFireNodeIds.includes(target)) {
-      set({ emergencyMode: 'FIRE' })
-      effectiveTarget = { findNearestExit: true }
+    if (outcome.warningCode === 'SOURCE_IN_HAZARD') {
+      routeWarning = {
+        code: 'SOURCE_IN_HAZARD',
+        severity: 'CRITICAL',
+        message: 'Vị trí hiện tại nằm trong vùng cháy — không thể tính tuyến an toàn từ điểm này.',
+      }
+    } else if (outcome.warningCode === 'NO_SAFE_EXIT_FOUND') {
+      routeWarning = {
+        code: 'NO_SAFE_EXIT_FOUND',
+        severity: 'CRITICAL',
+        message: 'Không còn lối thoát hiểm an toàn. Di chuyển tới khu vực lánh nạn và gọi 114.',
+        destinationCancelled: outcome.destinationCancelled,
+        requestedDestinationName: outcome.destinationCancelled ? request.targetName : undefined,
+      }
+    } else if (outcome.warningCode === 'DESTINATION_IN_HAZARD') {
       routeWarning = {
         code: 'DESTINATION_IN_HAZARD',
         severity: 'CRITICAL',
@@ -218,27 +232,13 @@ export const useNavigationStore = create<NavigationState>((set, get) => {
       }
     }
 
-    const evacuation = get().emergencyMode === 'FIRE'
-    if (evacuation && typeof effectiveTarget === 'string') {
-      // Khi đang báo cháy, mọi yêu cầu thường đều chuyển sang tìm lối thoát
-      effectiveTarget = { findNearestExit: true }
-    }
-
-    const route = routeOnGraph(startNodeId, effectiveTarget, { ...request, wheelchairMode })
+    const route = outcome.route
     if (!route) {
       set({
         route: undefined,
         routeTargetName: undefined,
-        routeWarning:
-          routeWarning ??
-          (evacuation
-            ? {
-                code: 'NO_SAFE_EXIT_FOUND',
-                severity: 'CRITICAL',
-                message: 'Không còn lối thoát hiểm an toàn. Di chuyển tới khu vực lánh nạn và gọi 114.',
-              }
-            : undefined),
-        error: evacuation ? undefined : 'Không tìm thấy tuyến đường phù hợp trên đồ thị.',
+        routeWarning,
+        error: outcome.effectiveMode === 'EVACUATION' ? undefined : 'Không tìm thấy tuyến đường phù hợp trên đồ thị.',
       })
       return undefined
     }
@@ -248,7 +248,8 @@ export const useNavigationStore = create<NavigationState>((set, get) => {
       route,
       error: undefined,
       routeWarning,
-      routeTargetName: get().emergencyMode === 'FIRE' ? exitName(lastNodeId) : (request.targetName ?? exitName(lastNodeId)),
+      routeSource: 'offline',
+      routeTargetName: outcome.effectiveMode === 'EVACUATION' ? exitName(lastNodeId) : (request.targetName ?? exitName(lastNodeId)),
     })
     return route
   }
@@ -469,9 +470,49 @@ export const useNavigationStore = create<NavigationState>((set, get) => {
     async findRoute(input) {
       set({ isRouting: true, error: undefined })
       try {
-        const route = await createPublicRoute(input)
-        set({ route, routeTargetName: undefined, routeWarning: undefined })
-        return route
+        const { emergencyMode, activeFireNodeIds } = get()
+        const evacuation = emergencyMode === 'FIRE'
+        try {
+          const route = await createPublicRoute({
+            ...input,
+            ...(evacuation ? { mode: 'EVACUATION' as const, hazardNodeIds: activeFireNodeIds } : {}),
+          })
+          const critical = route.warnings?.find((item) => item.severity === 'CRITICAL') ?? route.warnings?.[0]
+          const resolvedNodeId = route.resolvedDestination?.nodeId
+          set({
+            route,
+            routeSource: 'api',
+            routeTargetName: route.effectiveMode === 'EVACUATION' ? exitName(resolvedNodeId ?? route.nodeIds.at(-1)) : undefined,
+            routeWarning: critical && {
+              code: critical.code,
+              severity: critical.severity === 'CRITICAL' ? 'CRITICAL' : 'WARNING',
+              message: route.destinationCancelled
+                ? `${critical.message} Đã chuyển sang lộ trình thoát hiểm.`
+                : critical.message,
+              destinationCancelled: route.destinationCancelled,
+              requestedDestinationName: get().destinations.find((item) => item.id === input.toStoreId)?.name,
+            },
+            ...(route.effectiveMode === 'EVACUATION' ? { emergencyMode: 'FIRE' as const } : {}),
+          })
+          return route
+        } catch (apiError) {
+          // Backend lỗi/mất mạng: tính tuyến offline bằng Dijkstra cục bộ để không gián đoạn trải nghiệm
+          const destination = get().destinations.find((item) => item.id === input.toStoreId)
+          if (!destination || Object.keys(get().mapsByFloorId).length === 0) throw apiError
+          const route = applyRoute(input.fromNodeId, destination.nodeId, {
+            targetName: destination.name,
+            wheelchairMode: input.wheelchairMode,
+          })
+          if (route) {
+            set({ routeSource: 'offline' })
+            return route
+          }
+          if (get().routeWarning) {
+            set({ routeSource: 'offline' })
+            return undefined
+          }
+          throw apiError
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Không thể tìm tuyến đường.'
         set({ error: message })
@@ -481,7 +522,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => {
       }
     },
     clearRoute() {
-      set({ route: undefined, routeTargetName: undefined, routeWarning: undefined })
+      set({ route: undefined, routeTargetName: undefined, routeWarning: undefined, routeSource: undefined })
     },
     triggerFireAlarm(initialFireNodeId, currentNodeId) {
       const { floors, mapsByFloorId, simulationStartNodeId, activeFireNodeIds } = get()

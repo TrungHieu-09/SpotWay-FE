@@ -497,6 +497,54 @@ export function buildTurnByTurn(
   return { instructions, steps }
 }
 
+export type HazardPolicyOutcome = {
+  route: IndoorRoute | null
+  effectiveMode: 'NORMAL' | 'EVACUATION'
+  destinationCancelled: boolean
+  warningCode?: 'DESTINATION_IN_HAZARD' | 'NO_SAFE_EXIT_FOUND' | 'SOURCE_IN_HAZARD'
+}
+
+/**
+ * Áp chính sách an toàn lên một yêu cầu tìm đường:
+ * - nguồn nằm trong vùng cháy → SOURCE_IN_HAZARD (không giả vờ có tuyến an toàn);
+ * - điểm đến cụ thể nằm trong vùng cháy → huỷ điểm đến, chuyển sang EVACUATION;
+ * - đang ở chế độ cháy → mọi điểm đến cụ thể đều đổi thành lối thoát an toàn gần nhất;
+ * - không còn lối thoát → NO_SAFE_EXIT_FOUND, tuyệt đối không quay lại điểm cháy.
+ */
+export function findRouteWithHazardPolicy(
+  startNodeId: string,
+  target: RouteTarget,
+  nodes: PathfindingNode[],
+  edges: PathfindingEdge[],
+  verticalLinks: VerticalLink[],
+  options: PathfindingOptions = {},
+): HazardPolicyOutcome {
+  const blocked = options.blockedNodeIds
+  const burning = options.emergencyMode === 'FIRE'
+  if (blocked?.has(startNodeId)) {
+    return {
+      route: null,
+      effectiveMode: burning ? 'EVACUATION' : 'NORMAL',
+      destinationCancelled: false,
+      warningCode: 'SOURCE_IN_HAZARD',
+    }
+  }
+  const destinationCancelled = typeof target === 'string' && blocked?.has(target) === true
+  const evacuation = burning || destinationCancelled
+  const effectiveTarget: RouteTarget =
+    evacuation && typeof target === 'string' ? { findNearestExit: true } : target
+  const route = findIndoorRoute(startNodeId, effectiveTarget, nodes, edges, verticalLinks, {
+    ...options,
+    emergencyMode: evacuation ? 'FIRE' : options.emergencyMode,
+  })
+  return {
+    route,
+    effectiveMode: evacuation ? 'EVACUATION' : 'NORMAL',
+    destinationCancelled,
+    warningCode: !route && evacuation ? 'NO_SAFE_EXIT_FOUND' : destinationCancelled ? 'DESTINATION_IN_HAZARD' : undefined,
+  }
+}
+
 // ── Dijkstra ──────────────────────────────────────────────────────────────────
 
 /**

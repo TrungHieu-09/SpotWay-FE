@@ -41,8 +41,6 @@ export function DemoSimulationToolbar({ currentNodeId }: DemoSimulationToolbarPr
   const isDemoRunning = useNavigationStore((state) => state.isDemoRunning)
   const activeScenarioId = useNavigationStore((state) => state.activeScenarioId)
   const simulationMessage = useNavigationStore((state) => state.simulationMessage)
-  const routeWarning = useNavigationStore((state) => state.routeWarning)
-  const routeTargetName = useNavigationStore((state) => state.routeTargetName)
   const route = useNavigationStore((state) => state.route)
   const interactiveFireMode = useNavigationStore((state) => state.interactiveFireMode)
   const runDemoScenario = useNavigationStore((state) => state.runDemoScenario)
@@ -114,25 +112,6 @@ export function DemoSimulationToolbar({ currentNodeId }: DemoSimulationToolbarPr
           ]}
         />
 
-        {routeWarning && (
-          <Alert
-            type={routeWarning.severity === 'CRITICAL' ? 'error' : 'warning'}
-            showIcon
-            message={
-              <Space wrap>
-                <Typography.Text strong>{routeWarning.code}</Typography.Text>
-                {routeWarning.destinationCancelled && <Tag color="red">Destination cancelled</Tag>}
-              </Space>
-            }
-            description={
-              <>
-                {routeWarning.message}
-                {routeWarning.requestedDestinationName && <div>Điểm đến bị huỷ: {routeWarning.requestedDestinationName}</div>}
-                {route && routeTargetName && <div>Lối thoát được chọn: <b>{routeTargetName}</b></div>}
-              </>
-            }
-          />
-        )}
         {simulationMessage && (
           <Alert type={emergencyMode === 'FIRE' ? 'error' : 'info'} showIcon message={simulationMessage} />
         )}

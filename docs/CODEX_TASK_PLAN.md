@@ -631,3 +631,63 @@ Codex chỉ đánh dấu task hoàn thành khi có đủ:
 - Crowd density, smoke propagation simulation, live occupancy.
 - Thay Dijkstra bằng A* nếu chưa có benchmark chứng minh cần thiết.
 
+## 12. Kết quả nghiệm thu Frontend — Codex Pane 2 (2026-10-23)
+
+> Phạm vi checkpoint này chỉ là commit FE `9a80f72`. Các task T01–T21 phía trên là Acceptance Criteria end-to-end có backend/migration/API/e2e nên vẫn giữ `[ ]` cho đến khi hoàn thành đủ scope. Các checkbox dưới đây ghi nhận chính xác phần FE đã được Codex đọc code và kiểm tra độc lập.
+
+### Đã nghiệm thu
+
+- [x] **FE01 — Engine Dijkstra/min-heap và metric frontend hoạt động.**
+  - Có multi-target, wheelchair filtering, blocked edge/node, vertical timing và duration breakdown.
+  - Reviewer assertion xác nhận distance theo mét, instruction aggregation và arrival mode.
+  - Benchmark reviewer: graph 2.000 node/3.910 edge, median `13.45 ms`, cold run `39.28 ms`, đạt `<50 ms`.
+
+- [x] **FE02 — Bearing/delta-bearing và maneuver typed đã triển khai.**
+  - Reviewer xác nhận `350° -> 10° = +20°`, `10° -> 350° = -20°`.
+  - Boundary xác nhận: `<15° STRAIGHT`, `15° SLIGHT`, `45° TURN`, `135° U_TURN`.
+  - Có START/STRAIGHT/SLIGHT/TURN/U_TURN/vertical/ARRIVE/ARRIVE_AT_SAFE_EXIT và instruction theo mét.
+
+- [x] **FE03 — DemoSimulationToolbar hiển thị đủ danh mục frontend.**
+  - Có hai tab, đúng 10 Happy keys và 6 Fire keys theo manifest.
+  - Có loading/active scenario, reset, fire status, warning critical và duration summary.
+
+- [x] **FE04 — Interactive Fire local simulation hoạt động ở tầng code.**
+  - Click/toggle/reset hazard cập nhật Zustand đồng bộ và gọi reroute ngay.
+  - Node đang cháy bị loại khỏi graph; không cho đặt lửa tại current node.
+  - Có marker cháy trên map, cảnh báo đỏ và reroute tới exit khác khi còn route.
+
+- [x] **FE05 — Frontend quality gate khả dụng đã pass.**
+  - `npm run build`: pass.
+  - `npm run lint`: exit 0; navigation files mới không phát sinh warning.
+  - `git diff --check`: commit sạch.
+
+### Chưa đạt / không được tick task end-to-end
+
+- [ ] **FE06 — Automated tests phải được commit và chạy từ package script.**
+  - Repo chưa có test runner hoặc `npm test`; các assertion “fixture riêng” trong implementation report không tồn tại trong source tree.
+  - Cần unit tests cho pathfinding/store và component interaction để kết quả có thể tái chạy trong CI.
+
+- [ ] **FE07 — Backend phải là nguồn route authoritative.**
+  - Demo/fire hiện gọi `findIndoorRoute()` trực tiếp trong FE, trái T13 “UI không tự tính route”.
+  - Chưa có request/response `requestId`, effective mode, warnings và nearest API từ backend.
+  - T20 backend contract và stale-response protection chưa hoàn thành; local synchronous calculation chỉ là demo fallback.
+
+- [ ] **FE08 — Vertical-link data phải đến từ backend, không suy luận theo khoảng cách.**
+  - FE đang suy luận stair/escalator/elevator nếu hai node gần nhau; chưa đảm bảo shaft thật, direction, `smokeProtected`, `emergencyAllowed` hoặc building scope.
+  - H5/H6 dùng default escalator direction thay vì dữ liệu authoritative.
+
+- [ ] **FE09 — Deterministic topology và browser e2e.**
+  - Chưa có seed ba tầng/ba exit/ATM chuẩn nên 16 button có thể báo thiếu dữ liệu tùy building.
+  - Chưa chạy click-through bằng browser với backend thật; chưa chứng minh đủ 16 scenario đều cho expected route.
+
+- [ ] **FE10 — Đồng bộ calibration và coordinate contract.**
+  - `mapUnitsPerMeter`/`northOffsetDegrees` chưa được backend trả; FE fallback `10 units/m` trong khi backend hiện có fallback riêng.
+  - Implementation report xác nhận dùng map units, đang lệch quy ước `AGENTS.md` yêu cầu tọa độ `0..100%`; cần team chốt một contract duy nhất.
+
+### Kết luận task gốc
+
+- T17/T18/T19: **FE implementation đã có**, nhưng chưa `[x]` vì thiếu migration/backend DTO/Swagger và automated tests theo AC.
+- T05/T06/T07: **FE simulation đã có**, nhưng chưa `[x]` vì thiếu `smokeProtected`, response metadata authoritative và backend safety tests.
+- T12/T20: **toolbar/local interactive đã có**, nhưng chưa `[x]` vì thiếu scenario API, feature flag, request sequencing và HTTP e2e.
+- T14/T15/T16/T21: chưa `[x]`; test runner/e2e/backend gates chưa đủ, implementation report cũng chưa phản ánh đúng tổng số lint warning (`18`, không phải `3`).
+
