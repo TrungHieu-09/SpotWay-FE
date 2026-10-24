@@ -38,6 +38,13 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      "expo-localization",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "SpotWay uses the camera to scan the QR code at your venue."
+        }
       ]
     ],
     "experiments": {
