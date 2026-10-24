@@ -137,7 +137,7 @@ function useElementSize<T extends HTMLElement>(isEnabled: boolean) {
   return [ref, size] as const
 }
 
-export function CanvasBoard() {
+export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
   const selectedFloor = useFloorStore((state) => state.selectedFloor)
   const [stageHostRef, stageHostSize] = useElementSize<HTMLDivElement>(
     Boolean(selectedFloor),
@@ -177,8 +177,8 @@ export function CanvasBoard() {
     }
     getGraph(selectedFloorId)
       .then(({ nodes: nextNodes, edges: nextEdges }) => {
-        setNodes(nextNodes)
-        setEdges(nextEdges)
+        setNodes(Array.isArray(nextNodes) ? nextNodes : [])
+        setEdges(Array.isArray(nextEdges) ? nextEdges : [])
         setEdgeStartNodeId(undefined)
         setSelectedNodeId(undefined)
         setRouteAnchorNodeId(undefined)
@@ -513,7 +513,7 @@ export function CanvasBoard() {
     })
   }
 
-  const selectedNode = nodes.find((n) => n.id === selectedNodeId)
+  const selectedNode = Array.isArray(nodes) ? nodes.find((n) => n.id === selectedNodeId) : undefined
 
   return (
     <div className="canvas-workspace">

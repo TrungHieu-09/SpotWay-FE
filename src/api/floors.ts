@@ -9,13 +9,43 @@ import type { Poi } from '../types/poi'
 type ApiFloor = { id: string; buildingId: string; floorNumber: number; name: string; mapImageUrl: string | null; mapWidth: number | null; mapHeight: number | null; publishStatus: 'DRAFT' | 'PUBLISHED' }
 type ApiPoi = { id: string; floorId: string; nodeId: string; name: string; category: string }
 type ApiNode = { id: string; x: number; y: number }
-function toFloor(floor: ApiFloor): Floor { return { id: floor.id, buildingId: floor.buildingId, name: floor.name, level: floor.floorNumber, publishStatus: floor.publishStatus === 'PUBLISHED' ? 'published' : 'draft', mapImageUrl: floor.mapImageUrl, mapWidth: floor.mapWidth ?? 1200, mapHeight: floor.mapHeight ?? 760, pois: [] } }
+function toFloor(floor: any): Floor {
+  if (floor && 'level' in floor) {
+    return {
+      id: floor.id,
+      buildingId: floor.buildingId,
+      name: floor.name,
+      level: floor.level,
+      publishStatus: floor.publishStatus ?? 'draft',
+      mapImageUrl: floor.mapImageUrl ?? null,
+      mapWidth: floor.mapWidth ?? 1200,
+      mapHeight: floor.mapHeight ?? 760,
+      pois: floor.pois ?? [],
+    }
+  }
+  return {
+    id: floor?.id ?? '',
+    buildingId: floor?.buildingId ?? '',
+    name: floor?.name ?? '',
+    level: floor?.floorNumber ?? 0,
+    publishStatus: floor?.publishStatus === 'PUBLISHED' ? 'published' : 'draft',
+    mapImageUrl: floor?.mapImageUrl ?? null,
+    mapWidth: floor?.mapWidth ?? 1200,
+    mapHeight: floor?.mapHeight ?? 760,
+    pois: [],
+  }
+}
 
 export async function getFloors(buildingId: string) {
-  const { data } = await apiClient.get<{ items: ApiFloor[] }>(
+  const { data } = await apiClient.get<any>(
     `/buildings/${buildingId}/floors`,
   )
-  const floors = data.items.map(toFloor)
+  const items = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.items)
+      ? data.items
+      : []
+  const floors = items.map(toFloor)
   return Promise.all(floors.map(async (floor) => ({ ...floor, pois: await getFloorPois(floor) })))
 }
 

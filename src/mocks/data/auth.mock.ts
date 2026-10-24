@@ -70,10 +70,19 @@ export const initialInvoicesSeed: Invoice[] = [
 ]
 
 const storedPlans = loadFromStorage(MOCK_STORAGE_KEYS.plans, initialPlansSeed)
-export const plans = storedPlans.length > 0 ? storedPlans : initialPlansSeed
-export const tenants = loadFromStorage(MOCK_STORAGE_KEYS.tenants, initialTenantsSeed)
-export const users = loadFromStorage(MOCK_STORAGE_KEYS.users, initialUsersSeed)
-export const invoices = loadFromStorage(MOCK_STORAGE_KEYS.invoices, initialInvoicesSeed)
+export const plans = Array.isArray(storedPlans) && storedPlans.length > 0 ? storedPlans : initialPlansSeed
+
+const storedTenants = loadFromStorage(MOCK_STORAGE_KEYS.tenants, initialTenantsSeed)
+export const tenants = Array.isArray(storedTenants) && storedTenants.length > 0 ? storedTenants : initialTenantsSeed
+
+const storedUsers = loadFromStorage(MOCK_STORAGE_KEYS.users, initialUsersSeed)
+const validStoredUsers = Array.isArray(storedUsers)
+  ? storedUsers.filter((u) => u && typeof u === 'object' && u.email && u.id)
+  : []
+export const users = validStoredUsers.length > 0 ? validStoredUsers : initialUsersSeed
+
+const storedInvoices = loadFromStorage(MOCK_STORAGE_KEYS.invoices, initialInvoicesSeed)
+export const invoices = Array.isArray(storedInvoices) && storedInvoices.length > 0 ? storedInvoices : initialInvoicesSeed
 
 saveToStorage(MOCK_STORAGE_KEYS.plans, plans)
 saveToStorage(MOCK_STORAGE_KEYS.tenants, tenants)

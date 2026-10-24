@@ -1,22 +1,58 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useScrollReveal } from '../../hooks/useScrollReveal'
 import './LandingPage.css'
 
+type LevelId = 'L1' | 'L2' | 'L3'
+
+const LEVEL_INFO: Record<
+  LevelId,
+  {
+    title: string
+    sub: string
+    beaconTitle: string
+    beaconSub: string
+    activeBadge: string
+  }
+> = {
+  L3: {
+    title: 'Room 3.12 · 2 min walk',
+    sub: 'Optimal elevator route via Core North',
+    beaconTitle: 'GATE B14 BEACON SYNCED',
+    beaconSub: '±0.4m precision · UWB Channel 5',
+    activeBadge: 'SUITE 3.12 (ACTIVE)',
+  },
+  L2: {
+    title: 'Retail Lounge · 1 min walk',
+    sub: 'Direct escalators via Central Atrium',
+    beaconTitle: 'ZONE 2B BEACON SYNCED',
+    beaconSub: '±0.3m precision · BLE Mesh',
+    activeBadge: 'RETAIL 2.05 (ACTIVE)',
+  },
+  L1: {
+    title: 'Concourse Gate 1-4 · 3 min walk',
+    sub: 'Main concourse moving walkway',
+    beaconTitle: 'CONCOURSE A1 BEACON SYNCED',
+    beaconSub: '±0.2m precision · UWB Channel 2',
+    activeBadge: 'GATE 1.02 (ACTIVE)',
+  },
+}
+
 export function LandingPage() {
   const pageRef = useScrollReveal()
   const isoRef = useRef<HTMLDivElement>(null)
+  const [activeLevel, setActiveLevel] = useState<LevelId>('L3')
 
   const handleIsoMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!isoRef.current) return
     const rect = e.currentTarget.getBoundingClientRect()
     const cx = rect.left + rect.width / 2
     const cy = rect.top + rect.height / 2
-    const dx = (e.clientX - cx) / (rect.width / 2)   // -1 to 1
-    const dy = (e.clientY - cy) / (rect.height / 2)  // -1 to 1
-    // Parallax: base rotateX=58 ±6, rotateZ=-38 ±6
-    const rotX = 58 - dy * 6
-    const rotZ = -38 + dx * 6
+    const dx = (e.clientX - cx) / (rect.width / 2) // -1 to 1
+    const dy = (e.clientY - cy) / (rect.height / 2) // -1 to 1
+    // Parallax: base rotateX=58 ±5, rotateZ=-36 ±5
+    const rotX = 58 - dy * 5
+    const rotZ = -36 + dx * 5
     isoRef.current.style.transition = 'transform 0.1s ease-out'
     isoRef.current.style.transform = `rotateX(${rotX}deg) rotateZ(${rotZ}deg) skewX(2deg)`
   }, [])
@@ -24,8 +60,10 @@ export function LandingPage() {
   const handleIsoMouseLeave = useCallback(() => {
     if (!isoRef.current) return
     isoRef.current.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
-    isoRef.current.style.transform = 'rotateX(58deg) rotateZ(-38deg) skewX(2deg)'
+    isoRef.current.style.transform = 'rotateX(58deg) rotateZ(-36deg) skewX(2deg)'
   }, [])
+
+  const currentInfo = LEVEL_INFO[activeLevel]
 
   return (
     <div className="lp-root" ref={pageRef}>
@@ -40,15 +78,14 @@ export function LandingPage() {
       {/* ── 1. NAVBAR ── */}
       <header className="lp-nav" data-reveal="fade-down" data-reveal-delay="0">
         <div className="lp-nav__inner">
-          <a href="#" className="lp-nav__brand">
+          <Link to="/" className="lp-nav__brand">
             <div className="lp-nav__logo">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-              </svg>
+              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#5de6ff' }}>
+                near_me
+              </span>
             </div>
             <span className="lp-nav__name">SpotWay</span>
-          </a>
+          </Link>
 
           <nav className="lp-nav__links">
             <a href="#features">Features</a>
@@ -58,8 +95,12 @@ export function LandingPage() {
           </nav>
 
           <div className="lp-nav__cta">
-            <Link to="/owner/buildings" className="lp-btn lp-btn--ghost">Sign In</Link>
-            <Link to="/owner/buildings" className="lp-btn lp-btn--primary">Get Started</Link>
+            <Link to="/login" className="lp-btn lp-btn--ghost">
+              Sign In
+            </Link>
+            <Link to="/login" className="lp-btn lp-btn--primary">
+              Launch Spatial HUD
+            </Link>
           </div>
         </div>
       </header>
@@ -69,175 +110,299 @@ export function LandingPage() {
         <div className="lp-hero__content">
           <div className="lp-hero__badge" data-reveal="fade-down" data-reveal-delay="100">
             <span className="lp-dot lp-dot--cyan" />
-            AI-Powered Indoor Navigation Platform
+            v2.4 Spatial Intelligence Live
           </div>
 
           <h1 className="lp-hero__title" data-reveal="fade-up" data-reveal-delay="160">
-            Navigate every floor.<br />
+            Navigate every floor.
+            <br />
             <span className="lp-gradient-text">Manage every space.</span>
           </h1>
 
           <p className="lp-hero__sub" data-reveal="fade-up" data-reveal-delay="220">
-            Next-gen multi-tenant indoor 3D mapping, fine-grained telemetry, and autonomous spatial graph navigation for mega complexes, transit hubs, and campus facilities.
+            Next-gen multi-tenant indoor 3D mapping, live pedestrian telemetry, and autonomous spatial graph recognition
+            for mega-complexes, transit hubs, and campus facilities.
           </p>
 
           <div className="lp-hero__actions" data-reveal="fade-up" data-reveal-delay="280">
-            <Link to="/owner/buildings" className="lp-btn lp-btn--primary lp-btn--lg">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-              Start for Free
+            <Link to="/login" className="lp-btn lp-btn--primary lp-btn--lg">
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                rocket_launch
+              </span>
+              Start Free Trial
             </Link>
             <Link to="/manager" className="lp-btn lp-btn--ghost lp-btn--lg">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              View Live Demo
+              <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#5de6ff' }}>
+                play_circle
+              </span>
+              Book Live 3D Demo
             </Link>
           </div>
 
           <div className="lp-hero__stats" data-reveal="fade-up" data-reveal-delay="340">
             <div className="lp-hero__stat">
-              <span className="lp-hero__stat-value">60+</span>
-              <span className="lp-hero__stat-label">Global Deployments</span>
+              <span className="lp-hero__stat-value">500+</span>
+              <span className="lp-hero__stat-label">Global Facilities</span>
             </div>
             <div className="lp-hero__stat-divider" />
             <div className="lp-hero__stat">
-              <span className="lp-hero__stat-value">1.4M+</span>
-              <span className="lp-hero__stat-label">Daily Navigations</span>
+              <span className="lp-hero__stat-value">12M+</span>
+              <span className="lp-hero__stat-label">Monthly Navigations</span>
             </div>
             <div className="lp-hero__stat-divider" />
             <div className="lp-hero__stat">
-              <span className="lp-hero__stat-value">±0.38m</span>
-              <span className="lp-hero__stat-label">Positioning Accuracy</span>
+              <span className="lp-hero__stat-value">±0.25m</span>
+              <span className="lp-hero__stat-label">Positioning Precision</span>
             </div>
           </div>
         </div>
 
-        {/* 3D Stacked Floor Map — SpaceLumi ISO style */}
+        {/* 3D Stacked Floor Map — Exact SpaceLumi / SpotWay Visual */}
         <div className="lp-hero__visual" data-reveal="fade-left" data-reveal-delay="200">
           <div className="lp-floormap-scene" onMouseMove={handleIsoMouseMove} onMouseLeave={handleIsoMouseLeave}>
-
-            {/* ── Level selector panel ── */}
+            {/* ── Floor Selector Glass HUD (Floating Left) ── */}
             <div className="lp-floormap-levels">
               <div className="lp-floormap-levels__label">LEVELS</div>
-              <div className="lp-floormap-level lp-floormap-level--active">
-                <span className="lp-floormap-level__badge">L3</span>
-                <span className="lp-floormap-level__name">Exec Suites</span>
-                <span className="lp-dot lp-dot--violet" />
-              </div>
-              <div className="lp-floormap-level">
-                <span className="lp-floormap-level__badge lp-floormap-level__badge--dim">L2</span>
-                <span className="lp-floormap-level__name lp-floormap-level__name--dim">Retail Hub</span>
-              </div>
-              <div className="lp-floormap-level">
-                <span className="lp-floormap-level__badge lp-floormap-level__badge--dim">L1</span>
-                <span className="lp-floormap-level__name lp-floormap-level__name--dim">Concourse</span>
-              </div>
+              <button
+                type="button"
+                className={`lp-floormap-level ${activeLevel === 'L3' ? 'lp-floormap-level--active' : ''}`}
+                onClick={() => setActiveLevel('L3')}
+              >
+                <span className={`lp-floormap-level__badge ${activeLevel !== 'L3' ? 'lp-floormap-level__badge--dim' : ''}`}>
+                  L3
+                </span>
+                <span className={`lp-floormap-level__name ${activeLevel !== 'L3' ? 'lp-floormap-level__name--dim' : ''}`}>
+                  Exec Suites
+                </span>
+                <span className={`lp-floormap-level-dot ${activeLevel === 'L3' ? 'lp-floormap-level-dot--active' : ''}`} />
+              </button>
+
+              <button
+                type="button"
+                className={`lp-floormap-level ${activeLevel === 'L2' ? 'lp-floormap-level--active' : ''}`}
+                onClick={() => setActiveLevel('L2')}
+              >
+                <span className={`lp-floormap-level__badge ${activeLevel !== 'L2' ? 'lp-floormap-level__badge--dim' : ''}`}>
+                  L2
+                </span>
+                <span className={`lp-floormap-level__name ${activeLevel !== 'L2' ? 'lp-floormap-level__name--dim' : ''}`}>
+                  Retail Hub
+                </span>
+                <span className={`lp-floormap-level-dot ${activeLevel === 'L2' ? 'lp-floormap-level-dot--active' : ''}`} />
+              </button>
+
+              <button
+                type="button"
+                className={`lp-floormap-level ${activeLevel === 'L1' ? 'lp-floormap-level--active' : ''}`}
+                onClick={() => setActiveLevel('L1')}
+              >
+                <span className={`lp-floormap-level__badge ${activeLevel !== 'L1' ? 'lp-floormap-level__badge--dim' : ''}`}>
+                  L1
+                </span>
+                <span className={`lp-floormap-level__name ${activeLevel !== 'L1' ? 'lp-floormap-level__name--dim' : ''}`}>
+                  Concourse
+                </span>
+                <span className={`lp-floormap-level-dot ${activeLevel === 'L1' ? 'lp-floormap-level-dot--active' : ''}`} />
+              </button>
             </div>
 
-            {/* ── Top-right HUD: destination callout ── */}
-            <div className="lp-floormap-hud lp-floormap-hud--dest">
+            {/* ── 3D Waypoint Callout Tooltip (Floating Top Right) ── */}
+            <div className="lp-floormap-hud--dest">
               <div className="lp-floormap-hud__icon">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                  near_me
+                </span>
               </div>
               <div className="lp-floormap-hud__text">
-                <div className="lp-floormap-hud__title">Room 3.12 · 2 min walk <span className="lp-dot lp-dot--green" /></div>
-                <div className="lp-floormap-hud__sub">Optimal elevator route via Core North</div>
+                <div className="lp-floormap-hud__title">
+                  <span>{currentInfo.title}</span>
+                  <span className="lp-dot lp-dot--green" />
+                </div>
+                <div className="lp-floormap-hud__sub">{currentInfo.sub}</div>
               </div>
             </div>
 
-            {/* ── 3D Isometric container — parent transform approach (SpaceLumi) ── */}
+            {/* ── 3D Isometric container ── */}
             <div className="lp-iso-perspective">
               <div className="lp-iso-container" ref={isoRef}>
-
-                {/* Floor L1 — Concourse (base) */}
-                <div className="lp-iso-floor lp-iso-floor--l1">
+                {/* FLOOR 1: Concourse (Base Level) */}
+                <div
+                  className={`lp-iso-floor lp-iso-floor--l1 ${activeLevel === 'L1' ? 'is-active' : ''}`}
+                  onClick={() => setActiveLevel('L1')}
+                >
                   <div className="lp-iso-floor__inner">
                     <div className="lp-iso-grid-h" />
                     <div className="lp-iso-grid-v" />
                     <div className="lp-iso-heat lp-iso-heat--cyan" />
-                    <span className="lp-iso-floor__label">L1 Concourse (Arrivals / Metro Link)</span>
+                    <span
+                      style={{
+                        position: 'absolute',
+                        bottom: '12px',
+                        left: '14px',
+                        fontFamily: 'monospace',
+                        fontSize: '9.5px',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                        color: activeLevel === 'L1' ? '#5de6ff' : 'rgba(255, 255, 255, 0.35)',
+                      }}
+                    >
+                      L1 CONCOURSE (ARRIVALS / METRO LINK)
+                    </span>
                   </div>
                 </div>
 
-                {/* Elevator core pillar */}
+                {/* Vertical Elevator Core Pillar */}
                 <div className="lp-iso-elevator" />
 
-                {/* Floor L2 — Retail Hub */}
-                <div className="lp-iso-floor lp-iso-floor--l2">
+                {/* FLOOR 2: Retail Hub (Middle Level) */}
+                <div
+                  className={`lp-iso-floor lp-iso-floor--l2 ${activeLevel === 'L2' ? 'is-active' : ''}`}
+                  onClick={() => setActiveLevel('L2')}
+                >
                   <div className="lp-iso-floor__inner lp-iso-floor__inner--l2">
                     <div className="lp-iso-grid-h" style={{ top: '33%' }} />
                     <div className="lp-iso-grid-v" style={{ left: '65%' }} />
                     <div className="lp-iso-heat lp-iso-heat--fuchsia" />
-                    <span className="lp-iso-floor__label lp-iso-floor__label--cyan">L2 Retail Hub (Duty Free &amp; Lounges)</span>
+                    <span
+                      style={{
+                        position: 'absolute',
+                        bottom: '12px',
+                        left: '14px',
+                        fontFamily: 'monospace',
+                        fontSize: '9.5px',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                        color: activeLevel === 'L2' ? '#5de6ff' : 'rgba(93, 230, 255, 0.65)',
+                      }}
+                    >
+                      L2 RETAIL HUB (DUTY FREE &amp; LOUNGES)
+                    </span>
                   </div>
                 </div>
 
-                {/* Floor L3 — Executive Suites (active, highest) */}
-                <div className="lp-iso-floor lp-iso-floor--l3">
+                {/* FLOOR 3: Executive Suites (Highest Level) */}
+                <div
+                  className={`lp-iso-floor lp-iso-floor--l3 ${activeLevel === 'L3' ? 'is-active' : ''}`}
+                  onClick={() => setActiveLevel('L3')}
+                >
                   <div className="lp-iso-floor__inner lp-iso-floor__inner--l3">
-                    {/* Architectural wall lines */}
-                    <div className="lp-iso-wall lp-iso-wall--h" style={{ top: 32 }} />
-                    <div className="lp-iso-wall lp-iso-wall--v" style={{ left: 80 }} />
+                    {/* Architectural partition walls */}
+                    <div className="lp-iso-wall lp-iso-wall--h" style={{ top: '2.5rem' }} />
+                    <div className="lp-iso-wall lp-iso-wall--v" style={{ left: '5.5rem' }} />
 
-                    {/* Animated neon nav path */}
-                    <svg className="lp-iso-navpath" viewBox="0 0 360 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {/* Animated Neon Nav Path Vector */}
+                    <svg
+                      className="lp-iso-navpath"
+                      viewBox="0 0 380 380"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
                       <defs>
                         <linearGradient id="neonPathGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                           <stop offset="0%" stopColor="#8B5CF6" />
                           <stop offset="100%" stopColor="#22D3EE" />
                         </linearGradient>
                       </defs>
-                      {/* Path */}
                       <path
-                        className="lp-iso-navpath__line"
-                        d="M 60 280 L 140 240 L 140 110 L 280 80"
+                        className="path-dash-animate"
+                        d="M 60 220 L 140 180 L 140 90 L 260 70"
                         stroke="url(#neonPathGrad)"
                         strokeWidth="4"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        strokeDasharray="8 6"
                         fill="none"
                       />
-                      {/* Destination pin with ping */}
-                      <circle cx="280" cy="80" r="8" fill="#22D3EE" />
-                      <circle cx="280" cy="80" r="8" fill="none" stroke="#22D3EE" strokeWidth="1.5" opacity="0.5">
-                        <animate attributeName="r" values="10;22;10" dur="2s" repeatCount="indefinite" />
-                        <animate attributeName="opacity" values="0.7;0;0.7" dur="2s" repeatCount="indefinite" />
+                      {/* Destination Pin Pulse */}
+                      <circle cx="260" cy="70" r="7" fill="#22D3EE" />
+                      <circle
+                        cx="260"
+                        cy="70"
+                        r="7"
+                        fill="none"
+                        stroke="#22D3EE"
+                        strokeWidth="1.5"
+                        opacity="0.6"
+                      >
+                        <animate attributeName="r" values="7;18;7" dur="2.2s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" values="0.8;0;0.8" dur="2.2s" repeatCount="indefinite" />
                       </circle>
-                      {/* Origin dot */}
-                      <circle cx="60" cy="280" r="6" fill="#8B5CF6" />
+                      {/* Origin Dot */}
+                      <circle cx="60" cy="220" r="5" fill="#8B5CF6" />
                     </svg>
 
-                    {/* Active room badge */}
-                    <div className="lp-iso-room-badge">SUITE 3.12 (ACTIVE)</div>
+                    {/* Active Room Badge */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '14px',
+                        right: '18px',
+                        padding: '3px 10px',
+                        borderRadius: '6px',
+                        background: 'rgba(34, 211, 238, 0.18)',
+                        border: '1px solid #22D3EE',
+                        color: '#22D3EE',
+                        fontFamily: 'monospace',
+                        fontSize: '9.5px',
+                        fontWeight: 700,
+                        letterSpacing: '0.04em',
+                        zIndex: 10,
+                      }}
+                    >
+                      {currentInfo.activeBadge}
+                    </div>
 
-                    {/* Floor label */}
-                    <span className="lp-iso-floor__label lp-iso-floor__label--violet">
-                      <span className="lp-iso-floor__label-dot" />
-                      L3 Executive Suites &amp; Medical Center
+                    {/* Floor Label with live beacon indicator */}
+                    <span
+                      style={{
+                        position: 'absolute',
+                        bottom: '12px',
+                        left: '14px',
+                        fontFamily: 'monospace',
+                        fontSize: '9.5px',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        color: '#d0bcff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          backgroundColor: '#8B5CF6',
+                          display: 'inline-block',
+                          boxShadow: '0 0 6px #8B5CF6',
+                        }}
+                      />
+                      L3 EXECUTIVE SUITES &amp; MEDICAL CENTER
                     </span>
                   </div>
                 </div>
-
               </div>
             </div>
 
-            {/* ── Bottom-right HUD: beacon status ── */}
-            <div className="lp-floormap-hud lp-floormap-hud--beacon">
-              <div className="lp-floormap-beacon-icon">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5.64 5.64a9 9 0 0 0 0 12.73M18.36 5.64a9 9 0 0 1 0 12.73"/>
-                  <path d="M8.46 8.46a5 5 0 0 0 0 7.07M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                  <circle cx="12" cy="12" r="1" fill="currentColor"/>
-                </svg>
-              </div>
-              <div className="lp-floormap-hud__text">
-                <div className="lp-floormap-hud__title lp-floormap-hud__title--beacon">GATE B14 BEACON SYNCED</div>
-                <div className="lp-floormap-hud__sub">±0.4m precision · UMB Channel 5</div>
+            {/* ── Bottom-Right QR / Beacon Floating Badge ── */}
+            <div className="lp-floormap-hud--beacon">
+              <span className="material-symbols-outlined" style={{ color: '#f8acff', fontSize: '22px' }}>
+                sensors
+              </span>
+              <div style={{ textAlign: 'left' }}>
+                <div className="lp-floormap-hud__title--beacon">{currentInfo.beaconTitle}</div>
+                <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#e3e0f6' }}>
+                  {currentInfo.beaconSub}
+                </div>
               </div>
             </div>
-
           </div>
         </div>
       </section>
+
 
       {/* ── 3. LOGOS ── */}
       <section className="lp-logos">

@@ -15,6 +15,7 @@ function clearSession() {
   window.localStorage.removeItem('spotway.accessToken')
   window.localStorage.removeItem('spotway.refreshToken')
   window.localStorage.removeItem('spotway.role')
+  window.localStorage.removeItem('auth:token')
 }
 
 async function refreshAccessToken() {
@@ -51,7 +52,9 @@ export const apiClient = axios.create({
 })
 
 apiClient.interceptors.request.use((config) => {
-  const token = window.localStorage.getItem('spotway.accessToken')
+  const token =
+    window.localStorage.getItem('spotway.accessToken') ||
+    window.localStorage.getItem('auth:token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })

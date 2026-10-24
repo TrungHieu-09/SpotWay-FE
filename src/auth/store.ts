@@ -17,11 +17,18 @@ type AuthState = {
   clearSession: () => void
 }
 
-function saveToken(token: string | null) {
+function saveToken(token: string | null, role?: string | null) {
   if (token) {
     window.localStorage.setItem(AUTH_TOKEN_KEY, token)
+    window.localStorage.setItem('spotway.accessToken', token)
+    if (role) {
+      window.localStorage.setItem('spotway.role', role)
+    }
   } else {
     window.localStorage.removeItem(AUTH_TOKEN_KEY)
+    window.localStorage.removeItem('spotway.accessToken')
+    window.localStorage.removeItem('spotway.refreshToken')
+    window.localStorage.removeItem('spotway.role')
   }
 }
 
@@ -36,13 +43,15 @@ export function roleLabel(role: Role) {
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  token: window.localStorage.getItem(AUTH_TOKEN_KEY),
+  token: window.localStorage.getItem(AUTH_TOKEN_KEY) ?? window.localStorage.getItem('spotway.accessToken'),
   isInitializing: true,
   isLoading: false,
   error: null,
 
   async initialize() {
-    const token = window.localStorage.getItem(AUTH_TOKEN_KEY)
+    const token =
+      window.localStorage.getItem(AUTH_TOKEN_KEY) ??
+      window.localStorage.getItem('spotway.accessToken')
     if (!token) {
       set({ isInitializing: false })
       return
@@ -50,6 +59,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     try {
       const user = await getCurrentUser()
+      saveToken(token, user.role)
       set({ user, token, error: null })
     } catch {
       saveToken(null)
@@ -63,7 +73,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null })
     try {
       const result = await loginRequest(email, password)
-      saveToken(result.token)
+      saveToken(result.token, result.user.role)
       set({ user: result.user, token: result.token })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Đăng nhập thất bại'

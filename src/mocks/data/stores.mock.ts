@@ -136,7 +136,7 @@ function normalizeStore(store: StoredStore): Store {
     buildingId: store.buildingId ?? getBuildingIdByFloorId(store.floorId),
     createdByUserId: store.createdByUserId ?? 'user-owner-1',
     logoUrl: store.logoUrl?.trim() ? store.logoUrl : null,
-    galleryImageUrls: store.galleryImageUrls.slice(0, 5),
+    galleryImageUrls: Array.isArray(store.galleryImageUrls) ? store.galleryImageUrls.slice(0, 5) : [],
     openingHours: store.openingHours ?? '',
     status: store.status ?? 'inactive',
   }

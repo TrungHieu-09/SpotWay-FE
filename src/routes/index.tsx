@@ -53,14 +53,14 @@ const ManagerLayout = lazy(() =>
   })),
 )
 const StoreOwnerManagementPage = lazy(() =>
-  import('../pages/BuildingManager/BuildingManager/StoreOwnerManagementPage').then((module) => ({
+  import('../pages/BuildingManager/StoreOwnerManagementPage').then((module) => ({
     default: module.StoreOwnerManagementPage,
   })),
 )
 
 // ── Guest ──
 const GuestMapPage = lazy(() =>
-  import('../pages/Guest/Guest/GuestMapPage').then((module) => ({
+  import('../pages/Guest/GuestMapPage').then((module) => ({
     default: module.GuestMapPage,
   })),
 )
@@ -114,8 +114,9 @@ function lazyElement(element: ReactNode) {
 }
 
 export const router = createBrowserRouter([
-  // ── SpotWay Premium Landing Page ──
+  // ── SpotWay Premium Landing Page & Auth ──
   { path: '/', element: <LandingPage /> },
+  { path: 'login', element: <LoginPage /> },
 
   // ── Building Owner section with sidebar ──
   {
@@ -141,7 +142,6 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { path: 'home', element: lazyElement(<HomePage />) },
-      { path: 'login', element: <LoginPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
       { path: 'reset-password', element: <ResetPasswordPage /> },
       { path: '403', element: <ForbiddenPage /> },

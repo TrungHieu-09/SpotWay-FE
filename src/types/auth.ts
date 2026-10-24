@@ -1,7 +1,5 @@
 import type { Area } from './area'
 
-// ── Auth / Tenant types ──────────────────────────────────────────────────────
-
 export type Role = 'admin' | 'building_owner' | 'building_manager' | 'store_owner'
 
 export type UserStatus = 'active' | 'locked'
@@ -51,21 +49,6 @@ export type Invoice = {
   status: 'paid'
 }
 
-export type TenantOverview = {
-  tenant: Tenant
-  plan: Plan
-  usage: {
-    buildings: number
-    areas: number
-    managers: number
-    storeOwners: number
-    floors: number
-    publishedFloors: number
-    stores: number
-    activePromotions: number
-  }
-}
-
 export type AuthUser = Omit<User, 'status'> & {
   status: UserStatus
   tenant: Tenant | null
@@ -80,4 +63,19 @@ export type LoginResponse = {
 export type AuthErrorResponse = {
   code: string
   message: string
+}
+
+export type TenantOverview = {
+  tenant: Tenant
+  plan: Plan
+  usage: {
+    buildings: number
+    areas: number
+    managers: number
+    storeOwners: number
+    floors: number
+    publishedFloors: number
+    stores: number
+    activePromotions: number
+  }
 }

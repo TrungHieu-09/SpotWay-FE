@@ -38,10 +38,20 @@ export async function applyNavigationDraft(floorId: string, draft: NavigationDra
 }
 
 export async function getGraph(floorId: string) {
-  const [{ data: nodes }, { data: edges }] = await Promise.all([
-    apiClient.get<GraphNode[]>(`/floors/${floorId}/nodes`),
-    apiClient.get<GraphEdge[]>(`/floors/${floorId}/edges`),
+  const [{ data: rawNodes }, { data: rawEdges }] = await Promise.all([
+    apiClient.get<any>(`/floors/${floorId}/nodes`),
+    apiClient.get<any>(`/floors/${floorId}/edges`),
   ])
+  const nodes = Array.isArray(rawNodes)
+    ? rawNodes
+    : Array.isArray(rawNodes?.items)
+      ? rawNodes.items
+      : []
+  const edges = Array.isArray(rawEdges)
+    ? rawEdges
+    : Array.isArray(rawEdges?.items)
+      ? rawEdges.items
+      : []
   return { nodes, edges }
 }
 

@@ -1,7 +1,11 @@
 import type { Floor } from '../../types/floor'
 import type { Poi } from '../../types/poi'
 import { clampPercent } from '../../utils/canvasCoordinates'
-import { loadFromStorage, MOCK_STORAGE_KEYS } from '../persist'
+import { loadFromStorage, MOCK_STORAGE_KEYS, saveToStorage } from '../persist'
+import {
+  buildPlanSvgDataUri,
+  initialFloorGeometrySeed,
+} from './geometry.mock'
 
 type StoredPoi = Omit<Poi, 'x' | 'y'> &
   Partial<Pick<Poi, 'x' | 'y'>> & {
@@ -9,28 +13,32 @@ type StoredPoi = Omit<Poi, 'x' | 'y'> &
     yPercent?: number
   }
 
-type StoredFloor = Omit<Floor, 'pois' | 'publishStatus' | 'mapImageUrl'> &
-  Partial<Pick<Floor, 'publishStatus' | 'mapImageUrl'>> & {
+type StoredFloor = Omit<
+  Floor,
+  'pois' | 'publishStatus' | 'mapImageUrl' | 'nextPoiNumber' | 'areaId'
+> &
+  Partial<Pick<Floor, 'publishStatus' | 'mapImageUrl' | 'areaId'>> & {
     planImageUrl?: string | null
     pois?: StoredPoi[]
+    nextPoiNumber?: number
   }
 
-export const mallPlan =
-  'data:image/svg+xml;utf8,' +
-  encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760">
-  <rect width="1200" height="760" fill="#f8fafc"/>
-  <rect x="44" y="44" width="1112" height="672" rx="12" fill="#ffffff" stroke="#334155" stroke-width="8"/>
-  <path d="M150 130H520V330H150zM590 130h460v170H590zM150 400h285v215H150zM505 390h545v225H505z" fill="#e0f2fe" stroke="#64748b" stroke-width="5"/>
-  <path d="M520 235h70M435 505h70M760 300v90" stroke="#0f172a" stroke-width="28" stroke-linecap="round"/>
-  <rect x="650" y="455" width="170" height="105" fill="#dcfce7" stroke="#64748b" stroke-width="5"/>
-  <circle cx="304" cy="256" r="44" fill="#fee2e2" stroke="#ef4444" stroke-width="5"/>
-  <text x="176" y="190" font-family="Arial" font-size="44" fill="#0f172a">Retail A</text>
-  <text x="628" y="205" font-family="Arial" font-size="44" fill="#0f172a">Atrium</text>
-  <text x="188" y="505" font-family="Arial" font-size="42" fill="#0f172a">Cafe</text>
-  <text x="680" y="520" font-family="Arial" font-size="34" fill="#166534">Lobby</text>
-  <path d="M92 365h1015" stroke="#94a3b8" stroke-width="22" stroke-linecap="round"/>
-</svg>`)
+function geometryPlan(floorId: string) {
+  const geometry = initialFloorGeometrySeed.find((item) => item.floorId === floorId)
+  return geometry ? buildPlanSvgDataUri(geometry) : null
+}
+
+const areaByBuildingLevel: Record<string, string | null> = {
+  'bldg-1:1': 'area-fashion',
+  'bldg-1:2': 'area-food',
+  'bldg-1:3': 'area-entertainment',
+  'bldg-2:5': 'area-office',
+  'bldg-3:1': 'area-retail-2',
+}
+
+export const mallPlan = geometryPlan('floor-1') ?? ''
+const mallLevel2Plan = geometryPlan('floor-2') ?? mallPlan
+const mallLevel3Plan = geometryPlan('floor-3') ?? mallPlan
 
 export const officePlan =
   'data:image/svg+xml;utf8,' +
@@ -48,7 +56,7 @@ export const officePlan =
   <text x="710" y="525" font-family="Arial" font-size="38" fill="#111827">Workspace</text>
 </svg>`)
 
-export const initialFloorsSeed: Floor[] = [
+export const initialFloorsSeed: StoredFloor[] = [
   {
     id: 'floor-1',
     buildingId: 'bldg-1',
@@ -58,6 +66,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: mallPlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [
       {
         id: 'poi-1',
@@ -75,6 +84,38 @@ export const initialFloorsSeed: Floor[] = [
         x: 63.33,
         y: 48.03,
       },
+      {
+        id: 'poi-gf-elevator',
+        floorId: 'floor-1',
+        name: 'Elevator A',
+        type: 'elevator',
+        x: 68,
+        y: 43,
+      },
+      {
+        id: 'poi-gf-toilet',
+        floorId: 'floor-1',
+        name: 'Ground Toilet',
+        type: 'toilet',
+        x: 36,
+        y: 73,
+      },
+      {
+        id: 'poi-gf-exit',
+        floorId: 'floor-1',
+        name: 'Emergency Exit',
+        type: 'exit',
+        x: 91,
+        y: 50,
+      },
+      {
+        id: 'poi-gf-lumi',
+        floorId: 'floor-1',
+        name: 'Lumi Fashion',
+        type: 'store',
+        x: 23,
+        y: 22,
+      },
     ],
   },
   {
@@ -82,22 +123,74 @@ export const initialFloorsSeed: Floor[] = [
     buildingId: 'bldg-1',
     name: 'Level 2',
     level: 2,
-    publishStatus: 'draft',
-    mapImageUrl: null,
+    publishStatus: 'published',
+    mapImageUrl: mallLevel2Plan,
     mapWidth: 1200,
     mapHeight: 760,
-    pois: [],
+    nextPoiNumber: 1,
+    pois: [
+      {
+        id: 'poi-l2-elevator',
+        floorId: 'floor-2',
+        name: 'Elevator A',
+        type: 'elevator',
+        x: 68,
+        y: 43,
+      },
+      {
+        id: 'poi-l2-green',
+        floorId: 'floor-2',
+        name: 'Green Home',
+        type: 'store',
+        x: 23,
+        y: 23,
+      },
+      {
+        id: 'poi-l2-toilet',
+        floorId: 'floor-2',
+        name: 'Level 2 Toilet',
+        type: 'toilet',
+        x: 35,
+        y: 73,
+      },
+    ],
   },
   {
     id: 'floor-3',
     buildingId: 'bldg-1',
     name: 'Level 3',
     level: 3,
-    publishStatus: 'draft',
-    mapImageUrl: null,
+    publishStatus: 'published',
+    mapImageUrl: mallLevel3Plan,
     mapWidth: 1200,
     mapHeight: 760,
-    pois: [],
+    nextPoiNumber: 1,
+    pois: [
+      {
+        id: 'poi-l3-elevator',
+        floorId: 'floor-3',
+        name: 'Elevator A',
+        type: 'elevator',
+        x: 68,
+        y: 43,
+      },
+      {
+        id: 'poi-l3-cinema',
+        floorId: 'floor-3',
+        name: 'Cinema',
+        type: 'store',
+        x: 23,
+        y: 23,
+      },
+      {
+        id: 'poi-l3-food',
+        floorId: 'floor-3',
+        name: 'Food Hall',
+        type: 'store',
+        x: 80,
+        y: 23,
+      },
+    ],
   },
   {
     id: 'floor-4',
@@ -108,6 +201,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [
       {
         id: 'poi-3',
@@ -128,6 +222,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
   {
@@ -139,6 +234,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
   {
@@ -150,6 +246,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
   {
@@ -161,6 +258,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
   {
@@ -172,6 +270,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
   {
@@ -183,6 +282,7 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: mallPlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
   {
@@ -194,9 +294,17 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: mallPlan,
     mapWidth: 1200,
     mapHeight: 760,
+    nextPoiNumber: 1,
     pois: [],
   },
 ]
+
+const seedFloorByBuildingLevel = new Map(
+  initialFloorsSeed.map((floor) => [
+    `${floor.buildingId}:${floor.level}`,
+    floor,
+  ]),
+)
 
 function normalizePoi(poi: StoredPoi): Poi {
   return {
@@ -211,23 +319,78 @@ function normalizeMapImageUrl(url: string | null | undefined) {
   return normalizedUrl ? normalizedUrl : null
 }
 
+function getNextPoiNumber(pois: Poi[]) {
+  const maxPoiNumber = pois.reduce((max, poi) => {
+    const match = /^POI\s+(\d+)$/.exec(poi.name.trim())
+    return match ? Math.max(max, Number(match[1])) : max
+  }, 0)
+
+  return maxPoiNumber + 1
+}
+
 function normalizeFloor(floor: StoredFloor): Floor {
+  const seedFloor = seedFloorByBuildingLevel.get(
+    `${floor.buildingId}:${floor.level}`,
+  )
+  const id = seedFloor?.id ?? floor.id
+  const pois = floor.pois?.map(normalizePoi).map((poi) => ({
+    ...poi,
+    floorId: id,
+  })) ?? []
+  const nextPoiNumberFromNames = getNextPoiNumber(pois)
+  const nextPoiNumber = floor.nextPoiNumber
+  const storedNextPoiNumber =
+    Number.isFinite(nextPoiNumber) && nextPoiNumber !== undefined && nextPoiNumber > 0
+      ? Math.floor(nextPoiNumber)
+      : nextPoiNumberFromNames
+
   return {
     ...floor,
+    areaId: floor.areaId ?? areaByBuildingLevel[`${floor.buildingId}:${floor.level}`] ?? null,
+    id,
     publishStatus: floor.publishStatus ?? 'draft',
     mapImageUrl: normalizeMapImageUrl(
       floor.mapImageUrl ?? floor.planImageUrl,
     ),
     mapWidth: floor.mapWidth ?? 1200,
     mapHeight: floor.mapHeight ?? 760,
-    pois: floor.pois?.map(normalizePoi) ?? [],
+    pois,
+    nextPoiNumber: Math.max(storedNextPoiNumber, nextPoiNumberFromNames),
   }
 }
 
-export const floors = loadFromStorage<StoredFloor[]>(
+function mergeDuplicateFloors(normalizedFloors: Floor[]) {
+  const floorById = new Map<string, Floor>()
+
+  for (const floor of normalizedFloors) {
+    const existingFloor = floorById.get(floor.id)
+    if (!existingFloor) {
+      floorById.set(floor.id, floor)
+      continue
+    }
+
+    const poiById = new Map(existingFloor.pois.map((poi) => [poi.id, poi]))
+    for (const poi of floor.pois) {
+      poiById.set(poi.id, poi)
+    }
+
+    existingFloor.pois = [...poiById.values()]
+    existingFloor.nextPoiNumber = Math.max(
+      existingFloor.nextPoiNumber,
+      floor.nextPoiNumber,
+      getNextPoiNumber(existingFloor.pois),
+    )
+  }
+
+  return [...floorById.values()]
+}
+
+export const floors = mergeDuplicateFloors(loadFromStorage<StoredFloor[]>(
   MOCK_STORAGE_KEYS.floors,
   initialFloorsSeed,
-).map(normalizeFloor)
+).map(normalizeFloor))
+
+saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
 
 export function fallbackMap() {
   return mallPlan

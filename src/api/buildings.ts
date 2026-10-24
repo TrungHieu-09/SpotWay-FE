@@ -9,21 +9,37 @@ type ApiBuilding = {
   createdAt: string
 }
 
-function toBuilding(building: ApiBuilding): Building {
+function toBuilding(building: any): Building {
+  if (building && 'floorCount' in building) {
+    return {
+      id: building.id,
+      name: building.name,
+      address: building.address ?? '',
+      status: building.status === 'ACTIVE' || building.status === 'active' ? 'active' : 'draft',
+      floorCount: building.floorCount ?? 0,
+      createdAt: building.createdAt ?? new Date().toISOString(),
+      planImageUrl: building.planImageUrl ?? null,
+    }
+  }
   return {
-    id: building.id,
-    name: building.name,
-    address: building.address ?? '',
-    status: building.status === 'ACTIVE' ? 'active' : 'draft',
+    id: building?.id ?? '',
+    name: building?.name ?? '',
+    address: building?.address ?? '',
+    status: building?.status === 'ACTIVE' ? 'active' : 'draft',
     floorCount: 0,
-    createdAt: building.createdAt,
+    createdAt: building?.createdAt ?? new Date().toISOString(),
     planImageUrl: null,
   }
 }
 
-export async function getBuildings() {
-  const { data } = await apiClient.get<{ items: ApiBuilding[] }>('/buildings')
-  return data.items.map(toBuilding)
+export async function getBuildings(): Promise<Building[]> {
+  const { data } = await apiClient.get<any>('/buildings')
+  const items = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.items)
+      ? data.items
+      : []
+  return items.map(toBuilding)
 }
 
 export async function createBuilding(payload: CreateBuildingPayload) {

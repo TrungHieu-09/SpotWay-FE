@@ -1,4 +1,7 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { Spin } from 'antd'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { useAuthStore } from '../../auth/store'
+import type { Role } from '../../types/auth'
 
 export type AppRole =
   | 'guest'
@@ -6,14 +9,6 @@ export type AppRole =
   | 'building_manager'
   | 'building_owner'
   | 'admin'
-
-const defaultRouteByRole: Record<AppRole, string> = {
-  guest: '/login',
-  store_owner: '/login',
-  building_manager: '/manager',
-  building_owner: '/owner/buildings',
-  admin: '/owner/buildings',
-}
 
 export function getDemoRole(): AppRole {
   const storedRole = window.localStorage.getItem('spotway.role') as AppRole | null
@@ -25,16 +20,48 @@ export function getDemoRole(): AppRole {
 }
 
 type ProtectedRouteProps = {
-  allowedRoles: AppRole[]
+  allowedRoles: (Role | AppRole)[]
 }
 
 export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
-  const role = getDemoRole()
+  const location = useLocation()
+  const user = useAuthStore((state) => state.user)
+  const isInitializing = useAuthStore((state) => state.isInitializing)
 
-  if (!allowedRoles.includes(role)) {
-    return <Navigate to={defaultRouteByRole[role]} replace />
+  if (isInitializing) {
+    return (
+      <div
+        className="route-loading"
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '60vh',
+        }}
+      >
+        <Spin size="large" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <Navigate
+        to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`}
+        replace
+      />
+    )
+  }
+
+  if (user.mustChangePassword && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />
+  }
+
+  if (!allowedRoles.includes(user.role)) {
+    return <Navigate to="/403" replace />
   }
 
   return <Outlet />
 }
+
 

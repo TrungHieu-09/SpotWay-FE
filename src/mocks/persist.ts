@@ -3,6 +3,12 @@ const MOCK_STORAGE_PREFIX = 'mock:'
 export const MOCK_STORAGE_KEYS = {
   buildings: `${MOCK_STORAGE_PREFIX}buildings`,
   floors: `${MOCK_STORAGE_PREFIX}floors`,
+  plans: `${MOCK_STORAGE_PREFIX}plans`,
+  tenants: `${MOCK_STORAGE_PREFIX}tenants`,
+  users: `${MOCK_STORAGE_PREFIX}users`,
+  invoices: `${MOCK_STORAGE_PREFIX}invoices`,
+  areas: `${MOCK_STORAGE_PREFIX}areas`,
+  stores: `${MOCK_STORAGE_PREFIX}stores`,
 } as const
 
 function getStorage() {
