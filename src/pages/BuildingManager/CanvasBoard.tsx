@@ -693,6 +693,15 @@ export function CanvasBoard() {
               Analyze điều hướng
             </Button>
             {navigationDraft && <>
+              {navigationDraft.warnings.length > 0 && (
+                <Alert
+                  type="warning"
+                  showIcon
+                  style={{ width: '100%' }}
+                  message="Cảnh báo từ Analyze điều hướng"
+                  description={<ul style={{ margin: 0, paddingLeft: 18 }}>{navigationDraft.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
+                />
+              )}
               <Tag color="gold">Nháp: {navigationDraft.nodes.length} Node · {navigationDraft.edges.length} đường</Tag>
               <Button type="primary" onClick={() => void handleApplyNavigationDraft()} loading={isGraphSaving}>Áp dụng nháp</Button>
               <Button onClick={() => setNavigationDraft(undefined)}>Bỏ nháp</Button>
