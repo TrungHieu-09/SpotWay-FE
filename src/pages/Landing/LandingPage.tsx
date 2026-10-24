@@ -234,6 +234,52 @@ export function LandingPage() {
                     <div className="lp-iso-grid-h" />
                     <div className="lp-iso-grid-v" />
                     <div className="lp-iso-heat lp-iso-heat--cyan" />
+                    {activeLevel === 'L1' && (
+                      <>
+                        <svg className="lp-iso-navpath" viewBox="0 0 400 400" fill="none">
+                          <defs>
+                            <linearGradient id="neonPathGradL1" x1="0%" y1="100%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="#38BDF8" />
+                              <stop offset="100%" stopColor="#34D399" />
+                            </linearGradient>
+                          </defs>
+                          <path
+                            className="path-dash-animate"
+                            d="M 90 280 L 190 280 L 250 180 L 320 180"
+                            stroke="url(#neonPathGradL1)"
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            fill="none"
+                          />
+                          <circle cx="320" cy="180" r="7" fill="#34D399" />
+                          <circle cx="320" cy="180" r="7" fill="none" stroke="#34D399" strokeWidth="1.5" opacity="0.6">
+                            <animate attributeName="r" values="7;18;7" dur="2.2s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="0.8;0;0.8" dur="2.2s" repeatCount="indefinite" />
+                          </circle>
+                          <circle cx="90" cy="280" r="4.5" fill="#38BDF8" />
+                        </svg>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '14px',
+                            right: '18px',
+                            padding: '3px 10px',
+                            borderRadius: '6px',
+                            background: 'rgba(52, 211, 153, 0.18)',
+                            border: '1px solid #34D399',
+                            color: '#34D399',
+                            fontFamily: 'monospace',
+                            fontSize: '9.5px',
+                            fontWeight: 700,
+                            letterSpacing: '0.04em',
+                            zIndex: 10,
+                          }}
+                        >
+                          {currentInfo.activeBadge}
+                        </div>
+                      </>
+                    )}
                     <span
                       style={{
                         position: 'absolute',
@@ -264,6 +310,52 @@ export function LandingPage() {
                     <div className="lp-iso-grid-h" style={{ top: '33%' }} />
                     <div className="lp-iso-grid-v" style={{ left: '65%' }} />
                     <div className="lp-iso-heat lp-iso-heat--fuchsia" />
+                    {activeLevel === 'L2' && (
+                      <>
+                        <svg className="lp-iso-navpath" viewBox="0 0 400 400" fill="none">
+                          <defs>
+                            <linearGradient id="neonPathGradL2" x1="0%" y1="100%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="#22D3EE" />
+                              <stop offset="100%" stopColor="#E879F9" />
+                            </linearGradient>
+                          </defs>
+                          <path
+                            className="path-dash-animate"
+                            d="M 110 270 L 190 270 L 230 190 L 270 110"
+                            stroke="url(#neonPathGradL2)"
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            fill="none"
+                          />
+                          <circle cx="270" cy="110" r="7" fill="#E879F9" />
+                          <circle cx="270" cy="110" r="7" fill="none" stroke="#E879F9" strokeWidth="1.5" opacity="0.6">
+                            <animate attributeName="r" values="7;18;7" dur="2.2s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="0.8;0;0.8" dur="2.2s" repeatCount="indefinite" />
+                          </circle>
+                          <circle cx="110" cy="270" r="4.5" fill="#22D3EE" />
+                        </svg>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '14px',
+                            right: '18px',
+                            padding: '3px 10px',
+                            borderRadius: '6px',
+                            background: 'rgba(232, 121, 249, 0.18)',
+                            border: '1px solid #E879F9',
+                            color: '#E879F9',
+                            fontFamily: 'monospace',
+                            fontSize: '9.5px',
+                            fontWeight: 700,
+                            letterSpacing: '0.04em',
+                            zIndex: 10,
+                          }}
+                        >
+                          {currentInfo.activeBadge}
+                        </div>
+                      </>
+                    )}
                     <span
                       style={{
                         position: 'absolute',
@@ -293,65 +385,69 @@ export function LandingPage() {
                     <div className="lp-iso-wall lp-iso-wall--v" style={{ left: '5.5rem' }} />
 
                     {/* Animated Neon Nav Path Vector */}
-                    <svg
-                      className="lp-iso-navpath"
-                      viewBox="0 0 380 380"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <defs>
-                        <linearGradient id="neonPathGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#8B5CF6" />
-                          <stop offset="100%" stopColor="#22D3EE" />
-                        </linearGradient>
-                      </defs>
-                      <path
-                        className="path-dash-animate"
-                        d="M 60 220 L 140 180 L 140 90 L 260 70"
-                        stroke="url(#neonPathGrad)"
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        fill="none"
-                      />
-                      {/* Destination Pin Pulse */}
-                      <circle cx="260" cy="70" r="7" fill="#22D3EE" />
-                      <circle
-                        cx="260"
-                        cy="70"
-                        r="7"
-                        fill="none"
-                        stroke="#22D3EE"
-                        strokeWidth="1.5"
-                        opacity="0.6"
-                      >
-                        <animate attributeName="r" values="7;18;7" dur="2.2s" repeatCount="indefinite" />
-                        <animate attributeName="opacity" values="0.8;0;0.8" dur="2.2s" repeatCount="indefinite" />
-                      </circle>
-                      {/* Origin Dot */}
-                      <circle cx="60" cy="220" r="5" fill="#8B5CF6" />
-                    </svg>
+                    {activeLevel === 'L3' && (
+                      <>
+                        <svg
+                          className="lp-iso-navpath"
+                          viewBox="0 0 400 400"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <defs>
+                            <linearGradient id="neonPathGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="#8B5CF6" />
+                              <stop offset="100%" stopColor="#22D3EE" />
+                            </linearGradient>
+                          </defs>
+                          <path
+                            className="path-dash-animate"
+                            d="M 120 300 L 220 200 L 220 120 L 300 80"
+                            stroke="url(#neonPathGrad)"
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            fill="none"
+                          />
+                          {/* Destination Pin Pulse */}
+                          <circle cx="300" cy="80" r="7" fill="#22D3EE" />
+                          <circle
+                            cx="300"
+                            cy="80"
+                            r="7"
+                            fill="none"
+                            stroke="#22D3EE"
+                            strokeWidth="1.5"
+                            opacity="0.6"
+                          >
+                            <animate attributeName="r" values="7;18;7" dur="2.2s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="0.8;0;0.8" dur="2.2s" repeatCount="indefinite" />
+                          </circle>
+                          {/* Origin Dot */}
+                          <circle cx="120" cy="300" r="5" fill="#8B5CF6" />
+                        </svg>
 
-                    {/* Active Room Badge */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '14px',
-                        right: '18px',
-                        padding: '3px 10px',
-                        borderRadius: '6px',
-                        background: 'rgba(34, 211, 238, 0.18)',
-                        border: '1px solid #22D3EE',
-                        color: '#22D3EE',
-                        fontFamily: 'monospace',
-                        fontSize: '9.5px',
-                        fontWeight: 700,
-                        letterSpacing: '0.04em',
-                        zIndex: 10,
-                      }}
-                    >
-                      {currentInfo.activeBadge}
-                    </div>
+                        {/* Active Room Badge */}
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '14px',
+                            right: '18px',
+                            padding: '3px 10px',
+                            borderRadius: '6px',
+                            background: 'rgba(34, 211, 238, 0.18)',
+                            border: '1px solid #22D3EE',
+                            color: '#22D3EE',
+                            fontFamily: 'monospace',
+                            fontSize: '9.5px',
+                            fontWeight: 700,
+                            letterSpacing: '0.04em',
+                            zIndex: 10,
+                          }}
+                        >
+                          {currentInfo.activeBadge}
+                        </div>
+                      </>
+                    )}
 
                     {/* Floor Label with live beacon indicator */}
                     <span
