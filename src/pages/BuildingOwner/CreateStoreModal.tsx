@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { App as AntApp, Form, Input, Modal, Select } from 'antd'
-import { getGraph, type GraphNode } from '../../api/graph'
+import { graphGateway } from '../../api/graphGateway'
 import { createStore, updateStoreStatus } from '../../api/stores'
 import type { Floor } from '../../types/floor'
+import type { GraphNode } from '../../types/graph'
 
 type FormValues = { floorId: string; nodeId: string; name: string; description?: string }
 
@@ -17,7 +18,7 @@ export function CreateStoreModal({ floors, open, onClose }: { floors: Floor[]; o
     if (!open) return
     form.resetFields()
     if (floors[0]) form.setFieldValue('floorId', floors[0].id)
-    Promise.all(floors.map(async (floor) => [floor.id, await getGraph(floor.id)] as const))
+    Promise.all(floors.map(async (floor) => [floor.id, await graphGateway.fetchGraph(floor.id, { width: floor.mapWidth, height: floor.mapHeight })] as const))
       .then((results) => setNodesByFloorId(Object.fromEntries(results.map(([id, graph]) => [id, graph.nodes]))))
       .catch((error: Error) => message.error(`Không tải được Node: ${error.message}`))
   }, [floors, form, message, open])
@@ -37,7 +38,7 @@ export function CreateStoreModal({ floors, open, onClose }: { floors: Floor[]; o
   }
 
   const selectedFloor = floors.find((floor) => floor.id === floorId)
-  const nodeOptions = (nodesByFloorId[floorId] ?? []).map((node, index) => ({ value: node.id, label: `${node.type} · Node ${index + 1} (${Math.round(node.x)}, ${Math.round(node.y)})` }))
+  const nodeOptions = (nodesByFloorId[floorId] ?? []).map((node, index) => ({ value: node.id, label: `${node.type} · Node ${index + 1} (${Math.round(node.x)}%, ${Math.round(node.y)}%)` }))
 
   return <Modal title="Tạo cửa hàng làm điểm đến" open={open} onCancel={onClose} onOk={() => form.submit()} okText="Tạo cửa hàng" confirmLoading={isSubmitting} destroyOnHidden forceRender>
     <Form form={form} layout="vertical" onFinish={submit}>

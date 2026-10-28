@@ -8,7 +8,6 @@ import type {
   Floor,
   UpdateFloorPayload,
 } from '../types/floor'
-import type { Poi } from '../types/poi'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
@@ -33,7 +32,6 @@ function makeFloor(payload: CreateFloorPayload): Floor {
     mapImageUrl,
     mapWidth: payload.mapWidth ?? 1200,
     mapHeight: payload.mapHeight ?? 760,
-    pois: [],
   }
 }
 
@@ -196,20 +194,6 @@ export const handlers = [
     saveToStorage(MOCK_STORAGE_KEYS.buildings, buildings)
 
     return new HttpResponse(null, { status: 204 })
-  }),
-
-  http.patch(endpoint('/floors/:floorId/pois'), async ({ params, request }) => {
-    await delay(140)
-    const payload = (await request.json()) as Poi[]
-    const floor = floors.find((item) => item.id === params.floorId)
-
-    if (!floor) {
-      return HttpResponse.json({ message: 'Floor not found' }, { status: 404 })
-    }
-
-    floor.pois = payload
-    saveToStorage(MOCK_STORAGE_KEYS.floors, floors)
-    return HttpResponse.json(floor.pois)
   }),
 
   http.get('*', ({ request }) => {

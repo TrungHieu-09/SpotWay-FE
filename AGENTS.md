@@ -141,15 +141,19 @@ interface Floor {
 `PATCH /api/floors/:id/pois` (body: `Poi[]`) → `Poi[]`
 
 ```ts
+// Domain type (src/types/poi.ts). POI là entity độc lập, KHÔNG phải "node có tên".
 interface Poi {
   id: string;
   floorId: string;
   x: number;   // 0-100, phần trăm theo chiều ngang ảnh sơ đồ
   y: number;   // 0-100, phần trăm theo chiều dọc ảnh sơ đồ
-  type: "store" | "elevator" | "stair" | "toilet" | "exit" | "other";
-  label: string;
+  name: string;
+  category: "restroom" | "elevator" | "exit" | "info" | "parking" | "custom"; // khớp enum PoiCategory của BE
+  icon: string | null;          // khoá icon, null = icon mặc định của category
+  nearestNodeId: string | null; // node neo để dẫn đường; FE snap node gần nhất rồi gửi nodeId tường minh
 }
 ```
+API POI v2 của BE (x/y là pixel bản đồ, FE chuyển đổi tại `src/api/graphMapper.ts`): `GET /floors/:floorId/pois`, `POST /floors/:floorId/pois` (`x,y,name,category,icon?,nodeId?`; bỏ `nodeId` → BE tự snap, cần tầng đã hiệu chuẩn tỉ lệ), `PATCH /pois/:id` (đổi vị trí → re-snap), `DELETE /pois/:id` (soft delete). Response có `nodeId`, `snapDistanceMeters`; `x,y` có thể null với POI cũ.
 
 ## Endpoint: Node/Edge (người làm phần đặt Node/Edge trên canvas, ví dụ KDuy)
 
@@ -159,19 +163,37 @@ interface Poi {
 `POST /api/edges` → `Edge`
 
 ```ts
-interface Node {
+// Domain type (src/types/graph.ts)
+interface GraphNode {
   id: string;
   floorId: string;
   x: number;   // 0-100, CÙNG quy ước với Poi.x
   y: number;   // 0-100, CÙNG quy ước với Poi.y
-  isElevatorLink?: boolean; // true nếu node này liên kết thang máy xuyên tầng
+  name: string | null;
+  type: "NORMAL" | "DOOR" | "JUNCTION" | "ELEVATOR" | "STAIR" | "ESCALATOR" | "EXIT" | "EMERGENCY_EXIT";
+  accessible: boolean;
+  hazard: "NONE" | "FIRE" | "SMOKE" | "BLOCKED";
 }
 
-interface Edge {
+interface GraphEdge {
   id: string;
   floorId: string;
   fromNodeId: string;
   toNodeId: string;
+  accessible: boolean;
+  status: "ACTIVE" | "BLOCKED";
+  hazard: "NONE" | "FIRE" | "SMOKE" | "BLOCKED";
+  // KHÔNG có weight ở FE: dẫn xuất từ toạ độ + mapUnitsPerMeter
+}
+
+// Liên kết xuyên tầng (ConnectorResponse của BE): GET /buildings/:buildingId/connectors
+interface Connector {
+  id: string;
+  buildingId: string;
+  name: string;
+  kind: "ELEVATOR" | "STAIR" | "ESCALATOR";
+  accessible: boolean;
+  stops: { floorId: string; nodeId: string }[];
 }
 ```
 

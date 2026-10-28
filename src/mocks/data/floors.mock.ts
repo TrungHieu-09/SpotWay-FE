@@ -1,18 +1,9 @@
 import type { Floor } from '../../types/floor'
-import type { Poi } from '../../types/poi'
-import { clampPercent } from '../../utils/canvasCoordinates'
 import { loadFromStorage, MOCK_STORAGE_KEYS } from '../persist'
 
-type StoredPoi = Omit<Poi, 'x' | 'y'> &
-  Partial<Pick<Poi, 'x' | 'y'>> & {
-    xPercent?: number
-    yPercent?: number
-  }
-
-type StoredFloor = Omit<Floor, 'pois' | 'publishStatus' | 'mapImageUrl'> &
+type StoredFloor = Omit<Floor, 'publishStatus' | 'mapImageUrl'> &
   Partial<Pick<Floor, 'publishStatus' | 'mapImageUrl'>> & {
     planImageUrl?: string | null
-    pois?: StoredPoi[]
   }
 
 export const mallPlan =
@@ -58,24 +49,6 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: mallPlan,
     mapWidth: 1200,
     mapHeight: 760,
-    pois: [
-      {
-        id: 'poi-1',
-        floorId: 'floor-1',
-        name: 'Main Entrance',
-        type: 'entrance',
-        x: 25.33,
-        y: 33.68,
-      },
-      {
-        id: 'poi-2',
-        floorId: 'floor-1',
-        name: 'Atrium Info',
-        type: 'service',
-        x: 63.33,
-        y: 48.03,
-      },
-    ],
   },
   {
     id: 'floor-2',
@@ -86,7 +59,6 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: null,
     mapWidth: 1200,
     mapHeight: 760,
-    pois: [],
   },
   {
     id: 'floor-3',
@@ -97,7 +69,6 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: null,
     mapWidth: 1200,
     mapHeight: 760,
-    pois: [],
   },
   {
     id: 'floor-4',
@@ -108,16 +79,6 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
-    pois: [
-      {
-        id: 'poi-3',
-        floorId: 'floor-4',
-        name: 'Reception',
-        type: 'service',
-        x: 46.67,
-        y: 47.37,
-      },
-    ],
   },
   {
     id: 'floor-5',
@@ -128,7 +89,6 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
-    pois: [],
   },
   {
     id: 'floor-6',
@@ -139,7 +99,6 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
-    pois: [],
   },
   {
     id: 'floor-7',
@@ -150,7 +109,6 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
-    pois: [],
   },
   {
     id: 'floor-8',
@@ -161,7 +119,6 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
-    pois: [],
   },
   {
     id: 'floor-9',
@@ -172,7 +129,6 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: officePlan,
     mapWidth: 1200,
     mapHeight: 760,
-    pois: [],
   },
   {
     id: 'floor-10',
@@ -183,7 +139,6 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: mallPlan,
     mapWidth: 1200,
     mapHeight: 760,
-    pois: [],
   },
   {
     id: 'floor-11',
@@ -194,17 +149,8 @@ export const initialFloorsSeed: Floor[] = [
     mapImageUrl: mallPlan,
     mapWidth: 1200,
     mapHeight: 760,
-    pois: [],
   },
 ]
-
-function normalizePoi(poi: StoredPoi): Poi {
-  return {
-    ...poi,
-    x: clampPercent(poi.x ?? poi.xPercent ?? 0),
-    y: clampPercent(poi.y ?? poi.yPercent ?? 0),
-  }
-}
 
 function normalizeMapImageUrl(url: string | null | undefined) {
   const normalizedUrl = url?.trim()
@@ -220,7 +166,6 @@ function normalizeFloor(floor: StoredFloor): Floor {
     ),
     mapWidth: floor.mapWidth ?? 1200,
     mapHeight: floor.mapHeight ?? 760,
-    pois: floor.pois?.map(normalizePoi) ?? [],
   }
 }
 
@@ -232,8 +177,3 @@ export const floors = loadFromStorage<StoredFloor[]>(
 export function fallbackMap() {
   return mallPlan
 }
-
-export function getFloorPois(floorId: string): Poi[] {
-  return floors.find((floor) => floor.id === floorId)?.pois ?? []
-}
-

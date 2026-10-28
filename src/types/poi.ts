@@ -1,14 +1,20 @@
-export type PoiType = 'entrance' | 'shop' | 'service' | 'custom'
+import type { PercentPoint } from './geometry'
 
-export type Poi = {
+/** Khớp enum `PoiCategory` của BE (viết thường). */
+export type PoiCategory = 'restroom' | 'elevator' | 'exit' | 'info' | 'parking' | 'custom'
+
+/** POI là entity độc lập: có toạ độ riêng; `nearestNodeId` là điểm đồ thị dùng để dẫn đường tới nó. */
+export type Poi = PercentPoint & {
   id: string
-  nodeId?: string
   floorId: string
   name: string
-  type: PoiType
-  /** 0-100, percentage on the floor plan width. Not a pixel value. */
-  x: number
-  /** 0-100, percentage on the floor plan height. Not a pixel value. */
-  y: number
+  category: PoiCategory
+  /** Khoá icon; null = dùng icon mặc định của category. */
+  icon: string | null
+  nearestNodeId: string | null
 }
 
+export type NewPoi = Pick<Poi, 'x' | 'y' | 'name' | 'category' | 'icon'>
+
+/** Trường người dùng sửa được mà không đổi vị trí. */
+export type PoiDetailsPatch = Partial<Pick<Poi, 'name' | 'category' | 'icon'>>

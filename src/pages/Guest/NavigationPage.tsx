@@ -28,6 +28,7 @@ import {
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { resolvePublicQrToken } from '../../api/publicNavigation'
 import { DemoSimulationToolbar } from '../../components/navigation/DemoSimulationToolbar'
+import { toRouteMapData } from '../../api/graphMapper'
 import { RouteMap } from '../../components/navigation/RouteMap'
 import { useNavigationStore } from '../../store/useNavigationStore'
 import type { Maneuver, PublicQrResolution, RouteStep } from '../../types/navigation'
@@ -182,6 +183,11 @@ export function NavigationPage() {
     (fromLocked ? qr?.nodeId : undefined) ?? fromNodeId ?? qr?.nodeId ?? paramFromNodeId ?? sourceOptions[0]?.value
   const displayedFloorId =
     currentStep?.floorId ?? selectedFloorId ?? qr?.floorId ?? paramFloorId ?? floors[0]?.id
+
+  const displayedMap = useMemo(() => {
+    const publicMap = displayedFloorId ? mapsByFloorId[displayedFloorId] : undefined
+    return publicMap && toRouteMapData(publicMap)
+  }, [displayedFloorId, mapsByFloorId])
 
   const handleSelectNode = (nodeId: string) => {
     if (interactiveFireMode) toggleFireNode(nodeId, currentStep?.nodeId)
@@ -515,7 +521,7 @@ export function NavigationPage() {
               {/* Map Canvas with Animated Radar Pulse & Destination Pin */}
               <div style={{ flex: 1, position: 'relative' }}>
                 <RouteMap
-                  map={displayedFloorId ? mapsByFloorId[displayedFloorId] : undefined}
+                  map={displayedMap}
                   routeSteps={route?.steps ?? []}
                   activeStep={currentStep}
                   destinationName={destinationName}
@@ -587,7 +593,7 @@ export function NavigationPage() {
               ))}
             </div>
             <RouteMap
-              map={displayedFloorId ? mapsByFloorId[displayedFloorId] : undefined}
+              map={displayedMap}
               routeSteps={route?.steps ?? []}
               activeStep={currentStep}
               destinationName={destinationName}

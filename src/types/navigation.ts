@@ -1,3 +1,5 @@
+import type { GraphEdge, GraphNode, HazardType } from './graph'
+
 export type PublicFloor = {
   id: string
   buildingId: string
@@ -10,7 +12,7 @@ export type PublicFloor = {
   northOffsetDegrees?: number | null
 }
 
-export type NodeHazardType = 'NONE' | 'FIRE' | 'SMOKE' | 'BLOCKED'
+export type NodeHazardType = HazardType
 
 export type VerticalLinkKind = 'ELEVATOR' | 'STAIR' | 'ESCALATOR'
 
@@ -74,6 +76,13 @@ export type PublicNode = {
   accessible: boolean
   name?: string | null
   hazard?: NodeHazardType
+}
+
+/** Dữ liệu RouteMap cần: floor + graph domain (toạ độ %); route steps vẫn là toạ độ pixel bản đồ. */
+export type RouteMapData = {
+  floor: PublicFloor
+  nodes: GraphNode[]
+  edges: GraphEdge[]
 }
 
 export type PublicStore = {

@@ -1,9 +1,12 @@
 import { Empty } from 'antd'
-import type { PublicFloorMap, RouteStep } from '../../types/navigation'
+import { publicMapSize } from '../../api/graphMapper'
+import type { PercentPoint } from '../../types/geometry'
+import type { RouteMapData, RouteStep } from '../../types/navigation'
+import { percentToPixel } from '../../utils/canvasCoordinates'
 import './RouteMap.css'
 
 type RouteMapProps = {
-  map?: PublicFloorMap
+  map?: RouteMapData
   routeSteps: RouteStep[]
   activeStep?: RouteStep
   destinationName?: string
@@ -23,8 +26,11 @@ export function RouteMap({
 }: RouteMapProps) {
   if (!map) return <Empty description="Không có dữ liệu tầng này" />
 
-  const width = map.floor.mapWidth ?? 1200
-  const height = map.floor.mapHeight ?? 760
+  const { width, height } = publicMapSize(map.floor)
+  const at = (point: PercentPoint) => {
+    const { pixelX, pixelY } = percentToPixel(point.x, point.y, width, height)
+    return { x: pixelX, y: pixelY }
+  }
   const floorSteps = routeSteps.filter((step) => step.floorId === map.floor.id)
   const nodeById = new Map(map.nodes.map((node) => [node.id, node]))
   const pathPoints = floorSteps.map((step) => `${step.x},${step.y}`).join(' ')
@@ -69,13 +75,15 @@ export function RouteMap({
           const from = nodeById.get(edge.fromNodeId)
           const to = nodeById.get(edge.toNodeId)
           if (!from || !to) return null
+          const a = at(from)
+          const b = at(to)
           return (
             <line
               key={edge.id}
-              x1={from.x}
-              y1={from.y}
-              x2={to.x}
-              y2={to.y}
+              x1={a.x}
+              y1={a.y}
+              x2={b.x}
+              y2={b.y}
               className="route-map__graph"
             />
           )
@@ -94,6 +102,7 @@ export function RouteMap({
           const isOnRoute = floorSteps.some((step) => step.nodeId === node.id)
           const isActive = activeStep?.nodeId === node.id
           if (isActive) return null // Handled with custom user radar below
+          const p = at(node)
           return (
             <g
               key={node.id}
@@ -101,8 +110,8 @@ export function RouteMap({
               onClick={() => onSelectNode(node.id)}
             >
               <circle
-                cx={node.x}
-                cy={node.y}
+                cx={p.x}
+                cy={p.y}
                 r={isOnRoute ? 12 : 8}
                 className={
                   isOnRoute
@@ -178,14 +187,17 @@ export function RouteMap({
         {/* Simulated fire / blocked nodes */}
         {map.nodes
           .filter((node) => hazardNodeIds.includes(node.id))
-          .map((node) => (
-            <g key={`hazard-${node.id}`} className="route-map__hazard" onClick={() => onSelectNode(node.id)}>
-              <circle cx={node.x} cy={node.y} r="22" />
-              <text x={node.x} y={node.y + 8} textAnchor="middle" fontSize="22">
-                🔥
-              </text>
-            </g>
-          ))}
+          .map((node) => {
+            const p = at(node)
+            return (
+              <g key={`hazard-${node.id}`} className="route-map__hazard" onClick={() => onSelectNode(node.id)}>
+                <circle cx={p.x} cy={p.y} r="22" />
+                <text x={p.x} y={p.y + 8} textAnchor="middle" fontSize="22">
+                  🔥
+                </text>
+              </g>
+            )
+          })}
 
         {/* Current User Location Arrow with Radar Wave (matching the photo) */}
         {activeStep && (

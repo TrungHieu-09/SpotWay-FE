@@ -18,6 +18,7 @@ import {
 } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { useFloorStore } from '../../store/useFloorStore'
+import { usePoiStore } from '../../store/usePoiStore'
 import type { FloorPublishStatus } from '../../types/floor'
 
 const { Text } = Typography
@@ -39,6 +40,7 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [form] = Form.useForm<CreateFloorFormValues>()
   const floors = useFloorStore((state) => state.floors)
+  const poisByFloor = usePoiStore((state) => state.poisByFloor)
   const selectedFloorId = useFloorStore((state) => state.selectedFloorId)
   const isFloorLoading = useFloorStore((state) => state.isFloorLoading)
   const selectFloor = useFloorStore((state) => state.selectFloor)
@@ -131,7 +133,7 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
                 className="floor-list-actions"
                 onClick={(event) => event.stopPropagation()}
               >
-                <Tag>{floor.pois.length} POI</Tag>
+                {poisByFloor[floor.id] && <Tag>{poisByFloor[floor.id].length} POI</Tag>}
                 <Switch
                   size="small"
                   checked={floor.publishStatus === 'published'}

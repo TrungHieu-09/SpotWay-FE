@@ -1,5 +1,3 @@
-import type { Poi } from './poi'
-
 export type FloorPublishStatus = 'draft' | 'published'
 
 export type Floor = {
@@ -11,7 +9,6 @@ export type Floor = {
   mapImageUrl: string | null
   mapWidth: number
   mapHeight: number
-  pois: Poi[]
 }
 
 export type CreateFloorPayload = {
