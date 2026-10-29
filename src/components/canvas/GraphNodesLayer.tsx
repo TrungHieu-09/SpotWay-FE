@@ -8,6 +8,8 @@ type GraphNodesLayerProps = {
   nodes: readonly GraphNode[]
   selectedNodeId: string | null
   edgeStartNodeId?: string
+  /** Node chưa nối edge nào: vẽ vòng đỏ để người vẽ thấy ngay chỗ còn thiếu. */
+  isolatedNodeIds?: ReadonlySet<string>
   draftNodes?: readonly DraftNode[]
   size: MapSize
   onNodeClick: (nodeId: string) => void
@@ -30,6 +32,7 @@ export const GraphNodesLayer = memo(function GraphNodesLayer({
   nodes,
   selectedNodeId,
   edgeStartNodeId,
+  isolatedNodeIds,
   draftNodes = [],
   size,
   onNodeClick,
@@ -47,6 +50,9 @@ export const GraphNodesLayer = memo(function GraphNodesLayer({
           <Fragment key={node.id}>
             {isSelected && (
               <Circle x={x} y={y} radius={19} stroke="#0284c7" strokeWidth={3} dash={[4, 3]} listening={false} />
+            )}
+            {isolatedNodeIds?.has(node.id) && (
+              <Circle x={x} y={y} radius={18} stroke="#ef4444" strokeWidth={3} dash={[3, 3]} listening={false} />
             )}
             <Circle
               x={x}

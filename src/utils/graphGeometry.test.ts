@@ -1,8 +1,18 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { distanceInMapUnits, findNearestNode } from './graphGeometry.ts'
+import { distanceInMapUnits, findIsolatedNodeIds, findNearestNode } from './graphGeometry.ts'
 
 const size = { width: 1000, height: 500 }
+
+describe('findIsolatedNodeIds', () => {
+  it('chỉ trả node không thuộc edge nào, bất kể là đầu from hay to', () => {
+    const nodes = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }]
+    const edges = [{ fromNodeId: 'a', toNodeId: 'b' }, { fromNodeId: 'c', toNodeId: 'a' }]
+    assert.deepEqual([...findIsolatedNodeIds(nodes, edges)], ['d'])
+    assert.equal(findIsolatedNodeIds(nodes, []).size, 4)
+    assert.equal(findIsolatedNodeIds([], edges).size, 0)
+  })
+})
 
 describe('distanceInMapUnits', () => {
   it('quy % về đơn vị bản đồ theo từng chiều (ảnh không vuông)', () => {

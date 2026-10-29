@@ -54,7 +54,7 @@ import type { FloorPublishStatus } from '../../types/floor'
 import type { PercentPoint } from '../../types/geometry'
 import type { Connector, GraphDraft, GraphEdge, GraphNode } from '../../types/graph'
 import type { Poi } from '../../types/poi'
-import { distanceInMapUnits } from '../../utils/graphGeometry'
+import { distanceInMapUnits, findIsolatedNodeIds } from '../../utils/graphGeometry'
 
 const EMPTY_NODES: GraphNode[] = []
 const EMPTY_EDGES: GraphEdge[] = []
@@ -348,6 +348,11 @@ export function CanvasBoard() {
     () => new Map((navigationDraft?.nodes ?? []).map((node) => [node.id, node])),
     [navigationDraft],
   )
+  // Một node lẻ loi là bình thường (mới đặt); từ 2 node trở lên, node chưa nối edge sẽ bị tô đỏ.
+  const isolatedNodeIds = useMemo(
+    () => (currentFloorNodes.length > 1 ? findIsolatedNodeIds(currentFloorNodes, currentFloorEdges) : undefined),
+    [currentFloorNodes, currentFloorEdges],
+  )
 
   if (!selectedFloor) {
     return (
@@ -631,13 +636,14 @@ export function CanvasBoard() {
                       nodes={currentFloorNodes}
                       selectedNodeId={selectedNodeId}
                       edgeStartNodeId={tool.edgeStartNodeId}
+                      isolatedNodeIds={isolatedNodeIds}
                       draftNodes={navigationDraft?.nodes}
                       size={stageSize}
                       onNodeClick={tool.handleNodeClick}
                       onNodeDelete={tool.handleNodeDelete}
                       onDraftNodeMove={moveDraftNode}
                     />
-                    <PoiMarkersLayer pois={pois} size={stageSize} selectedPoiId={editingPoiId} onMove={handleMovePoi} onSelect={setEditingPoiId} />
+                    <PoiMarkersLayer pois={pois} nodes={currentFloorNodes} size={stageSize} selectedPoiId={editingPoiId} onMove={handleMovePoi} onSelect={setEditingPoiId} />
                   </Stage>
                   {editingPoi && (
                     <PoiEditPopover
@@ -733,6 +739,7 @@ export function CanvasBoard() {
                           <AntText strong style={{ fontSize: 12 }}>
                             #{node.id.slice(0, 6)}
                           </AntText>
+                          {isolatedNodeIds?.has(node.id) && <Tag color="error">Chưa nối Edge</Tag>}
                         </Space>
                         <AntText type="secondary" style={{ fontSize: 11 }}>
                           {Math.round(node.x)}%, {Math.round(node.y)}%
