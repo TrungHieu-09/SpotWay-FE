@@ -1,5 +1,5 @@
 import { Button, Card, List, Popconfirm, Space, Tabs, Tag, Typography } from 'antd'
-import { ClearOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import { ClearOutlined, DeleteOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { CONNECTOR_STYLE } from '../../components/canvas/ConnectorsLayer'
 import type { Connector, GraphEdge, GraphNode } from '../../types/graph'
 import type { Poi } from '../../types/poi'
@@ -41,6 +41,7 @@ type CanvasSidebarProps = {
   onDeleteNode: (nodeId: string) => void
   onDeleteEdge: (edgeId: string) => void
   onCreateConnector: () => void
+  onSuggestConnectors: () => void
   onDeleteConnector: (connectorId: string) => void
   onDeletePoi: (poiId: string) => void
   onDeleteAllNodes: () => void
@@ -61,6 +62,7 @@ export function CanvasSidebar({
   onDeleteNode,
   onDeleteEdge,
   onCreateConnector,
+  onSuggestConnectors,
   onDeleteConnector,
   onDeletePoi,
   onDeleteAllNodes,
@@ -205,6 +207,9 @@ export function CanvasSidebar({
                 onClick={() => onCreateConnector()}
               >
                 Tạo connector
+              </Button>
+              <Button size="small" block icon={<ThunderboltOutlined />} style={{ marginBottom: 8 }} onClick={() => onSuggestConnectors()}>
+                Gợi ý tự động
               </Button>
               <List
                 size="small"

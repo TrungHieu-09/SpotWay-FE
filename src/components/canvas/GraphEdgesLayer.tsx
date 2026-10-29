@@ -9,6 +9,8 @@ type GraphEdgesLayerProps = {
   nodeById: ReadonlyMap<string, GraphNode>
   draftEdges?: readonly DraftEdge[]
   draftNodeById?: ReadonlyMap<string, DraftNode>
+  /** Edge gợi ý tự động (chưa lưu): vẽ nét đứt xanh lá giữa các node thật. */
+  suggestions?: readonly { id: string; fromNodeId: string; toNodeId: string }[]
   size: MapSize
 }
 
@@ -18,6 +20,7 @@ export const GraphEdgesLayer = memo(function GraphEdgesLayer({
   nodeById,
   draftEdges = [],
   draftNodeById,
+  suggestions = [],
   size,
 }: GraphEdgesLayerProps) {
   const segment = (from: { x: number; y: number }, to: { x: number; y: number }) => {
@@ -47,6 +50,12 @@ export const GraphEdgesLayer = memo(function GraphEdgesLayer({
         const to = draftNodeById?.get(edge.toNodeId)
         if (!from || !to) return null
         return <Line key={edge.id} points={segment(from, to)} stroke="#f59e0b" dash={[8, 6]} strokeWidth={3} />
+      })}
+      {suggestions.map((edge) => {
+        const from = nodeById.get(edge.fromNodeId)
+        const to = nodeById.get(edge.toNodeId)
+        if (!from || !to) return null
+        return <Line key={edge.id} points={segment(from, to)} stroke="#16a34a" dash={[10, 6]} strokeWidth={4} lineCap="round" />
       })}
     </Layer>
   )

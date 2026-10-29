@@ -266,5 +266,6 @@ export function toRouteMapData(map: PublicFloorMap): RouteMapData {
       ),
     ),
     edges: map.edges.map((edge) => edgeFromDto(edge)),
+    pois: map.pois,
   }
 }

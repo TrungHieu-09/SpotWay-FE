@@ -5,6 +5,18 @@ import type { RouteMapData, RouteStep } from '../../types/navigation'
 import { percentToPixel } from '../../utils/canvasCoordinates'
 import './RouteMap.css'
 
+/** Biểu tượng theo loại POI; loại lạ dùng ghim chung. */
+const POI_ICON: Record<string, string> = {
+  RESTROOM: '🚻',
+  TOILET: '🚻',
+  ELEVATOR: '🛗',
+  EXIT: '🚪',
+  INFO: 'ℹ️',
+  PARKING: '🅿️',
+  ATM: '🏧',
+}
+const poiIcon = (category: string) => POI_ICON[category.toUpperCase()] ?? '📍'
+
 type RouteMapProps = {
   map?: RouteMapData
   routeSteps: RouteStep[]
@@ -12,6 +24,8 @@ type RouteMapProps = {
   destinationName?: string
   hazardNodeIds?: string[]
   interactiveFireMode?: boolean
+  /** Hiện toàn bộ đồ thị đi bộ (để gỡ lỗi); mặc định ẩn cho bản đồ gọn. */
+  showGraph?: boolean
   onSelectNode: (nodeId: string) => void
 }
 
@@ -22,17 +36,21 @@ export function RouteMap({
   destinationName,
   hazardNodeIds = [],
   interactiveFireMode = false,
+  showGraph = false,
   onSelectNode,
 }: RouteMapProps) {
   if (!map) return <Empty description="Không có dữ liệu tầng này" />
 
   const { width, height } = publicMapSize(map.floor)
+  // Cỡ ký hiệu tỉ lệ theo kích thước ảnh để đọc được dù ảnh 800px hay 4000px.
+  const s = Math.max(width, height) / 1000
   const at = (point: PercentPoint) => {
     const { pixelX, pixelY } = percentToPixel(point.x, point.y, width, height)
     return { x: pixelX, y: pixelY }
   }
   const floorSteps = routeSteps.filter((step) => step.floorId === map.floor.id)
   const nodeById = new Map(map.nodes.map((node) => [node.id, node]))
+  const poiNodeIds = new Set(map.pois.map((poi) => poi.nodeId))
   const pathPoints = floorSteps.map((step) => `${step.x},${step.y}`).join(' ')
 
   const isDestinationFloor =
@@ -53,6 +71,10 @@ export function RouteMap({
         preserveAspectRatio="xMidYMid meet"
       >
         <defs>
+          <linearGradient id="routeGradient" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={width} y2={height}>
+            <stop offset="0%" stopColor="#38bdf8" />
+            <stop offset="100%" stopColor="#2563eb" />
+          </linearGradient>
           <radialGradient id="userRadarGlow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.45" />
             <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
@@ -62,6 +84,7 @@ export function RouteMap({
         {map.floor.mapImageUrl ? (
           <image
             href={map.floor.mapImageUrl}
+            className="route-map__plan"
             width={width}
             height={height}
             preserveAspectRatio="none"
@@ -70,8 +93,8 @@ export function RouteMap({
           <rect width={width} height={height} className="route-map__fallback" />
         )}
 
-        {/* Graph edges */}
-        {map.edges.map((edge) => {
+        {/* Graph edges: chỉ khi gỡ lỗi hoặc đang đặt lửa, để bản đồ không rối */}
+        {(showGraph || interactiveFireMode) && map.edges.map((edge) => {
           const from = nodeById.get(edge.fromNodeId)
           const to = nodeById.get(edge.toNodeId)
           if (!from || !to) return null
@@ -94,14 +117,38 @@ export function RouteMap({
           <polyline points={pathPoints} className="route-map__route-outline" />
         )}
         {pathPoints && (
-          <polyline points={pathPoints} className="route-map__route" />
+          <polyline points={pathPoints} className="route-map__route" stroke="url(#routeGradient)" />
         )}
+        {pathPoints && (
+          <polyline points={pathPoints} className="route-map__route-flow" />
+        )}
+
+        {/* POI: biểu tượng theo loại + tên, bỏ POI đang là đích (đã có ghim đích) */}
+        {map.pois
+          .filter((poi) => poi.floorId === map.floor.id && poi.nodeId !== destinationStep?.nodeId)
+          .map((poi) => {
+            const node = nodeById.get(poi.nodeId)
+            if (!node) return null
+            const p = at(node)
+            return (
+              <g key={`poi-${poi.id}`} className="route-map__poi" onClick={() => onSelectNode(poi.nodeId)}>
+                <circle cx={p.x} cy={p.y} r={15 * s} />
+                <text x={p.x} y={p.y + 5.5 * s} textAnchor="middle" fontSize={15 * s}>
+                  {poiIcon(poi.category)}
+                </text>
+                <text x={p.x} y={p.y + 30 * s} textAnchor="middle" fontSize={12 * s} className="route-map__poi-label">
+                  {poi.name.length > 16 ? `${poi.name.slice(0, 15)}…` : poi.name}
+                </text>
+              </g>
+            )
+          })}
 
         {/* Regular Nodes */}
         {map.nodes.map((node) => {
           const isOnRoute = floorSteps.some((step) => step.nodeId === node.id)
           const isActive = activeStep?.nodeId === node.id
           if (isActive) return null // Handled with custom user radar below
+          if (poiNodeIds.has(node.id) && !isOnRoute) return null // Đã có biểu tượng POI
           const p = at(node)
           return (
             <g
@@ -109,10 +156,11 @@ export function RouteMap({
               className="route-map__node"
               onClick={() => onSelectNode(node.id)}
             >
+              <circle cx={p.x} cy={p.y} r={16 * s} fill="transparent" />
               <circle
                 cx={p.x}
                 cy={p.y}
-                r={isOnRoute ? 12 : 8}
+                r={(isOnRoute ? 10 : 5) * s}
                 className={
                   isOnRoute
                     ? 'route-map__node--route'

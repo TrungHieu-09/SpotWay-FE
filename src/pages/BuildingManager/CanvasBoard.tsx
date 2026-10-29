@@ -17,6 +17,7 @@ import { Stage } from 'react-konva'
 import {
   ColumnWidthOutlined,
   DeleteOutlined,
+  ThunderboltOutlined,
   LinkOutlined,
   LoadingOutlined,
   NodeIndexOutlined,
@@ -33,6 +34,7 @@ import { usePoiStore } from '../../store/usePoiStore'
 import { CanvasSidebar } from './CanvasSidebar'
 import { CalibrationDistanceModal } from '../../components/canvas/CalibrationDistanceModal'
 import { CalibrationLayer } from '../../components/canvas/CalibrationLayer'
+import { ConnectorSuggestModal } from '../../components/canvas/ConnectorSuggestModal'
 import { ConnectorFormModal } from '../../components/canvas/ConnectorFormModal'
 import { ConnectorsLayer } from '../../components/canvas/ConnectorsLayer'
 import { GraphEdgesLayer } from '../../components/canvas/GraphEdgesLayer'
@@ -48,6 +50,7 @@ import type { PercentPoint } from '../../types/geometry'
 import type { Connector, GraphDraft, GraphEdge, GraphNode } from '../../types/graph'
 import type { Poi } from '../../types/poi'
 import { distanceInMapUnits, findIsolatedNodeIds } from '../../utils/graphGeometry'
+import { suggestEdges, type EdgeSuggestion } from '../../utils/graphSuggestions'
 
 const EMPTY_NODES: GraphNode[] = []
 const EMPTY_EDGES: GraphEdge[] = []
@@ -91,6 +94,9 @@ export function CanvasBoard() {
   const createConnector = useGraphStore((state) => state.createConnector)
   const deleteConnector = useGraphStore((state) => state.deleteConnector)
   const [connectorModalOpen, setConnectorModalOpen] = useState(false)
+  const [suggestModalOpen, setSuggestModalOpen] = useState(false)
+  const [suggestedEdges, setSuggestedEdges] = useState<EdgeSuggestion[]>([])
+  const createEdge = useGraphStore((state) => state.createEdge)
   const floors = useFloorStore((state) => state.floors)
   const calibrateFloor = useFloorStore((state) => state.calibrateFloor)
   const [editingPoiId, setEditingPoiId] = useState<string>()
@@ -146,11 +152,28 @@ export function CanvasBoard() {
   if (draftFloorId !== selectedFloorId) {
     setDraftFloorId(selectedFloorId)
     setNavigationDraft(undefined)
+    setSuggestedEdges([])
     setGraphError(undefined)
   }
 
   const handleMovePoi = (poiId: string, to: PercentPoint) => {
     if (selectedFloorId) movePoi(selectedFloorId, poiId, to)
+  }
+
+  function handleSuggestEdges() {
+    if (!selectedFloor) return
+    const found = suggestEdges(currentFloorNodes, currentFloorEdges, { width: selectedFloor.mapWidth, height: selectedFloor.mapHeight })
+    setSuggestedEdges(found)
+    if (found.length === 0) message.info('Các node đã nối liền một mạng, không cần gợi ý thêm.')
+  }
+
+  function handleApplySuggestedEdges() {
+    if (!selectedFloorId) return
+    const existing = new Set(currentFloorNodes.map((node) => node.id))
+    for (const edge of suggestedEdges) {
+      if (existing.has(edge.fromNodeId) && existing.has(edge.toNodeId)) createEdge(selectedFloorId, edge.fromNodeId, edge.toNodeId)
+    }
+    setSuggestedEdges([])
   }
 
   function handleDeleteAllNodes() {
@@ -332,6 +355,16 @@ export function CanvasBoard() {
             <Button icon={<ScanOutlined />} onClick={() => void handleAnalyzeNavigation()} loading={isGraphSaving} disabled={!selectedFloor.mapImageUrl}>
               Analyze điều hướng
             </Button>
+            <Button icon={<ThunderboltOutlined />} onClick={handleSuggestEdges} disabled={currentFloorNodes.length < 2}>
+              Gợi ý nối edge
+            </Button>
+            {suggestedEdges.length > 0 && (
+              <>
+                <Tag color="green">Gợi ý: {suggestedEdges.length} edge (nét đứt xanh) — kiểm tra không xuyên tường</Tag>
+                <Button type="primary" onClick={handleApplySuggestedEdges}>Áp dụng gợi ý</Button>
+                <Button onClick={() => setSuggestedEdges([])}>Bỏ gợi ý</Button>
+              </>
+            )}
             {navigationDraft && <>
               {navigationDraft.warnings.length > 0 && (
                 <Alert
@@ -480,6 +513,7 @@ export function CanvasBoard() {
                       nodeById={nodeById}
                       draftEdges={navigationDraft?.edges}
                       draftNodeById={draftNodeById}
+                      suggestions={suggestedEdges}
                       size={stageSize}
                     />
                     <ConnectorsLayer floorId={selectedFloor.id} connectors={connectors} nodeById={nodeById} size={stageSize} />
@@ -541,6 +575,7 @@ export function CanvasBoard() {
         onDeleteNode={tool.handleNodeDelete}
         onDeleteEdge={handleDeleteEdge}
         onCreateConnector={() => setConnectorModalOpen(true)}
+        onSuggestConnectors={() => setSuggestModalOpen(true)}
         onDeleteConnector={(connectorId) => buildingId && deleteConnector(buildingId, connectorId)}
         onDeletePoi={(poiId) => deletePoi(selectedFloor.id, poiId)}
         onDeleteAllNodes={handleDeleteAllNodes}
@@ -551,6 +586,13 @@ export function CanvasBoard() {
         mapSize={{ width: selectedFloor.mapWidth, height: selectedFloor.mapHeight }}
         onSubmit={handleCalibrate}
         onCancel={tool.clearCalibration}
+      />
+      <ConnectorSuggestModal
+        open={suggestModalOpen}
+        floors={floors}
+        connectors={connectors}
+        onCreate={(input) => (buildingId ? createConnector(buildingId, input) : Promise.resolve(false))}
+        onClose={() => setSuggestModalOpen(false)}
       />
       <ConnectorFormModal
         open={connectorModalOpen}

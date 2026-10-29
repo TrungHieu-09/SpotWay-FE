@@ -83,6 +83,8 @@ export type RouteMapData = {
   floor: PublicFloor
   nodes: GraphNode[]
   edges: GraphEdge[]
+  /** POI của tầng (gắn vào node) để vẽ biểu tượng trên bản đồ khách. */
+  pois: PublicPoi[]
 }
 
 export type PublicStore = {
