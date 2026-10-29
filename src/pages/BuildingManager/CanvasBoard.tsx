@@ -5,13 +5,11 @@ import {
   Card,
   Empty,
   Input,
-  List,
   message,
   Popconfirm,
   Radio,
   Select,
   Space,
-  Tabs,
   Tag,
   Typography,
 } from 'antd'
@@ -22,7 +20,6 @@ import {
   LinkOutlined,
   LoadingOutlined,
   NodeIndexOutlined,
-  PlusOutlined,
   PushpinOutlined,
   SaveOutlined,
   ScanOutlined,
@@ -41,8 +38,9 @@ export interface WallSegment {
 import { useFloorStore } from '../../store/useFloorStore'
 import { useGraphStore } from '../../store/useGraphStore'
 import { usePoiStore } from '../../store/usePoiStore'
+import { CanvasSidebar } from './CanvasSidebar'
 import { ConnectorFormModal } from '../../components/canvas/ConnectorFormModal'
-import { CONNECTOR_STYLE, ConnectorsLayer } from '../../components/canvas/ConnectorsLayer'
+import { ConnectorsLayer } from '../../components/canvas/ConnectorsLayer'
 import { GraphEdgesLayer } from '../../components/canvas/GraphEdgesLayer'
 import { GraphNodesLayer } from '../../components/canvas/GraphNodesLayer'
 import { MapBackgroundLayer } from '../../components/canvas/MapBackgroundLayer'
@@ -681,292 +679,28 @@ export function CanvasBoard() {
         </div>
       </Card>
 
-      {/* Multi-Tab Sidebar: Nodes, Edges, POIs */}
-      <Card
-        className="tool-card poi-card"
-        styles={{ body: { padding: '12px 14px' } }}
-      >
-        <Tabs
-          defaultActiveKey="nodes"
-          items={[
-            {
-              key: 'nodes',
-              label: `Node (${currentFloorNodes.length})`,
-              children: (
-                <List
-                  size="small"
-                  dataSource={currentFloorNodes}
-                  locale={{ emptyText: 'Chưa có Node. Click lên bản đồ để thêm' }}
-                  style={{ maxHeight: 520, overflowY: 'auto' }}
-                  renderItem={(node) => (
-                    <List.Item
-                      style={{
-                        padding: '6px 8px',
-                        background: selectedNodeId === node.id ? '#f0f9ff' : undefined,
-                        borderRadius: 4,
-                        cursor: 'pointer',
-                      }}
-                      onClick={() => selectNode(selectedNodeId === node.id ? null : node.id)}
-                      actions={[
-                        <div key="delete" onClick={(e) => e.stopPropagation()}>
-                          <Popconfirm
-                            title="Xác nhận xóa Node?"
-                            onConfirm={() => tool.handleNodeDelete(node.id)}
-                            okText="Xóa"
-                            cancelText="Hủy"
-                            okButtonProps={{ danger: true }}
-                          >
-                            <Button
-                              danger
-                              size="small"
-                              type="text"
-                              icon={<DeleteOutlined />}
-                            />
-                          </Popconfirm>
-                        </div>,
-                      ]}
-                    >
-                      <Space orientation="vertical" size={1}>
-                        <Space>
-                          <Tag
-                            color={
-                              node.type === 'ELEVATOR'
-                                ? 'purple'
-                                : node.type === 'DOOR'
-                                  ? 'orange'
-                                  : node.type === 'EXIT' || node.type === 'EMERGENCY_EXIT'
-                                    ? 'green'
-                                    : 'cyan'
-                            }
-                          >
-                            {node.type}
-                          </Tag>
-                          <AntText strong style={{ fontSize: 12 }}>
-                            #{node.id.slice(0, 6)}
-                          </AntText>
-                          {isolatedNodeIds?.has(node.id) && <Tag color="error">Chưa nối Edge</Tag>}
-                        </Space>
-                        <AntText type="secondary" style={{ fontSize: 11 }}>
-                          {Math.round(node.x)}%, {Math.round(node.y)}%
-                        </AntText>
-                      </Space>
-                    </List.Item>
-                  )}
-                />
-              ),
-            },
-            {
-              key: 'edges',
-              label: `Edge (${currentFloorEdges.length})`,
-              children: (
-                <List
-                  size="small"
-                  dataSource={currentFloorEdges}
-                  locale={{ emptyText: 'Chưa có Edge. Nối 2 Node ở chế độ Edge' }}
-                  style={{ maxHeight: 520, overflowY: 'auto' }}
-                  renderItem={(edge) => (
-                    <List.Item
-                      style={{ padding: '6px 8px' }}
-                      actions={[
-                        <Popconfirm
-                          key="delete"
-                          title="Xác nhận xóa Edge?"
-                          onConfirm={() => handleDeleteEdge(edge.id)}
-                          okText="Xóa"
-                          cancelText="Hủy"
-                          okButtonProps={{ danger: true }}
-                        >
-                          <Button
-                            danger
-                            size="small"
-                            type="text"
-                            icon={<DeleteOutlined />}
-                          />
-                        </Popconfirm>,
-                      ]}
-                    >
-                      <Space orientation="vertical" size={1}>
-                        <AntText style={{ fontSize: 12 }}>
-                          #{edge.fromNodeId.slice(0, 5)} → #{edge.toNodeId.slice(0, 5)}
-                        </AntText>
-                        <AntText type="secondary" style={{ fontSize: 11 }}>
-                          Khoảng cách: {Math.round(edgeLength(edge))}px bản đồ
-                        </AntText>
-                      </Space>
-                    </List.Item>
-                  )}
-                />
-              ),
-            },
-            {
-              key: 'connectors',
-              label: `Connector (${floorConnectors.length})`,
-              children: (
-                <>
-                <Button
-                  size="small"
-                  type="dashed"
-                  block
-                  icon={<PlusOutlined />}
-                  style={{ marginBottom: 8 }}
-                  onClick={() => setConnectorModalOpen(true)}
-                >
-                  Tạo connector
-                </Button>
-                <List
-                  size="small"
-                  dataSource={floorConnectors}
-                  locale={{ emptyText: 'Tầng này chưa có thang máy/cầu thang liên kết tầng khác' }}
-                  style={{ maxHeight: 520, overflowY: 'auto' }}
-                  renderItem={(connector) => (
-                    <List.Item
-                      style={{ padding: '6px 8px' }}
-                      actions={[
-                        <Popconfirm
-                          key="delete"
-                          title="Xóa connector này?"
-                          description="Các node vẫn giữ nguyên, chỉ gỡ liên kết giữa các tầng."
-                          onConfirm={() => buildingId && deleteConnector(buildingId, connector.id)}
-                          okText="Xóa"
-                          cancelText="Hủy"
-                          okButtonProps={{ danger: true }}
-                        >
-                          <Button danger size="small" type="text" icon={<DeleteOutlined />} />
-                        </Popconfirm>,
-                      ]}
-                    >
-                      <Space orientation="vertical" size={1}>
-                        <Space>
-                          <Tag color={CONNECTOR_STYLE[connector.kind].color}>{CONNECTOR_STYLE[connector.kind].label}</Tag>
-                          <AntText strong style={{ fontSize: 12 }}>
-                            {connector.name}
-                          </AntText>
-                          {!connector.accessible && <Tag>Không xe lăn</Tag>}
-                        </Space>
-                        <AntText type="secondary" style={{ fontSize: 11 }}>
-                          Nối: {connector.stops.map((stop) => floorNameById.get(stop.floorId) ?? '?').join(' ↔ ')}
-                        </AntText>
-                      </Space>
-                    </List.Item>
-                  )}
-                />
-                </>
-              ),
-            },
-            {
-              key: 'pois',
-              label: `POI (${pois.length})`,
-              children: (
-                <List
-                  size="small"
-                  dataSource={pois}
-                  locale={{ emptyText: 'Chuyển sang chế độ POI để thêm' }}
-                  style={{ maxHeight: 520, overflowY: 'auto' }}
-                  renderItem={(poi) => (
-                    <List.Item
-                      style={{ padding: '6px 8px' }}
-                      actions={[
-                        <Button
-                          key="delete"
-                          danger
-                          size="small"
-                          type="text"
-                          icon={<DeleteOutlined />}
-                          onClick={() => deletePoi(selectedFloor.id, poi.id)}
-                        />,
-                      ]}
-                    >
-                      <Space orientation="vertical" size={1}>
-                        <Space>
-                          <AntText strong style={{ fontSize: 12 }}>
-                            {poi.name}
-                          </AntText>
-                          <Tag color="blue">{poi.category}</Tag>
-                          {!poi.nearestNodeId && <Tag color="warning">Chưa gắn Node</Tag>}
-                        </Space>
-                        <AntText type="secondary" style={{ fontSize: 11 }}>
-                          {poi.x.toFixed(1)}%, {poi.y.toFixed(1)}%
-                        </AntText>
-                      </Space>
-                    </List.Item>
-                  )}
-                />
-              ),
-            },
-            {
-              key: 'walls',
-              label: `Tường (${walls.length})`,
-              children: (
-                <List
-                  size="small"
-                  dataSource={walls}
-                  locale={{
-                    emptyText: (
-                      <div style={{ padding: '16px 0', textAlign: 'center' }}>
-                        <p style={{ margin: 0, color: '#94a3b8', fontSize: 12 }}>
-                          Chưa có vách tường nào.
-                        </p>
-                        <Button
-                          size="small"
-                          type="link"
-                          icon={<ScanOutlined />}
-                          onClick={() => void handleAutoExtractWallsFromImage()}
-                          disabled={!selectedFloor.mapImageUrl}
-                          style={{ marginTop: 4, padding: 0 }}
-                        >
-                          Quét vách tường từ ảnh sơ đồ
-                        </Button>
-                      </div>
-                    ),
-                  }}
-                  style={{ maxHeight: 520, overflowY: 'auto' }}
-                  renderItem={(wall, idx) => (
-                    <List.Item
-                      style={{
-                        padding: '6px 8px',
-                        background: selectedWallId === wall.id ? '#f0f9ff' : undefined,
-                        borderRadius: 4,
-                        cursor: 'pointer',
-                      }}
-                      onClick={() => setSelectedWallId((curr) => (curr === wall.id ? undefined : wall.id))}
-                      actions={[
-                        <div key="delete" onClick={(e) => e.stopPropagation()}>
-                          <Popconfirm
-                            title="Xác nhận xóa vách tường này?"
-                            onConfirm={() => handleDeleteWall(wall.id)}
-                            okText="Xóa"
-                            cancelText="Hủy"
-                            okButtonProps={{ danger: true }}
-                          >
-                            <Button
-                              danger
-                              size="small"
-                              type="text"
-                              icon={<DeleteOutlined />}
-                            />
-                          </Popconfirm>
-                        </div>,
-                      ]}
-                    >
-                      <Space orientation="vertical" size={1}>
-                        <Space>
-                          <Tag color="geekblue">Vách #{idx + 1}</Tag>
-                          <AntText strong style={{ fontSize: 12 }}>
-                            ({Math.round(wall.x1)}%, {Math.round(wall.y1)}%) → ({Math.round(wall.x2)}%, {Math.round(wall.y2)}%)
-                          </AntText>
-                        </Space>
-                        <AntText type="secondary" style={{ fontSize: 11 }}>
-                          Dài ~{Math.round(Math.hypot(wall.x2 - wall.x1, wall.y2 - wall.y1))}% ảnh · Tự extrude sang 3D
-                        </AntText>
-                      </Space>
-                    </List.Item>
-                  )}
-                />
-              ),
-            },
-          ]}
-        />
-      </Card>
+      <CanvasSidebar
+        nodes={currentFloorNodes}
+        edges={currentFloorEdges}
+        connectors={floorConnectors}
+        pois={pois}
+        walls={walls}
+        floorNameById={floorNameById}
+        isolatedNodeIds={isolatedNodeIds}
+        selectedNodeId={selectedNodeId}
+        selectedWallId={selectedWallId}
+        canScanWalls={Boolean(selectedFloor.mapImageUrl)}
+        edgeLength={edgeLength}
+        onSelectNode={selectNode}
+        onDeleteNode={tool.handleNodeDelete}
+        onDeleteEdge={handleDeleteEdge}
+        onCreateConnector={() => setConnectorModalOpen(true)}
+        onDeleteConnector={(connectorId) => buildingId && deleteConnector(buildingId, connectorId)}
+        onDeletePoi={(poiId) => deletePoi(selectedFloor.id, poiId)}
+        onScanWalls={() => void handleAutoExtractWallsFromImage()}
+        onToggleWall={(wallId) => setSelectedWallId((curr) => (curr === wallId ? undefined : wallId))}
+        onDeleteWall={handleDeleteWall}
+      />
       <ConnectorFormModal
         open={connectorModalOpen}
         floors={floors}
