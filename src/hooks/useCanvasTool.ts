@@ -5,7 +5,7 @@ import type { MapSize, PercentPoint } from '../types/geometry'
 import type { NodeType } from '../types/graph'
 import { pixelToPercent } from '../utils/canvasCoordinates'
 
-type EditorMode = 'poi' | 'node' | 'edge'
+type EditorMode = 'poi' | 'node' | 'edge' | 'calibrate'
 
 type UseCanvasToolOptions = {
   floorId?: string
@@ -24,6 +24,8 @@ export function useCanvasTool({ floorId, stageSize, onAddPoi, onError }: UseCanv
   const [nodeName, setNodeName] = useState('')
   const [edgeStartNodeId, setEdgeStartNodeId] = useState<string>()
   const [routeAnchorNodeId, setRouteAnchorNodeId] = useState<string>()
+  /** Hai điểm (%) người dùng chấm để hiệu chuẩn tỉ lệ; chấm lần thứ ba thì bắt đầu lại. */
+  const [calibrationPoints, setCalibrationPoints] = useState<PercentPoint[]>([])
 
   const selectedNodeId = useGraphStore((state) => state.selectedNodeId)
   const createNode = useGraphStore((state) => state.createNode)
@@ -37,12 +39,16 @@ export function useCanvasTool({ floorId, stageSize, onAddPoi, onError }: UseCanv
     setToolFloorId(floorId)
     setEdgeStartNodeId(undefined)
     setRouteAnchorNodeId(undefined)
+    setCalibrationPoints([])
   }
 
   const changeMode = useCallback((next: EditorMode) => {
     setMode(next)
     setEdgeStartNodeId(undefined)
+    setCalibrationPoints([])
   }, [])
+
+  const clearCalibration = useCallback(() => setCalibrationPoints([]), [])
 
   function handleStageClick(event: Konva.KonvaEventObject<MouseEvent>) {
     if (!floorId) return
@@ -55,6 +61,11 @@ export function useCanvasTool({ floorId, stageSize, onAddPoi, onError }: UseCanv
 
     if (mode === 'poi') {
       onAddPoi(at)
+      return
+    }
+
+    if (mode === 'calibrate') {
+      setCalibrationPoints((points) => (points.length >= 2 ? [at] : [...points, at]))
       return
     }
 
@@ -121,6 +132,8 @@ export function useCanvasTool({ floorId, stageSize, onAddPoi, onError }: UseCanv
     setRouteAnchorNodeId,
     startEdgeFrom,
     resetNodeContext,
+    calibrationPoints,
+    clearCalibration,
     handleStageClick,
     handleNodeClick,
     handleNodeDelete,

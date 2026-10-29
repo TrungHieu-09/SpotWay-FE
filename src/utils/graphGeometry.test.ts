@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { distanceInMapUnits, findIsolatedNodeIds, findNearestNode } from './graphGeometry.ts'
+import { distanceInMapUnits, estimateMetersPerPixel, findIsolatedNodeIds, findNearestNode } from './graphGeometry.ts'
 
 const size = { width: 1000, height: 500 }
 
@@ -11,6 +11,20 @@ describe('findIsolatedNodeIds', () => {
     assert.deepEqual([...findIsolatedNodeIds(nodes, edges)], ['d'])
     assert.equal(findIsolatedNodeIds(nodes, []).size, 4)
     assert.equal(findIsolatedNodeIds([], edges).size, 0)
+  })
+})
+
+describe('estimateMetersPerPixel', () => {
+  it('chia khoảng cách thật cho khoảng cách pixel (tính cả ảnh không vuông)', () => {
+    // 10% ngang = 100px; 5 m / 100 px = 0.05 m/px
+    assert.equal(estimateMetersPerPixel({ x: 0, y: 0 }, { x: 10, y: 0 }, size, 5), 0.05)
+    // 10% dọc = 50px
+    assert.equal(estimateMetersPerPixel({ x: 0, y: 0 }, { x: 0, y: 10 }, size, 5), 0.1)
+  })
+
+  it('trả null khi hai điểm trùng nhau hoặc khoảng cách thật <= 0', () => {
+    assert.equal(estimateMetersPerPixel({ x: 5, y: 5 }, { x: 5, y: 5 }, size, 5), null)
+    assert.equal(estimateMetersPerPixel({ x: 0, y: 0 }, { x: 10, y: 0 }, size, 0), null)
   })
 })
 

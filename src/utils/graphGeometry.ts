@@ -8,6 +8,15 @@ export function distanceInMapUnits(a: PercentPoint, b: PercentPoint, size: MapSi
   return Math.hypot(((a.x - b.x) / 100) * size.width, ((a.y - b.y) / 100) * size.height)
 }
 
+/**
+ * Tỉ lệ mét/pixel suy từ hai điểm % và khoảng cách thật giữa chúng.
+ * Trả null khi hai điểm gần như trùng nhau hoặc khoảng cách thật không hợp lệ.
+ */
+export function estimateMetersPerPixel(a: PercentPoint, b: PercentPoint, size: MapSize, realDistanceMeters: number) {
+  const pixels = distanceInMapUnits(a, b, size)
+  return pixels > 1e-6 && realDistanceMeters > 0 ? realDistanceMeters / pixels : null
+}
+
 /** Id các node không nằm trong edge nào: tìm đường không thể đi tới/đi qua chúng. */
 export function findIsolatedNodeIds(
   nodes: readonly { id: string }[],

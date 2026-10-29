@@ -15,6 +15,7 @@ import {
 } from 'antd'
 import { Stage } from 'react-konva'
 import {
+  ColumnWidthOutlined,
   DeleteOutlined,
   LinkOutlined,
   LoadingOutlined,
@@ -23,12 +24,15 @@ import {
   ScanOutlined,
 } from '@ant-design/icons'
 import { analyzeNavigationDraft, applyNavigationDraft } from '../../api/graphGateway'
+import { positionToDto } from '../../api/graphMapper'
 import { buildCorridorDraft } from '../../utils/navigationDraft'
 
 import { useFloorStore } from '../../store/useFloorStore'
 import { useGraphStore } from '../../store/useGraphStore'
 import { usePoiStore } from '../../store/usePoiStore'
 import { CanvasSidebar } from './CanvasSidebar'
+import { CalibrationDistanceModal } from '../../components/canvas/CalibrationDistanceModal'
+import { CalibrationLayer } from '../../components/canvas/CalibrationLayer'
 import { ConnectorFormModal } from '../../components/canvas/ConnectorFormModal'
 import { ConnectorsLayer } from '../../components/canvas/ConnectorsLayer'
 import { GraphEdgesLayer } from '../../components/canvas/GraphEdgesLayer'
@@ -88,6 +92,7 @@ export function CanvasBoard() {
   const deleteConnector = useGraphStore((state) => state.deleteConnector)
   const [connectorModalOpen, setConnectorModalOpen] = useState(false)
   const floors = useFloorStore((state) => state.floors)
+  const calibrateFloor = useFloorStore((state) => state.calibrateFloor)
   const [editingPoiId, setEditingPoiId] = useState<string>()
 
   // POI là entity riêng trong usePoiStore (tự snap vào node gần nhất khi tạo/kéo)
@@ -251,6 +256,21 @@ export function CanvasBoard() {
     if (selectedFloor) deleteEdge(selectedFloor.id, edgeId)
   }
 
+  async function handleCalibrate(realDistanceMeters: number) {
+    const size = { width: selectedFloor!.mapWidth, height: selectedFloor!.mapHeight }
+    const [pointA, pointB] = tool.calibrationPoints.map((point) => positionToDto(point, size))
+    try {
+      const edges = await calibrateFloor(selectedFloor!.id, { pointA, pointB, realDistanceMeters })
+      message.success(`Đã hiệu chuẩn tầng, tính lại độ dài ${edges} edge.`)
+      tool.clearCalibration()
+      tool.changeMode('node')
+      return true
+    } catch (reason) {
+      message.error((reason as Error).message)
+      return false
+    }
+  }
+
   /** Độ dài edge theo đơn vị pixel ảnh sơ đồ (chỉ để hiển thị; weight không lưu ở FE). */
   function edgeLength(edge: GraphEdge) {
     const from = nodeById.get(edge.fromNodeId)
@@ -305,6 +325,9 @@ export function CanvasBoard() {
               <Radio.Button value="poi">
                 <PushpinOutlined /> POI
               </Radio.Button>
+              <Radio.Button value="calibrate">
+                <ColumnWidthOutlined /> Hiệu chuẩn
+              </Radio.Button>
             </Radio.Group>
             <Button icon={<ScanOutlined />} onClick={() => void handleAnalyzeNavigation()} loading={isGraphSaving} disabled={!selectedFloor.mapImageUrl}>
               Analyze điều hướng
@@ -348,6 +371,13 @@ export function CanvasBoard() {
                   style={{ width: 230 }}
                 />
               </>
+            )}
+            {tool.mode === 'calibrate' && (
+              <AntText type="secondary">
+                {tool.calibrationPoints.length === 0
+                  ? 'Click điểm đầu của một khoảng đã biết độ dài thật (vd. bề rộng cửa chính, hành lang).'
+                  : 'Click điểm thứ hai. Click thêm lần nữa để chấm lại từ đầu.'}
+              </AntText>
             )}
             {tool.mode === 'edge' && (
               <AntText type="secondary">
@@ -465,6 +495,7 @@ export function CanvasBoard() {
                       onDraftNodeMove={moveDraftNode}
                     />
                     <PoiMarkersLayer pois={pois} nodes={currentFloorNodes} size={stageSize} selectedPoiId={editingPoiId} onMove={handleMovePoi} onSelect={setEditingPoiId} />
+                    <CalibrationLayer points={tool.calibrationPoints} size={stageSize} />
                   </Stage>
                   {editingPoi && (
                     <PoiEditPopover
@@ -514,6 +545,12 @@ export function CanvasBoard() {
         onDeletePoi={(poiId) => deletePoi(selectedFloor.id, poiId)}
         onDeleteAllNodes={handleDeleteAllNodes}
         onDeleteAllPois={handleDeleteAllPois}
+      />
+      <CalibrationDistanceModal
+        points={tool.calibrationPoints}
+        mapSize={{ width: selectedFloor.mapWidth, height: selectedFloor.mapHeight }}
+        onSubmit={handleCalibrate}
+        onCancel={tool.clearCalibration}
       />
       <ConnectorFormModal
         open={connectorModalOpen}
