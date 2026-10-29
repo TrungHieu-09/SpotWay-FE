@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { describePublishError } from './publishIssues.ts'
+import { describePublishError, hintFor } from './publishIssues.ts'
 
 describe('describePublishError', () => {
   it('tách từng lỗi và dịch sang cách sửa', () => {
@@ -15,6 +15,12 @@ describe('describePublishError', () => {
 
   it('lỗi BE lạ giữ nguyên chữ gốc', () => {
     assert.deepEqual(describePublishError('The floor cannot be published: Something new'), ['Something new'])
+  })
+
+  it('hintFor dịch từng thông báo lẻ và giữ nguyên thông báo lạ', () => {
+    assert.match(hintFor('Nodes with no edge cannot be walked to'), /chưa nối edge/)
+    assert.equal(hintFor('Something new'), 'Something new')
+    assert.match(hintFor('Calibrate the floor scale before publishing (PATCH /floors/:id/calibration)'), /hiệu chuẩn/)
   })
 
   it('thông báo không phải lỗi publish được trả nguyên', () => {

@@ -47,6 +47,14 @@ export async function calibrateFloor(floorId: string, input: CalibrateFloorInput
   return data
 }
 
+export type FloorGraphIssue = { code: string; severity: 'ERROR' | 'WARNING'; message: string; ids?: string[] }
+
+/** Báo cáo kiểm tra trước khi publish (BE không ghi gì). `valid` = không còn lỗi ERROR. */
+export async function validateFloorGraph(floorId: string) {
+  const { data } = await apiClient.post<{ valid: boolean; issues: FloorGraphIssue[] }>(`/floors/${floorId}/graph/validate`)
+  return data
+}
+
 export async function deleteFloor(floorId: string) {
   await apiClient.delete(`/floors/${floorId}`)
 }
