@@ -262,6 +262,52 @@ describe('deleteNode', () => {
   })
 })
 
+describe('deleteAllNodes', () => {
+  const seed = (store: ReturnType<typeof setup>['store']) =>
+    store.setState({
+      nodesByFloor: { A: [node('n1', 'A'), node('n2', 'A')], B: [node('n3', 'B')] },
+      edgesByFloor: { A: [edge('e1', 'A', 'n1', 'n2')], B: [] },
+      selectedNodeId: 'n1',
+    })
+
+  it('xoá mọi node + edge của đúng tầng đó, gọi BE cho từng node, không đụng tầng khác', async () => {
+    const { store, calls } = setup()
+    await store.getState().loadFloorGraph('A', size)
+    await store.getState().loadFloorGraph('B', size)
+    seed(store)
+
+    store.getState().deleteAllNodes('A')
+    assert.deepEqual(store.getState().nodesByFloor['A'], [])
+    assert.deepEqual(store.getState().edgesByFloor['A'], [])
+    assert.equal(store.getState().selectedNodeId, null)
+    assert.deepEqual(store.getState().nodesByFloor['B']?.map((n) => n.id), ['n3'])
+
+    await store.getState().flush()
+    assert.deepEqual([...calls].sort(), ['deleteNode:n1', 'deleteNode:n2'])
+  })
+
+  it('BE từ chối một node (còn POI gắn vào): chỉ node đó quay lại, edge nối tới node đã xoá không hồi sinh', async () => {
+    const { store } = setup({
+      deleteNode: async (id) => { if (id === 'n2') throw new Error('còn POI') },
+    })
+    await store.getState().loadFloorGraph('A', size)
+    seed(store)
+
+    store.getState().deleteAllNodes('A')
+    await store.getState().flush()
+    assert.deepEqual(store.getState().nodesByFloor['A']?.map((n) => n.id), ['n2'])
+    assert.deepEqual(store.getState().edgesByFloor['A'], [])
+    assert.match(store.getState().error ?? '', /Không thể xoá node: còn POI/)
+  })
+
+  it('tầng rỗng hoặc chưa tải: không làm gì', async () => {
+    const { store, calls } = setup()
+    store.getState().deleteAllNodes('chua-tai')
+    await store.getState().flush()
+    assert.deepEqual(calls, [])
+  })
+})
+
 describe('moveNode', () => {
   it('đổi vị trí ngay (kẹp 0..100); lỗi -> trả vị trí cũ', async () => {
     const { store } = setup({ moveNode: () => Promise.reject(new Error('x')) })

@@ -15,26 +15,16 @@ import {
 } from 'antd'
 import { Stage } from 'react-konva'
 import {
-  BuildOutlined,
   DeleteOutlined,
   LinkOutlined,
   LoadingOutlined,
   NodeIndexOutlined,
   PushpinOutlined,
-  SaveOutlined,
   ScanOutlined,
 } from '@ant-design/icons'
 import { analyzeNavigationDraft, applyNavigationDraft } from '../../api/graphGateway'
 import { buildCorridorDraft } from '../../utils/navigationDraft'
 
-export interface WallSegment {
-  id: string
-  floorId: string
-  x1: number
-  y1: number
-  x2: number
-  y2: number
-}
 import { useFloorStore } from '../../store/useFloorStore'
 import { useGraphStore } from '../../store/useGraphStore'
 import { usePoiStore } from '../../store/usePoiStore'
@@ -46,7 +36,6 @@ import { GraphNodesLayer } from '../../components/canvas/GraphNodesLayer'
 import { MapBackgroundLayer } from '../../components/canvas/MapBackgroundLayer'
 import { PoiEditPopover } from '../../components/canvas/PoiEditPopover'
 import { PoiMarkersLayer } from '../../components/canvas/PoiMarkersLayer'
-import { WallsLayer } from '../../components/canvas/WallsLayer'
 import { useCanvasTool } from '../../hooks/useCanvasTool'
 import { useElementSize } from '../../hooks/useElementSize'
 import { useImage } from '../../hooks/useImage'
@@ -60,16 +49,7 @@ const EMPTY_NODES: GraphNode[] = []
 const EMPTY_EDGES: GraphEdge[] = []
 const EMPTY_POIS: Poi[] = []
 const EMPTY_CONNECTORS: Connector[] = []
-import {
-  analyzeFloorPlan,
-  getLatestFloorPlanRevision,
-  saveFloorPlanRevision,
-} from '../../api/floorPlanAnalysis'
-import { detectWallsFromFloorPlanImage } from '../../utils/wallDetection'
-
 const { Text: AntText } = Typography
-
-const makeLocalId = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
 function floorStatusColor(status: FloorPublishStatus) {
   return status === 'published' ? 'green' : 'gold'
@@ -82,10 +62,7 @@ export function CanvasBoard() {
   )
   const error = useFloorStore((state) => state.error)
   const selectedFloorId = selectedFloor?.id
-  const [walls, setWalls] = useState<WallSegment[]>([])
-  const [selectedWallId, setSelectedWallId] = useState<string>()
   const [isGraphSaving, setIsGraphSaving] = useState(false)
-  const [isSavingWalls, setIsSavingWalls] = useState(false)
   const [graphError, setGraphError] = useState<string>()
   const [navigationDraft, setNavigationDraft] = useState<GraphDraft>()
   const floorIdRef = useRef(selectedFloorId)
@@ -101,6 +78,7 @@ export function CanvasBoard() {
   const loadFloorGraph = useGraphStore((state) => state.loadFloorGraph)
   const clearFloor = useGraphStore((state) => state.clearFloor)
   const deleteEdge = useGraphStore((state) => state.deleteEdge)
+  const deleteAllNodes = useGraphStore((state) => state.deleteAllNodes)
   const selectNode = useGraphStore((state) => state.selectNode)
   const buildingId = selectedFloor?.buildingId
   const connectors = useGraphStore((state) => (buildingId && state.connectorsByBuilding[buildingId]) || EMPTY_CONNECTORS)
@@ -121,6 +99,7 @@ export function CanvasBoard() {
   const createPoi = usePoiStore((state) => state.createPoi)
   const movePoi = usePoiStore((state) => state.movePoi)
   const deletePoi = usePoiStore((state) => state.deletePoi)
+  const deleteAllPois = usePoiStore((state) => state.deleteAllPois)
   const updatePoiDetails = usePoiStore((state) => state.updatePoiDetails)
   const mapImageUrl = selectedFloor?.mapImageUrl?.trim() || null
   const mapImage = useImage(mapImageUrl)
@@ -155,106 +134,30 @@ export function CanvasBoard() {
 
   useEffect(() => {
     floorIdRef.current = selectedFloorId
-    setWalls([])
-    setNavigationDraft(undefined)
-    setGraphError(undefined)
-    setSelectedWallId(undefined)
-    if (!selectedFloorId) return
-
-    // Only a persisted server revision may initialize the editor.  Restoring
-    // browser-local walls made a newly uploaded, unanalyzed plan look as if
-    // it had already been processed by the AI.
-    let cancelled = false
-    getLatestFloorPlanRevision(selectedFloorId)
-      .then((revision) => {
-        if (cancelled) return
-        const draftWalls = revision?.editorState?.walls
-        if (Array.isArray(draftWalls) && draftWalls.length > 0) {
-          const loaded: WallSegment[] = draftWalls.map((w) => ({
-            ...w,
-            floorId: selectedFloorId,
-          }))
-          setWalls(loaded)
-          return
-        }
-        setWalls([])
-      })
-      .catch(() => {
-        if (!cancelled) setWalls([])
-      })
-
-    return () => {
-      cancelled = true
-    }
   }, [selectedFloorId])
 
-  function saveWalls(nextWalls: WallSegment[]) {
-    setWalls(nextWalls)
-    if (selectedFloor) {
-      try {
-        localStorage.setItem(`spotway.walls.${selectedFloor.id}`, JSON.stringify(nextWalls))
-      } catch {}
-    }
+  // Đổi tầng: bỏ bản nháp điều hướng và lỗi của tầng cũ (điều chỉnh state ngay trong render).
+  const [draftFloorId, setDraftFloorId] = useState(selectedFloorId)
+  if (draftFloorId !== selectedFloorId) {
+    setDraftFloorId(selectedFloorId)
+    setNavigationDraft(undefined)
+    setGraphError(undefined)
   }
 
   const handleMovePoi = (poiId: string, to: PercentPoint) => {
     if (selectedFloorId) movePoi(selectedFloorId, poiId, to)
   }
 
-  const toggleWallSelection = (wallId: string) =>
-    setSelectedWallId((current) => (current === wallId ? undefined : wallId))
-
-  function handleDeleteWall(wallId: string) {
-    const next = walls.filter((w) => w.id !== wallId)
-    saveWalls(next)
-    if (selectedWallId === wallId) setSelectedWallId(undefined)
+  function handleDeleteAllNodes() {
+    if (!selectedFloorId) return
+    deleteAllNodes(selectedFloorId)
+    tool.resetNodeContext()
   }
 
-  function handleClearWalls() {
-    saveWalls([])
-    tool.cancelWall()
-    setSelectedWallId(undefined)
-  }
-
-  async function handleAutoExtractWallsFromImage() {
-    if (!selectedFloor?.mapImageUrl) return
-    setIsGraphSaving(true)
-    setGraphError(undefined)
-    try {
-      let detectedWalls: WallSegment[] = []
-      try {
-        const revision = await analyzeFloorPlan(selectedFloor.id)
-        if (revision.editorState.walls && revision.editorState.walls.length > 0) {
-          detectedWalls = revision.editorState.walls.map((wall) => ({
-            ...wall,
-            floorId: selectedFloor.id,
-          }))
-        }
-      } catch {
-        // Fallback to client-side extraction using canvas image
-      }
-
-      if (detectedWalls.length === 0 && selectedFloor.mapImageUrl) {
-        const clientWalls = await detectWallsFromFloorPlanImage(selectedFloor.mapImageUrl, selectedFloor.id)
-        detectedWalls = clientWalls
-      }
-
-      if (detectedWalls.length > 0) {
-        saveWalls(detectedWalls)
-        message.success(`Đã tự động nhận diện và dựng ${detectedWalls.length} vách tường!`)
-        // Auto-persist draft to backend revision
-        try {
-          await saveFloorPlanRevision(selectedFloor.id, { walls: detectedWalls })
-        } catch {}
-      } else {
-        message.warning('Không tìm thấy vách tường rõ nét trên sơ đồ.')
-      }
-      tool.cancelWall()
-    } catch (reason) {
-      setGraphError((reason as Error).message)
-    } finally {
-      setIsGraphSaving(false)
-    }
+  function handleDeleteAllPois() {
+    if (!selectedFloorId) return
+    deleteAllPois(selectedFloorId)
+    setEditingPoiId(undefined)
   }
 
   async function handleAnalyzeNavigation() {
@@ -295,22 +198,6 @@ export function CanvasBoard() {
     setNavigationDraft((draft) => draft && { ...draft, nodes: draft.nodes.map((node) => node.id === id ? { ...node, ...to } : node) })
   }
 
-  async function handleSaveWallsDraft() {
-    if (!selectedFloor) return
-    setIsSavingWalls(true)
-    try {
-      await saveFloorPlanRevision(selectedFloor.id, {
-        walls,
-        updatedAt: new Date().toISOString(),
-      })
-      message.success('Đã lưu bản vẽ vách tường thành công! Mô hình 3D sẽ tự động cập nhật.')
-    } catch (err) {
-      message.error((err as Error).message || 'Không thể lưu bản vẽ vách tường')
-    } finally {
-      setIsSavingWalls(false)
-    }
-  }
-
   const stageSize = useMemo(() => {
     if (!selectedFloor) {
       return { width: 0, height: 0 }
@@ -335,13 +222,6 @@ export function CanvasBoard() {
     stageSize,
     onAddPoi: (at) => {
       if (selectedFloorId) createPoi(selectedFloorId, { ...at, name: `POI ${pois.length + 1}`, category: 'custom', icon: null })
-    },
-    onAddWall: (from, to) => {
-      if (!selectedFloorId) return
-      saveWalls([
-        ...walls,
-        { id: makeLocalId('wall'), floorId: selectedFloorId, x1: from.x, y1: from.y, x2: to.x, y2: to.y },
-      ])
     },
     onError: setGraphError,
   })
@@ -406,7 +286,6 @@ export function CanvasBoard() {
               <span>{currentFloorNodes.length} Node</span>
               <span>{currentFloorEdges.length} Edge</span>
               <span>{pois.length} POI</span>
-              <span>{walls.length} Tường</span>
             </Space>
           </div>
 
@@ -425,9 +304,6 @@ export function CanvasBoard() {
               </Radio.Button>
               <Radio.Button value="poi">
                 <PushpinOutlined /> POI
-              </Radio.Button>
-              <Radio.Button value="wall">
-                <BuildOutlined /> Vẽ tường 3D
               </Radio.Button>
             </Radio.Group>
             <Button icon={<ScanOutlined />} onClick={() => void handleAnalyzeNavigation()} loading={isGraphSaving} disabled={!selectedFloor.mapImageUrl}>
@@ -488,54 +364,6 @@ export function CanvasBoard() {
                 <Button size="small" onClick={() => tool.setRouteAnchorNodeId(undefined)}>
                   Bắt đầu tuyến mới
                 </Button>
-              </>
-            )}
-            {tool.mode === 'wall' && (
-              <>
-                <AntText type="secondary">
-                  {tool.wallStart
-                    ? `Đang vẽ từ (${Math.round(tool.wallStart.x)}%, ${Math.round(tool.wallStart.y)}%). Click điểm tiếp theo để tạo vách tường. Chuột phải để ngắt.`
-                    : 'Click lên bản đồ để bắt đầu vách tường.'}
-                </AntText>
-                {tool.wallStart && (
-                  <Button
-                    size="small"
-                    onClick={tool.cancelWall}
-                  >
-                    Ngắt đoạn tường
-                  </Button>
-                )}
-                <Button
-                  size="small"
-                  icon={<ScanOutlined />}
-                  onClick={() => void handleAutoExtractWallsFromImage()}
-                  disabled={!selectedFloor.mapImageUrl}
-                >
-                  Quét vách tường từ ảnh
-                </Button>
-                <Button
-                  size="small"
-                  type="primary"
-                  icon={<SaveOutlined />}
-                  onClick={() => void handleSaveWallsDraft()}
-                  loading={isSavingWalls}
-                  disabled={walls.length === 0}
-                >
-                  Lưu vách tường (Save 3D)
-                </Button>
-                {walls.length > 0 && (
-                  <Popconfirm
-                    title="Xác nhận xóa toàn bộ tường của tầng này?"
-                    onConfirm={handleClearWalls}
-                    okText="Xóa tất cả"
-                    cancelText="Hủy"
-                    okButtonProps={{ danger: true }}
-                  >
-                    <Button size="small" danger icon={<DeleteOutlined />}>
-                      Xóa tất cả tường
-                    </Button>
-                  </Popconfirm>
-                )}
               </>
             )}
           </Space>
@@ -615,18 +443,8 @@ export function CanvasBoard() {
                     width={stageSize.width}
                     height={stageSize.height}
                     onClick={tool.handleStageClick}
-                    onMouseMove={tool.handleStageMouseMove}
-                    onContextMenu={tool.handleStageContextMenu}
                   >
                     <MapBackgroundLayer image={mapImage.image} status={mapImage.status} size={stageSize} />
-                    <WallsLayer
-                      walls={walls}
-                      selectedWallId={selectedWallId}
-                      draft={tool.wallDraft}
-                      size={stageSize}
-                      onToggleSelect={toggleWallSelection}
-                      onDelete={handleDeleteWall}
-                    />
                     <GraphEdgesLayer
                       edges={currentFloorEdges}
                       nodeById={nodeById}
@@ -684,12 +502,9 @@ export function CanvasBoard() {
         edges={currentFloorEdges}
         connectors={floorConnectors}
         pois={pois}
-        walls={walls}
         floorNameById={floorNameById}
         isolatedNodeIds={isolatedNodeIds}
         selectedNodeId={selectedNodeId}
-        selectedWallId={selectedWallId}
-        canScanWalls={Boolean(selectedFloor.mapImageUrl)}
         edgeLength={edgeLength}
         onSelectNode={selectNode}
         onDeleteNode={tool.handleNodeDelete}
@@ -697,9 +512,8 @@ export function CanvasBoard() {
         onCreateConnector={() => setConnectorModalOpen(true)}
         onDeleteConnector={(connectorId) => buildingId && deleteConnector(buildingId, connectorId)}
         onDeletePoi={(poiId) => deletePoi(selectedFloor.id, poiId)}
-        onScanWalls={() => void handleAutoExtractWallsFromImage()}
-        onToggleWall={(wallId) => setSelectedWallId((curr) => (curr === wallId ? undefined : wallId))}
-        onDeleteWall={handleDeleteWall}
+        onDeleteAllNodes={handleDeleteAllNodes}
+        onDeleteAllPois={handleDeleteAllPois}
       />
       <ConnectorFormModal
         open={connectorModalOpen}

@@ -164,6 +164,45 @@ describe('movePoi', () => {
   })
 })
 
+describe('deleteAllPois', () => {
+  it('xoá mọi POI của đúng tầng đó và gọi BE cho từng POI', async () => {
+    const { store, calls } = setup()
+    await store.getState().loadFloorPois('A', size)
+    await store.getState().loadFloorPois('B', size)
+    store.setState({ poisByFloor: { A: [poi('p1'), poi('p2')], B: [poi('p3', 'B')] } })
+
+    store.getState().deleteAllPois('A')
+    assert.deepEqual(store.getState().poisByFloor['A'], [])
+    assert.deepEqual(store.getState().poisByFloor['B']?.map((p) => p.id), ['p3'])
+
+    await store.getState().flush()
+    assert.deepEqual(calls.map((c) => c.id).sort(), ['p1', 'p2'])
+  })
+
+  it('BE từ chối một POI: chỉ POI đó quay lại', async () => {
+    const { store } = setup({ deletePoi: async (id) => { if (id === 'p2') throw new Error('403') } })
+    await store.getState().loadFloorPois('A', size)
+    store.setState({ poisByFloor: { A: [poi('p1'), poi('p2')] } })
+
+    store.getState().deleteAllPois('A')
+    await store.getState().flush()
+    assert.deepEqual(store.getState().poisByFloor['A']?.map((p) => p.id), ['p2'])
+    assert.match(store.getState().error ?? '', /Không thể xoá POI/)
+  })
+
+  it('POI tạm đang tạo cũng bị gỡ, không để sót trên server', async () => {
+    const slow = deferred<Poi>()
+    const { store, calls } = setup({ createPoi: () => slow.promise })
+    await store.getState().loadFloorPois('A', size)
+    store.getState().createPoi('A', input)
+    store.getState().deleteAllPois('A')
+    slow.resolve(poi('real-1'))
+    await store.getState().flush()
+    assert.deepEqual(calls, [{ op: 'delete', id: 'real-1' }])
+    assert.deepEqual(store.getState().poisByFloor['A'], [])
+  })
+})
+
 describe('updatePoiDetails / deletePoi', () => {
   it('sửa tên ngay; lỗi -> khôi phục tên cũ', async () => {
     const { store } = setup({ updatePoi: () => Promise.reject(new Error('x')) })

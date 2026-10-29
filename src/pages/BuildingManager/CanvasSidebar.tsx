@@ -1,11 +1,31 @@
 import { Button, Card, List, Popconfirm, Space, Tabs, Tag, Typography } from 'antd'
-import { DeleteOutlined, PlusOutlined, ScanOutlined } from '@ant-design/icons'
+import { ClearOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { CONNECTOR_STYLE } from '../../components/canvas/ConnectorsLayer'
 import type { Connector, GraphEdge, GraphNode } from '../../types/graph'
 import type { Poi } from '../../types/poi'
-import type { WallSegment } from './CanvasBoard'
 
 const { Text: AntText } = Typography
+
+type DeleteAllButtonProps = { count: number; label: string; description: string; onConfirm: () => void }
+
+/** Nút "Xóa tất cả" có xác nhận; ẩn khi danh sách rỗng. */
+function DeleteAllButton({ count, label, description, onConfirm }: DeleteAllButtonProps) {
+  if (count === 0) return null
+  return (
+    <Popconfirm
+      title={`Xóa toàn bộ ${count} ${label} của tầng này?`}
+      description={description}
+      onConfirm={onConfirm}
+      okText="Xóa tất cả"
+      cancelText="Hủy"
+      okButtonProps={{ danger: true }}
+    >
+      <Button danger size="small" block icon={<ClearOutlined />} style={{ marginBottom: 8 }}>
+        Xóa tất cả {label}
+      </Button>
+    </Popconfirm>
+  )
+}
 
 type CanvasSidebarProps = {
   nodes: GraphNode[]
@@ -13,12 +33,9 @@ type CanvasSidebarProps = {
   /** Connector có điểm dừng ở tầng đang mở. */
   connectors: Connector[]
   pois: Poi[]
-  walls: WallSegment[]
   floorNameById: ReadonlyMap<string, string>
   isolatedNodeIds?: ReadonlySet<string>
   selectedNodeId: string | null
-  selectedWallId?: string
-  canScanWalls: boolean
   edgeLength: (edge: GraphEdge) => number
   onSelectNode: (nodeId: string | null) => void
   onDeleteNode: (nodeId: string) => void
@@ -26,23 +43,19 @@ type CanvasSidebarProps = {
   onCreateConnector: () => void
   onDeleteConnector: (connectorId: string) => void
   onDeletePoi: (poiId: string) => void
-  onScanWalls: () => void
-  onToggleWall: (wallId: string) => void
-  onDeleteWall: (wallId: string) => void
+  onDeleteAllNodes: () => void
+  onDeleteAllPois: () => void
 }
 
-/** Cột bên phải của canvas: danh sách Node / Edge / Connector / POI / Tường của tầng đang mở. */
+/** Cột bên phải của canvas: danh sách Node / Edge / Connector / POI của tầng đang mở. */
 export function CanvasSidebar({
   nodes,
   edges,
   connectors,
   pois,
-  walls,
   floorNameById,
   isolatedNodeIds,
   selectedNodeId,
-  selectedWallId,
-  canScanWalls,
   edgeLength,
   onSelectNode,
   onDeleteNode,
@@ -50,9 +63,8 @@ export function CanvasSidebar({
   onCreateConnector,
   onDeleteConnector,
   onDeletePoi,
-  onScanWalls,
-  onToggleWall,
-  onDeleteWall,
+  onDeleteAllNodes,
+  onDeleteAllPois,
 }: CanvasSidebarProps) {
   return (
     <Card
@@ -66,6 +78,13 @@ export function CanvasSidebar({
             key: 'nodes',
             label: `Node (${nodes.length})`,
             children: (
+              <>
+              <DeleteAllButton
+                count={nodes.length}
+                label="Node"
+                description="Edge nối với các Node này cũng bị xóa. Node còn POI hoặc connector gắn vào sẽ bị từ chối — xóa POI/connector trước."
+                onConfirm={onDeleteAllNodes}
+              />
               <List
                 size="small"
                 dataSource={nodes}
@@ -126,6 +145,7 @@ export function CanvasSidebar({
                   </List.Item>
                 )}
               />
+              </>
             ),
           },
           {
@@ -230,6 +250,13 @@ export function CanvasSidebar({
             key: 'pois',
             label: `POI (${pois.length})`,
             children: (
+              <>
+              <DeleteAllButton
+                count={pois.length}
+                label="POI"
+                description="Chỉ xóa POI, Node vẫn giữ nguyên."
+                onConfirm={onDeleteAllPois}
+              />
               <List
                 size="small"
                 dataSource={pois}
@@ -264,77 +291,7 @@ export function CanvasSidebar({
                   </List.Item>
                 )}
               />
-            ),
-          },
-          {
-            key: 'walls',
-            label: `Tường (${walls.length})`,
-            children: (
-              <List
-                size="small"
-                dataSource={walls}
-                locale={{
-                  emptyText: (
-                    <div style={{ padding: '16px 0', textAlign: 'center' }}>
-                      <p style={{ margin: 0, color: '#94a3b8', fontSize: 12 }}>
-                        Chưa có vách tường nào.
-                      </p>
-                      <Button
-                        size="small"
-                        type="link"
-                        icon={<ScanOutlined />}
-                        onClick={() => onScanWalls()}
-                        disabled={!canScanWalls}
-                        style={{ marginTop: 4, padding: 0 }}
-                      >
-                        Quét vách tường từ ảnh sơ đồ
-                      </Button>
-                    </div>
-                  ),
-                }}
-                style={{ maxHeight: 520, overflowY: 'auto' }}
-                renderItem={(wall, idx) => (
-                  <List.Item
-                    style={{
-                      padding: '6px 8px',
-                      background: selectedWallId === wall.id ? '#f0f9ff' : undefined,
-                      borderRadius: 4,
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => onToggleWall(wall.id)}
-                    actions={[
-                      <div key="delete" onClick={(e) => e.stopPropagation()}>
-                        <Popconfirm
-                          title="Xác nhận xóa vách tường này?"
-                          onConfirm={() => onDeleteWall(wall.id)}
-                          okText="Xóa"
-                          cancelText="Hủy"
-                          okButtonProps={{ danger: true }}
-                        >
-                          <Button
-                            danger
-                            size="small"
-                            type="text"
-                            icon={<DeleteOutlined />}
-                          />
-                        </Popconfirm>
-                      </div>,
-                    ]}
-                  >
-                    <Space orientation="vertical" size={1}>
-                      <Space>
-                        <Tag color="geekblue">Vách #{idx + 1}</Tag>
-                        <AntText strong style={{ fontSize: 12 }}>
-                          ({Math.round(wall.x1)}%, {Math.round(wall.y1)}%) → ({Math.round(wall.x2)}%, {Math.round(wall.y2)}%)
-                        </AntText>
-                      </Space>
-                      <AntText type="secondary" style={{ fontSize: 11 }}>
-                        Dài ~{Math.round(Math.hypot(wall.x2 - wall.x1, wall.y2 - wall.y1))}% ảnh · Tự extrude sang 3D
-                      </AntText>
-                    </Space>
-                  </List.Item>
-                )}
-              />
+              </>
             ),
           },
         ]}

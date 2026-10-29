@@ -86,14 +86,15 @@ PoiCategory, Poi {id,floorId,name,category,icon,x,y,nearestNodeId}  // poi.ts
 | Thấy POI snap vào đâu | `PoiMarkersLayer` vẽ đường nét đứt POI → `nearestNodeId`. |
 | UI tạo/xoá connector | `ConnectorFormModal` + `createConnector`/`deleteConnector` trong `useGraphStore` (có test). |
 | Lý do xoá node thất bại | Đã có: lỗi BE hiện qua `message.error` từ `useGraphStore.error`. |
-| Tách `CanvasBoard` | Tách `CanvasSidebar` (970 → ~710 dòng). |
+| Tách `CanvasBoard` | Tách `CanvasSidebar`; bỏ tính năng dựng tường khỏi editor (xoá `WallsLayer`, chế độ `wall` của `useCanvasTool`, tab Tường, bộ nhận diện tường client) → còn ~520 dòng. |
+| Tách `useNavigationStore` | `createNavigationDataSlice` (load/tìm đường, gateway tiêm vào), `createSimulationSlice` (kịch bản + cháy), `navigationRouteEngine` (tính tuyến offline dùng chung), `navigationState` (type), `utils/navigationHelpers`; có test. API `useNavigationStore` giữ nguyên. |
+| Xoá tất cả Node / POI | `deleteAllNodes`, `deleteAllPois` (dùng lại delete từng cái nên rollback riêng lẻ), nút có xác nhận ở tab Node và POI; có test. |
 
 ### Chưa làm (cần quyết định)
 | Việc | Lý do chưa làm |
 |---|---|
-| Tách `useNavigationStore` (route / simulation) | Store 598 dòng, mô phỏng lửa tính lại route nên hai phần gắn chặt; chưa có test cho store. Nên viết test hành vi trước khi tách. |
 | `indoorPathfinding` sang toạ độ % | Thuật toán và test dùng pixel + `mapUnitsPerMeter`; đổi đơn vị ảnh hưởng trực tiếp độ dài/hướng rẽ. |
-| `CanvasBoard` ≲ 250 dòng | Phần còn lại là logic tường + nháp điều hướng dùng chung `isGraphSaving`/`graphError`; cần tách thành hook `useNavigationDraft` và `useWallEditor` cùng lúc. |
+| `CanvasBoard` ≲ 250 dòng | Còn logic nháp điều hướng (analyze/apply, `isGraphSaving`/`graphError`); tách hook `useNavigationDraft` nếu muốn xuống nữa. |
 | Giới hạn snap 10 m ở client | `Floor` chưa có `metersPerPixel`; client gửi `nodeId` tường minh nên bỏ qua giới hạn của BE. |
 | Gợi ý edge bằng visibility graph | Ý từ FloorPlanTo3D (nối 2 node nếu đoạn thẳng không cắt tường); `buildCorridorDraft` hiện chỉ dựng tuyến mẫu. |
 | Seed node tại cửa | Chưa có khái niệm cửa/phòng trong FE; cần quyết định có thêm `Space` hay không. |

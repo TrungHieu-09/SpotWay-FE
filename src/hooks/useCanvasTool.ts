@@ -5,30 +5,25 @@ import type { MapSize, PercentPoint } from '../types/geometry'
 import type { NodeType } from '../types/graph'
 import { pixelToPercent } from '../utils/canvasCoordinates'
 
-type EditorMode = 'poi' | 'node' | 'edge' | 'wall'
+type EditorMode = 'poi' | 'node' | 'edge'
 
 type UseCanvasToolOptions = {
   floorId?: string
   stageSize: MapSize
   onAddPoi: (at: PercentPoint) => void
-  onAddWall: (from: PercentPoint, to: PercentPoint) => void
   onError: (message: string) => void
 }
 
-const round1 = (value: number) => Math.round(value * 10) / 10
-
 /**
- * Công cụ vẽ trên canvas: chế độ, node đang vẽ tuyến, điểm đầu edge, tường đang vẽ dở.
+ * Công cụ vẽ trên canvas: chế độ, node đang vẽ tuyến, điểm đầu edge.
  * Mọi toạ độ ra khỏi hook đều là %; pixel chỉ đi vào từ sự kiện Konva.
  */
-export function useCanvasTool({ floorId, stageSize, onAddPoi, onAddWall, onError }: UseCanvasToolOptions) {
+export function useCanvasTool({ floorId, stageSize, onAddPoi, onError }: UseCanvasToolOptions) {
   const [mode, setMode] = useState<EditorMode>('node')
   const [nodeType, setNodeType] = useState<NodeType>('NORMAL')
   const [nodeName, setNodeName] = useState('')
   const [edgeStartNodeId, setEdgeStartNodeId] = useState<string>()
   const [routeAnchorNodeId, setRouteAnchorNodeId] = useState<string>()
-  const [wallStart, setWallStart] = useState<PercentPoint | null>(null)
-  const [wallPointer, setWallPointer] = useState<PercentPoint | null>(null)
 
   const selectedNodeId = useGraphStore((state) => state.selectedNodeId)
   const createNode = useGraphStore((state) => state.createNode)
@@ -36,28 +31,18 @@ export function useCanvasTool({ floorId, stageSize, onAddPoi, onAddWall, onError
   const createEdge = useGraphStore((state) => state.createEdge)
   const selectNode = useGraphStore((state) => state.selectNode)
 
-  const cancelWall = useCallback(() => {
-    setWallStart(null)
-    setWallPointer(null)
-  }, [])
-
   // Đổi tầng: bỏ mọi thao tác dở dang (điều chỉnh state ngay trong render, không cần effect).
   const [toolFloorId, setToolFloorId] = useState(floorId)
   if (toolFloorId !== floorId) {
     setToolFloorId(floorId)
     setEdgeStartNodeId(undefined)
     setRouteAnchorNodeId(undefined)
-    cancelWall()
   }
 
-  const changeMode = useCallback(
-    (next: EditorMode) => {
-      setMode(next)
-      setEdgeStartNodeId(undefined)
-      cancelWall()
-    },
-    [cancelWall],
-  )
+  const changeMode = useCallback((next: EditorMode) => {
+    setMode(next)
+    setEdgeStartNodeId(undefined)
+  }, [])
 
   function handleStageClick(event: Konva.KonvaEventObject<MouseEvent>) {
     if (!floorId) return
@@ -70,17 +55,6 @@ export function useCanvasTool({ floorId, stageSize, onAddPoi, onAddWall, onError
 
     if (mode === 'poi') {
       onAddPoi(at)
-      return
-    }
-
-    if (mode === 'wall') {
-      const point = { x: round1(at.x), y: round1(at.y) }
-      if (!wallStart) {
-        setWallStart(point)
-      } else if (wallStart.x !== point.x || wallStart.y !== point.y) {
-        onAddWall(wallStart, point)
-        setWallStart(point)
-      }
       return
     }
 
@@ -98,21 +72,6 @@ export function useCanvasTool({ floorId, stageSize, onAddPoi, onAddWall, onError
     )
     if (tempId) setRouteAnchorNodeId(tempId)
     setNodeName('')
-  }
-
-  function handleStageMouseMove(event: Konva.KonvaEventObject<MouseEvent>) {
-    if (mode !== 'wall' || !wallStart) {
-      if (wallPointer) setWallPointer(null)
-      return
-    }
-    const pointer = event.target.getStage()?.getPointerPosition()
-    if (pointer) setWallPointer(pixelToPercent(pointer.x, pointer.y, stageSize.width, stageSize.height))
-  }
-
-  function handleStageContextMenu(event: Konva.KonvaEventObject<PointerEvent>) {
-    if (mode !== 'wall') return
-    event.evt.preventDefault()
-    cancelWall()
   }
 
   function handleNodeClick(nodeId: string) {
@@ -144,6 +103,12 @@ export function useCanvasTool({ floorId, stageSize, onAddPoi, onAddWall, onError
     setEdgeStartNodeId(nodeId)
   }
 
+  /** Sau khi xoá tất cả node: bỏ node đang chờ nối/neo tuyến vì không còn tồn tại. */
+  function resetNodeContext() {
+    setEdgeStartNodeId(undefined)
+    setRouteAnchorNodeId(undefined)
+  }
+
   return {
     mode,
     changeMode,
@@ -155,12 +120,8 @@ export function useCanvasTool({ floorId, stageSize, onAddPoi, onAddWall, onError
     routeAnchorNodeId,
     setRouteAnchorNodeId,
     startEdgeFrom,
-    wallDraft: wallStart && wallPointer ? { start: wallStart, pointer: wallPointer } : null,
-    wallStart,
-    cancelWall,
+    resetNodeContext,
     handleStageClick,
-    handleStageMouseMove,
-    handleStageContextMenu,
     handleNodeClick,
     handleNodeDelete,
   }

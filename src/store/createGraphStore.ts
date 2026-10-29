@@ -24,6 +24,8 @@ export type GraphState = {
   createNode: (floorId: string, input: NewGraphNode, options?: { linkFromNodeId?: string }) => string | null
   moveNode: (floorId: string, nodeId: string, to: PercentPoint) => void
   deleteNode: (floorId: string, nodeId: string) => void
+  /** Xoá mọi node (kèm edge) của tầng; mỗi node tự hoàn tác nếu BE từ chối (vd. còn POI/connector gắn vào). */
+  deleteAllNodes: (floorId: string) => void
   createEdge: (floorId: string, fromNodeId: string, toNodeId: string) => string | null
   deleteEdge: (floorId: string, edgeId: string) => void
   selectNode: (nodeId: string | null) => void
@@ -262,6 +264,10 @@ export function createGraphSlice(gateway: GraphGateway): StateCreator<GraphState
             }
           })(),
         )
+      },
+
+      deleteAllNodes(floorId) {
+        for (const node of [...(get().nodesByFloor[floorId] ?? [])]) get().deleteNode(floorId, node.id)
       },
 
       createEdge(floorId, rawFromId, rawToId) {
