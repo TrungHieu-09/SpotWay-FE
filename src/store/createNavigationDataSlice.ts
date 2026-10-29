@@ -13,7 +13,8 @@ import { INITIAL_SIMULATION, type NavigationDataState, type NavigationState } fr
 
 export type RouteRequestInput = {
   fromNodeId: string
-  toStoreId: string
+  toStoreId?: string
+  toNodeId?: string
   wheelchairMode: boolean
   mode?: 'NORMAL' | 'EVACUATION'
   hazardNodeIds?: string[]
@@ -78,8 +79,13 @@ export function createNavigationDataSlice(
           const { emergencyMode, activeFireNodeIds } = get()
           const evacuation = emergencyMode === 'FIRE'
           try {
+            // `toStoreId` của UI là id điểm đến: cửa hàng đi theo store, POI đi theo node neo.
+            const picked = get().destinations.find((item) => item.id === input.toStoreId)
+            const target = picked && picked.type !== 'STORE' ? { toNodeId: picked.nodeId } : { toStoreId: input.toStoreId }
             const route = await gateway.createRoute({
-              ...input,
+              fromNodeId: input.fromNodeId,
+              wheelchairMode: input.wheelchairMode,
+              ...target,
               ...(evacuation ? { mode: 'EVACUATION' as const, hazardNodeIds: activeFireNodeIds } : {}),
             })
             const critical = route.warnings?.find((item) => item.severity === 'CRITICAL') ?? route.warnings?.[0]

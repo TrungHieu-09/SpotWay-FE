@@ -103,6 +103,17 @@ describe('findRoute', () => {
     assert.deepEqual(sent, { ...input, mode: 'EVACUATION', hazardNodeIds: ['exitL'] })
   })
 
+  it('điểm đến là POI: gửi toNodeId (node neo) thay vì toStoreId', async () => {
+    let sent: unknown
+    const poiDestination: PublicSearchResult = { type: 'POI', id: 'poi-1', name: 'WC', floorId: 'f1', nodeId: 'c', x: 300, y: 0 }
+    const store = await loaded({
+      searchDestinations: async () => [...destinations, poiDestination],
+      createRoute: async (body) => { sent = body; return apiRoute },
+    })
+    await store.getState().findRoute({ fromNodeId: 'a', toStoreId: 'poi-1', wheelchairMode: false })
+    assert.deepEqual(sent, { fromNodeId: 'a', toNodeId: 'c', wheelchairMode: false })
+  })
+
   it('API lỗi: tính offline trên graph đã nạp', async () => {
     const store = await loaded({ createRoute: async () => { throw new Error('500') } })
     const route = await store.getState().findRoute(input)

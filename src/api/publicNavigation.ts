@@ -11,12 +11,18 @@ export async function getPublicFloorMap(floorId: string) {
   return data
 }
 
+/** Điểm đến = cửa hàng + POI (BE tách hai loại theo `type`; node có tên bị bỏ để khỏi trùng POI). */
 export async function searchPublicDestinations(buildingId: string, query = '') {
-  const { data } = await apiClient.get<{ items: PublicSearchResult[] }>(
-    `/public/buildings/${buildingId}/search`,
-    { params: { q: query, type: 'STORE', limit: 100 } },
+  const [stores, pois] = await Promise.all(
+    (['STORE', 'POI'] as const).map(async (type) => {
+      const { data } = await apiClient.get<{ items: PublicSearchResult[] }>(
+        `/public/buildings/${buildingId}/search`,
+        { params: { q: query, type, limit: 100 } },
+      )
+      return data.items
+    }),
   )
-  return data.items
+  return [...stores, ...pois].sort((a, b) => a.name.localeCompare(b.name))
 }
 
 const isBackendUnreachable = (error: unknown) =>
@@ -39,7 +45,9 @@ export async function resolvePublicQrToken(token: string, fallback?: () => Publi
 
 export async function createPublicRoute(input: {
   fromNodeId: string
-  toStoreId: string
+  /** Cửa hàng thì gửi `toStoreId`; POI chỉ có node nên gửi `toNodeId` (BE không nhận cả hai). */
+  toStoreId?: string
+  toNodeId?: string
   wheelchairMode: boolean
   mode?: 'NORMAL' | 'EVACUATION'
   hazardNodeIds?: string[]
