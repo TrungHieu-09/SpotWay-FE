@@ -25,10 +25,11 @@ export type GraphState = {
   moveNode: (floorId: string, nodeId: string, to: PercentPoint) => void
   deleteNode: (floorId: string, nodeId: string) => void
   /**
-   * Xoá mọi node (kèm edge) của tầng, lần lượt từng node: mỗi lần xoá BE khoá dòng tầng để tăng graphVersion,
-   * gửi song song vài chục lần sẽ quá hạn giao dịch và trả 500. Node bị BE từ chối tự hoàn tác, vòng lặp vẫn đi tiếp.
+   * Xoá mọi node + edge của tầng bằng MỘT yêu cầu (BE gỡ luôn POI và connector gắn vào trong cùng giao dịch).
+   * Xoá ngay trên canvas, BE từ chối (vd. còn cửa hàng/QR) thì khôi phục. Trả true khi BE đã xoá; người gọi
+   * nạp lại POI/connector vì chúng đã đổi theo.
    */
-  deleteAllNodes: (floorId: string) => Promise<void>
+  deleteAllNodes: (floorId: string) => Promise<boolean>
   createEdge: (floorId: string, fromNodeId: string, toNodeId: string) => string | null
   deleteEdge: (floorId: string, edgeId: string) => void
   selectNode: (nodeId: string | null) => void
@@ -270,10 +271,31 @@ export function createGraphSlice(gateway: GraphGateway): StateCreator<GraphState
       },
 
       async deleteAllNodes(floorId) {
-        for (const node of [...(get().nodesByFloor[floorId] ?? [])]) {
-          get().deleteNode(floorId, node.id)
-          await kit.flush()
-        }
+        await kit.flush() // node tạm đang tạo phải có mặt trên BE trước khi xoá cả tầng
+        const nodes = get().nodesByFloor[floorId] ?? []
+        const edges = get().edgesByFloor[floorId] ?? []
+        if (nodes.length === 0) return false
+        updateNodes(floorId, () => [])
+        updateEdges(floorId, () => [])
+        set({ selectedNodeId: null, selectedEdgeId: null, error: null })
+
+        const task = (async () => {
+          try {
+            await gateway.clearFloorGraph(floorId)
+            return true
+          } catch (reason) {
+            const restore = <T extends { id: string }>(current: T[], removed: T[]) => [
+              ...removed,
+              ...current.filter((item) => !removed.some((r) => r.id === item.id)),
+            ]
+            updateNodes(floorId, (current) => restore(current, nodes))
+            updateEdges(floorId, (current) => restore(current, edges))
+            fail('Không thể xoá toàn bộ node', reason)
+            return false
+          }
+        })()
+        track(task)
+        return task
       },
 
       createEdge(floorId, rawFromId, rawToId) {

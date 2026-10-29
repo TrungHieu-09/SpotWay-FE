@@ -26,6 +26,8 @@ export type GraphGateway = {
   createNode(floorId: string, size: MapSize, input: NewGraphNode): Promise<GraphNode>
   moveNode(nodeId: string, size: MapSize, to: PercentPoint): Promise<void>
   deleteNode(nodeId: string): Promise<void>
+  /** Một lần gọi xoá mọi node + edge của tầng (BE gỡ luôn POI và connector gắn vào). */
+  clearFloorGraph(floorId: string): Promise<void>
   createEdge(floorId: string, fromNodeId: string, toNodeId: string): Promise<GraphEdge>
   deleteEdge(edgeId: string): Promise<void>
   fetchConnectors(buildingId: string, signal?: AbortSignal): Promise<Connector[]>
@@ -54,6 +56,9 @@ export const graphGateway: GraphGateway = {
   },
   async deleteNode(nodeId) {
     await apiClient.delete(`/nodes/${nodeId}`)
+  },
+  async clearFloorGraph(floorId) {
+    await apiClient.delete(`/floors/${floorId}/graph`)
   },
   async createEdge(floorId, fromNodeId, toNodeId) {
     const { data } = await apiClient.post<GraphEdgeDto>(`/floors/${floorId}/edges`, { fromNodeId, toNodeId })
@@ -111,6 +116,8 @@ export type PoiGateway = {
     patch: PoiDetailsPatch & { position?: PercentPoint; nodeId?: string | null },
   ): Promise<Poi>
   deletePoi(poiId: string): Promise<void>
+  /** Một lần gọi xoá mọi POI của tầng. */
+  clearFloorPois(floorId: string): Promise<void>
 }
 
 export const poiGateway: PoiGateway = {
@@ -134,6 +141,9 @@ export const poiGateway: PoiGateway = {
   async updatePoi(poiId, size, patch) {
     const { data } = await apiClient.patch<PoiDto>(`/pois/${poiId}`, poiToUpdateDto(patch, size))
     return toPoi(data, size)
+  },
+  async clearFloorPois(floorId) {
+    await apiClient.delete(`/floors/${floorId}/pois`)
   },
   async deletePoi(poiId) {
     await apiClient.delete(`/pois/${poiId}`)

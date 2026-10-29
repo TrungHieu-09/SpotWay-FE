@@ -23,8 +23,8 @@ export type PoiState = {
   movePoi: (floorId: string, poiId: string, to: PercentPoint) => void
   updatePoiDetails: (floorId: string, poiId: string, patch: PoiDetailsPatch) => void
   deletePoi: (floorId: string, poiId: string) => void
-  /** Xoá mọi POI của tầng lần lượt từng cái (tránh dồn hàng loạt giao dịch lên BE); POI bị từ chối tự hoàn tác. */
-  deleteAllPois: (floorId: string) => Promise<void>
+  /** Xoá mọi POI của tầng bằng một yêu cầu; BE từ chối thì khôi phục. Trả true khi đã xoá. */
+  deleteAllPois: (floorId: string) => Promise<boolean>
   clearError: () => void
   /** Chờ mọi thao tác ghi đang bay hoàn tất (thành công hoặc đã rollback). */
   flush: () => Promise<void>
@@ -233,10 +233,24 @@ export function createPoiSlice(
       },
 
       async deleteAllPois(floorId) {
-        for (const poi of [...(get().poisByFloor[floorId] ?? [])]) {
-          get().deletePoi(floorId, poi.id)
-          await kit.flush()
-        }
+        await kit.flush() // POI tạm đang tạo phải có mặt trên BE trước khi xoá cả tầng
+        const pois = get().poisByFloor[floorId] ?? []
+        if (pois.length === 0) return false
+        updatePois(floorId, () => [])
+        set({ error: null })
+
+        const task = (async () => {
+          try {
+            await gateway.clearFloorPois(floorId)
+            return true
+          } catch (reason) {
+            updatePois(floorId, (current) => [...pois, ...current.filter((item) => !pois.some((p) => p.id === item.id))])
+            fail('Không thể xoá toàn bộ POI', reason)
+            return false
+          }
+        })()
+        track(task)
+        return task
       },
 
       clearError: () => set({ error: null }),

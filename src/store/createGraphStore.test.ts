@@ -33,6 +33,7 @@ function setup(overrides: Partial<GraphGateway> = {}) {
     },
     moveNode: async (id) => { calls.push(`moveNode:${id}`) },
     deleteNode: async (id) => { calls.push(`deleteNode:${id}`) },
+    clearFloorGraph: async () => {},
     createEdge: async (floorId, from, to) => {
       calls.push(`createEdge:${from}>${to}`)
       return edge(`real-e${++counter}`, floorId, from, to)
@@ -270,55 +271,54 @@ describe('deleteAllNodes', () => {
       selectedNodeId: 'n1',
     })
 
-  it('xoá mọi node + edge của đúng tầng đó, gọi BE cho từng node, không đụng tầng khác', async () => {
-    const { store, calls } = setup()
+  it('một yêu cầu duy nhất cho cả tầng; canvas sạch ngay và tầng khác không bị đụng', async () => {
+    const calls: string[] = []
+    const { store } = setup({ clearFloorGraph: async (id) => { calls.push(`clear:${id}`) } })
     await store.getState().loadFloorGraph('A', size)
     await store.getState().loadFloorGraph('B', size)
     seed(store)
 
-    await store.getState().deleteAllNodes('A')
-    assert.deepEqual(store.getState().nodesByFloor['A'], [])
+    const pending = store.getState().deleteAllNodes('A')
+    await Promise.resolve()
+    assert.deepEqual(store.getState().nodesByFloor['A'], []) // optimistic, chưa chờ BE
     assert.deepEqual(store.getState().edgesByFloor['A'], [])
     assert.equal(store.getState().selectedNodeId, null)
+    assert.equal(await pending, true)
+    assert.deepEqual(calls, ['clear:A']) // không có deleteNode lẻ
     assert.deepEqual(store.getState().nodesByFloor['B']?.map((n) => n.id), ['n3'])
-    assert.deepEqual([...calls].sort(), ['deleteNode:n1', 'deleteNode:n2'])
   })
 
-  it('BE từ chối một node (còn POI gắn vào): chỉ node đó quay lại, edge nối tới node đã xoá không hồi sinh', async () => {
-    const { store } = setup({
-      deleteNode: async (id) => { if (id === 'n2') throw new Error('còn POI') },
-    })
+  it('BE từ chối (còn cửa hàng/QR): khôi phục toàn bộ node và edge, báo lỗi, trả false', async () => {
+    const { store } = setup({ clearFloorGraph: () => Promise.reject(new Error('còn cửa hàng')) })
     await store.getState().loadFloorGraph('A', size)
     seed(store)
 
-    await store.getState().deleteAllNodes('A')
-    assert.deepEqual(store.getState().nodesByFloor['A']?.map((n) => n.id), ['n2'])
-    assert.deepEqual(store.getState().edgesByFloor['A'], [])
-    assert.match(store.getState().error ?? '', /Không thể xoá node: còn POI/)
+    assert.equal(await store.getState().deleteAllNodes('A'), false)
+    assert.deepEqual(store.getState().nodesByFloor['A']?.map((n) => n.id), ['n1', 'n2'])
+    assert.deepEqual(store.getState().edgesByFloor['A']?.map((e) => e.id), ['e1'])
+    assert.match(store.getState().error ?? '', /Không thể xoá toàn bộ node: còn cửa hàng/)
   })
 
-  it('tầng rỗng hoặc chưa tải: không làm gì', async () => {
-    const { store, calls } = setup()
-    await store.getState().deleteAllNodes('chua-tai')
-    assert.deepEqual(calls, [])
-  })
-
-  it('xoá lần lượt: không bao giờ có hai yêu cầu xoá cùng bay một lúc', async () => {
-    let inFlight = 0
-    let peak = 0
+  it('đợi node đang tạo có id thật rồi mới xoá cả tầng', async () => {
+    const slow = deferred<GraphNode>()
+    const order: string[] = []
     const { store } = setup({
-      deleteNode: async () => {
-        inFlight += 1
-        peak = Math.max(peak, inFlight)
-        await new Promise((resolve) => setTimeout(resolve, 5))
-        inFlight -= 1
-      },
+      createNode: async () => { const created = await slow.promise; order.push('created'); return created },
+      clearFloorGraph: async () => { order.push('clear') },
     })
     await store.getState().loadFloorGraph('A', size)
-    store.setState({ nodesByFloor: { A: [node('n1', 'A'), node('n2', 'A'), node('n3', 'A')] }, edgesByFloor: { A: [] } })
-    await store.getState().deleteAllNodes('A')
-    assert.equal(peak, 1)
-    assert.deepEqual(store.getState().nodesByFloor['A'], [])
+    store.getState().createNode('A', input)
+    const pending = store.getState().deleteAllNodes('A')
+    slow.resolve(node('real-1', 'A'))
+    await pending
+    assert.deepEqual(order, ['created', 'clear'])
+  })
+
+  it('tầng rỗng hoặc chưa tải: không gọi BE, trả false', async () => {
+    const calls: string[] = []
+    const { store } = setup({ clearFloorGraph: async (id) => { calls.push(id) } })
+    assert.equal(await store.getState().deleteAllNodes('chua-tai'), false)
+    assert.deepEqual(calls, [])
   })
 })
 

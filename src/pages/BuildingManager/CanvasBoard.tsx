@@ -189,29 +189,25 @@ export function CanvasBoard() {
   }
 
   /**
-   * BE chặn xoá node còn POI/connector gắn vào, nên gỡ chúng trước và chờ BE xác nhận rồi mới xoá node.
-   * Cửa hàng và QR anchor gắn vào node chưa có giao diện ở đây: nếu còn, BE vẫn từ chối và lỗi hiện ra.
+   * Một yêu cầu xoá cả tầng: BE gỡ node, edge, POI và connector gắn vào trong một giao dịch (xoá từng node sẽ
+   * khoá dòng tầng mỗi lần và quá hạn). Xong thì nạp lại POI/connector vì chúng đã đổi theo.
+   * Cửa hàng và QR anchor gắn vào node vẫn chặn: BE từ chối và lỗi hiện ra, node được khôi phục.
    */
   async function handleDeleteAllNodes() {
-    if (!selectedFloorId) return
-    const floorId = selectedFloorId
+    if (!selectedFloor) return
+    const floor = selectedFloor
     setEditingPoiId(undefined)
-    // Từng thao tác một: BE khoá dòng tầng ở mỗi lần xoá, gửi dồn sẽ quá hạn giao dịch và trả 500.
-    await deleteAllPois(floorId)
-    if (buildingId) {
-      for (const connector of floorConnectors) {
-        deleteConnector(buildingId, connector.id)
-        await useGraphStore.getState().flush()
-      }
-    }
-    await deleteAllNodes(floorId)
+    const deleted = await deleteAllNodes(floor.id)
     tool.resetNodeContext()
+    if (!deleted) return
+    void loadFloorPois(floor.id, { width: floor.mapWidth, height: floor.mapHeight })
+    if (floor.buildingId) void loadConnectors(floor.buildingId)
   }
 
   function handleDeleteAllPois() {
     if (!selectedFloorId) return
-    deleteAllPois(selectedFloorId)
     setEditingPoiId(undefined)
+    void deleteAllPois(selectedFloorId)
   }
 
   async function handleAnalyzeNavigation() {
