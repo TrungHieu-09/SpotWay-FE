@@ -22,6 +22,7 @@ import {
   LinkOutlined,
   LoadingOutlined,
   NodeIndexOutlined,
+  PlusOutlined,
   PushpinOutlined,
   SaveOutlined,
   ScanOutlined,
@@ -40,6 +41,7 @@ export interface WallSegment {
 import { useFloorStore } from '../../store/useFloorStore'
 import { useGraphStore } from '../../store/useGraphStore'
 import { usePoiStore } from '../../store/usePoiStore'
+import { ConnectorFormModal } from '../../components/canvas/ConnectorFormModal'
 import { CONNECTOR_STYLE, ConnectorsLayer } from '../../components/canvas/ConnectorsLayer'
 import { GraphEdgesLayer } from '../../components/canvas/GraphEdgesLayer'
 import { GraphNodesLayer } from '../../components/canvas/GraphNodesLayer'
@@ -106,6 +108,9 @@ export function CanvasBoard() {
   const connectors = useGraphStore((state) => (buildingId && state.connectorsByBuilding[buildingId]) || EMPTY_CONNECTORS)
   const loadConnectors = useGraphStore((state) => state.loadConnectors)
   const clearConnectors = useGraphStore((state) => state.clearConnectors)
+  const createConnector = useGraphStore((state) => state.createConnector)
+  const deleteConnector = useGraphStore((state) => state.deleteConnector)
+  const [connectorModalOpen, setConnectorModalOpen] = useState(false)
   const floors = useFloorStore((state) => state.floors)
   const [editingPoiId, setEditingPoiId] = useState<string>()
 
@@ -797,13 +802,39 @@ export function CanvasBoard() {
               key: 'connectors',
               label: `Connector (${floorConnectors.length})`,
               children: (
+                <>
+                <Button
+                  size="small"
+                  type="dashed"
+                  block
+                  icon={<PlusOutlined />}
+                  style={{ marginBottom: 8 }}
+                  onClick={() => setConnectorModalOpen(true)}
+                >
+                  Tạo connector
+                </Button>
                 <List
                   size="small"
                   dataSource={floorConnectors}
                   locale={{ emptyText: 'Tầng này chưa có thang máy/cầu thang liên kết tầng khác' }}
                   style={{ maxHeight: 520, overflowY: 'auto' }}
                   renderItem={(connector) => (
-                    <List.Item style={{ padding: '6px 8px' }}>
+                    <List.Item
+                      style={{ padding: '6px 8px' }}
+                      actions={[
+                        <Popconfirm
+                          key="delete"
+                          title="Xóa connector này?"
+                          description="Các node vẫn giữ nguyên, chỉ gỡ liên kết giữa các tầng."
+                          onConfirm={() => buildingId && deleteConnector(buildingId, connector.id)}
+                          okText="Xóa"
+                          cancelText="Hủy"
+                          okButtonProps={{ danger: true }}
+                        >
+                          <Button danger size="small" type="text" icon={<DeleteOutlined />} />
+                        </Popconfirm>,
+                      ]}
+                    >
                       <Space orientation="vertical" size={1}>
                         <Space>
                           <Tag color={CONNECTOR_STYLE[connector.kind].color}>{CONNECTOR_STYLE[connector.kind].label}</Tag>
@@ -819,6 +850,7 @@ export function CanvasBoard() {
                     </List.Item>
                   )}
                 />
+                </>
               ),
             },
             {
@@ -935,6 +967,13 @@ export function CanvasBoard() {
           ]}
         />
       </Card>
+      <ConnectorFormModal
+        open={connectorModalOpen}
+        floors={floors}
+        defaultFloorId={selectedFloor.id}
+        onSubmit={(input) => (buildingId ? createConnector(buildingId, input) : Promise.resolve(false))}
+        onClose={() => setConnectorModalOpen(false)}
+      />
     </div>
   )
 }

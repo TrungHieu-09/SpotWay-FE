@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand/vanilla'
 import type { GraphGateway } from '../api/graphGateway.ts'
 import type { MapSize, PercentPoint } from '../types/geometry.ts'
-import type { Connector, GraphEdge, GraphNode, NewGraphNode } from '../types/graph.ts'
+import type { Connector, GraphEdge, GraphNode, NewConnector, NewGraphNode } from '../types/graph.ts'
 import { clampPercent } from '../utils/canvasCoordinates.ts'
 import { createOptimisticKit } from './optimisticKit.ts'
 
@@ -30,6 +30,9 @@ export type GraphState = {
   selectEdge: (edgeId: string | null) => void
   loadConnectors: (buildingId: string) => Promise<void>
   clearConnectors: (buildingId: string) => void
+  /** Không optimistic (cần id từ BE). Trả true khi tạo xong. */
+  createConnector: (buildingId: string, input: NewConnector) => Promise<boolean>
+  deleteConnector: (buildingId: string, connectorId: string) => void
   clearError: () => void
   /** Chờ mọi thao tác ghi đang bay hoàn tất (thành công hoặc đã rollback). */
   flush: () => Promise<void>
@@ -350,6 +353,49 @@ export function createGraphSlice(gateway: GraphGateway): StateCreator<GraphState
           return { connectorsByBuilding }
         })
       },
+      createConnector(buildingId, input) {
+        set({ error: null })
+        const task = (async () => {
+          try {
+            const connector = await gateway.createConnector(buildingId, input)
+            set((state) => ({
+              connectorsByBuilding: {
+                ...state.connectorsByBuilding,
+                [buildingId]: [...(state.connectorsByBuilding[buildingId] ?? []), connector],
+              },
+            }))
+            return true
+          } catch (reason) {
+            fail('Không thể tạo connector', reason)
+            return false
+          }
+        })()
+        track(task)
+        return task
+      },
+
+      deleteConnector(buildingId, connectorId) {
+        const connector = get().connectorsByBuilding[buildingId]?.find((item) => item.id === connectorId)
+        if (!connector) return
+        const setList = (fn: (list: Connector[]) => Connector[]) =>
+          set((state) =>
+            state.connectorsByBuilding[buildingId]
+              ? { connectorsByBuilding: { ...state.connectorsByBuilding, [buildingId]: fn(state.connectorsByBuilding[buildingId]) } }
+              : state,
+          )
+        setList((list) => list.filter((item) => item.id !== connectorId))
+        track(
+          (async () => {
+            try {
+              await gateway.deleteConnector(connectorId)
+            } catch (reason) {
+              setList((list) => (list.some((item) => item.id === connectorId) ? list : [...list, connector]))
+              fail('Không thể xoá connector', reason)
+            }
+          })(),
+        )
+      },
+
       clearError: () => set({ error: null }),
 
       flush: kit.flush,

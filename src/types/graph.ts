@@ -49,6 +49,9 @@ export type Connector = {
   stops: ConnectorStop[]
 }
 
+/** Dữ liệu tạo connector; `buildingId` lấy từ đường dẫn, `id` do BE cấp. */
+export type NewConnector = Omit<Connector, 'id' | 'buildingId'>
+
 /** Bản nháp node/edge do AI (hoặc mẫu) sinh ra, chờ người dùng xác nhận trước khi áp dụng. */
 export type DraftNode = PercentPoint & {
   id: string

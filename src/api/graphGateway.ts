@@ -17,7 +17,7 @@ import {
   type PoiDto,
 } from './graphMapper'
 import type { MapSize, PercentPoint } from '../types/geometry'
-import type { Connector, GraphDraft, GraphEdge, GraphNode, NewGraphNode } from '../types/graph'
+import type { Connector, GraphDraft, GraphEdge, GraphNode, NewConnector, NewGraphNode } from '../types/graph'
 import type { NewPoi, Poi, PoiDetailsPatch } from '../types/poi'
 
 /** Hợp đồng store <-> mạng. Nhận/trả domain type (%); đổi pixel xảy ra trong graphMapper. */
@@ -29,6 +29,8 @@ export type GraphGateway = {
   createEdge(floorId: string, fromNodeId: string, toNodeId: string): Promise<GraphEdge>
   deleteEdge(edgeId: string): Promise<void>
   fetchConnectors(buildingId: string, signal?: AbortSignal): Promise<Connector[]>
+  createConnector(buildingId: string, input: NewConnector): Promise<Connector>
+  deleteConnector(connectorId: string): Promise<void>
 }
 
 export const graphGateway: GraphGateway = {
@@ -63,6 +65,13 @@ export const graphGateway: GraphGateway = {
   async fetchConnectors(buildingId, signal) {
     const { data } = await apiClient.get<ConnectorDto[]>(`/buildings/${buildingId}/connectors`, { signal })
     return data.map(connectorFromDto)
+  },
+  async createConnector(buildingId, input) {
+    const { data } = await apiClient.post<ConnectorDto>(`/buildings/${buildingId}/connectors`, input)
+    return connectorFromDto(data)
+  },
+  async deleteConnector(connectorId) {
+    await apiClient.delete(`/connectors/${connectorId}`)
   },
 }
 

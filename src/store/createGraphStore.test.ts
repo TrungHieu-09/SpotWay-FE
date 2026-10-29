@@ -39,6 +39,8 @@ function setup(overrides: Partial<GraphGateway> = {}) {
     },
     deleteEdge: async (id) => { calls.push(`deleteEdge:${id}`) },
     fetchConnectors: async () => [],
+    createConnector: async (buildingId, value) => ({ ...value, id: 'new-c', buildingId }),
+    deleteConnector: async (id) => { calls.push(`deleteConnector:${id}`) },
     ...overrides,
   }
   const store = createStore(createGraphSlice(gateway))
@@ -322,5 +324,40 @@ describe('edges', () => {
     assert.deepEqual(store.getState().edgesByFloor['A'], [])
     await store.getState().flush()
     assert.deepEqual(store.getState().edgesByFloor['A']?.map((e) => e.id), ['e1'])
+  })
+})
+
+describe('connector CRUD', () => {
+  const lift = { id: 'c1', buildingId: 'B1', name: 'Thang máy A', kind: 'ELEVATOR' as const, accessible: true, stops: [] }
+
+  it('tạo: thêm vào danh sách khi BE trả về; lỗi thì báo và không thêm', async () => {
+    const { store } = setup()
+    const input = { name: 'Thang B', kind: 'STAIR' as const, accessible: false, stops: [] }
+    assert.equal(await store.getState().createConnector('B1', input), true)
+    assert.deepEqual(store.getState().connectorsByBuilding['B1']?.map((c) => c.id), ['new-c'])
+
+    const { store: failing } = setup({ createConnector: () => Promise.reject(new Error('409')) })
+    assert.equal(await failing.getState().createConnector('B1', input), false)
+    assert.match(failing.getState().error ?? '', /Không thể tạo connector: 409/)
+    assert.equal(failing.getState().connectorsByBuilding['B1'], undefined)
+  })
+
+  it('xoá: gỡ ngay, lỗi thì khôi phục và báo', async () => {
+    const { store, calls } = setup({ fetchConnectors: async () => [lift] })
+    await store.getState().loadConnectors('B1')
+    store.getState().deleteConnector('B1', 'c1')
+    assert.deepEqual(store.getState().connectorsByBuilding['B1'], [])
+    await store.getState().flush()
+    assert.ok(calls.includes('deleteConnector:c1'))
+
+    const { store: failing } = setup({
+      fetchConnectors: async () => [lift],
+      deleteConnector: () => Promise.reject(new Error('409')),
+    })
+    await failing.getState().loadConnectors('B1')
+    failing.getState().deleteConnector('B1', 'c1')
+    await failing.getState().flush()
+    assert.deepEqual(failing.getState().connectorsByBuilding['B1']?.map((c) => c.id), ['c1'])
+    assert.match(failing.getState().error ?? '', /Không thể xoá connector: 409/)
   })
 })
