@@ -188,9 +188,18 @@ export function CanvasBoard() {
     crossingEdgeIds?.forEach((edgeId) => deleteEdge(selectedFloorId, edgeId))
   }
 
-  function handleDeleteAllNodes() {
+  /**
+   * BE chặn xoá node còn POI/connector gắn vào, nên gỡ chúng trước và chờ BE xác nhận rồi mới xoá node.
+   * Cửa hàng và QR anchor gắn vào node chưa có giao diện ở đây: nếu còn, BE vẫn từ chối và lỗi hiện ra.
+   */
+  async function handleDeleteAllNodes() {
     if (!selectedFloorId) return
-    deleteAllNodes(selectedFloorId)
+    const floorId = selectedFloorId
+    setEditingPoiId(undefined)
+    deleteAllPois(floorId)
+    if (buildingId) floorConnectors.forEach((connector) => deleteConnector(buildingId, connector.id))
+    await Promise.all([usePoiStore.getState().flush(), useGraphStore.getState().flush()])
+    deleteAllNodes(floorId)
     tool.resetNodeContext()
   }
 
@@ -599,7 +608,7 @@ export function CanvasBoard() {
         onSuggestConnectors={() => setSuggestModalOpen(true)}
         onDeleteConnector={(connectorId) => buildingId && deleteConnector(buildingId, connectorId)}
         onDeletePoi={(poiId) => deletePoi(selectedFloor.id, poiId)}
-        onDeleteAllNodes={handleDeleteAllNodes}
+        onDeleteAllNodes={() => void handleDeleteAllNodes()}
         onDeleteAllPois={handleDeleteAllPois}
       />
       <CalibrationDistanceModal

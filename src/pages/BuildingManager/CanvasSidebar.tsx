@@ -89,7 +89,7 @@ export function CanvasSidebar({
               <DeleteAllButton
                 count={nodes.length}
                 label="Node"
-                description="Edge nối với các Node này cũng bị xóa. Node còn POI hoặc connector gắn vào sẽ bị từ chối — xóa POI/connector trước."
+                description={`BE không cho xóa node còn gắn POI hoặc connector, nên sẽ xóa luôn ${pois.length} POI và ${connectors.length} connector của tầng này (connector bị xóa khỏi cả các tầng còn lại), cùng mọi edge.`}
                 onConfirm={onDeleteAllNodes}
               />
               <List
