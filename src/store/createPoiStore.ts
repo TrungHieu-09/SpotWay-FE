@@ -23,8 +23,8 @@ export type PoiState = {
   movePoi: (floorId: string, poiId: string, to: PercentPoint) => void
   updatePoiDetails: (floorId: string, poiId: string, patch: PoiDetailsPatch) => void
   deletePoi: (floorId: string, poiId: string) => void
-  /** Xoá mọi POI của tầng; mỗi POI tự hoàn tác nếu BE từ chối. */
-  deleteAllPois: (floorId: string) => void
+  /** Xoá mọi POI của tầng lần lượt từng cái (tránh dồn hàng loạt giao dịch lên BE); POI bị từ chối tự hoàn tác. */
+  deleteAllPois: (floorId: string) => Promise<void>
   clearError: () => void
   /** Chờ mọi thao tác ghi đang bay hoàn tất (thành công hoặc đã rollback). */
   flush: () => Promise<void>
@@ -232,8 +232,11 @@ export function createPoiSlice(
         )
       },
 
-      deleteAllPois(floorId) {
-        for (const poi of [...(get().poisByFloor[floorId] ?? [])]) get().deletePoi(floorId, poi.id)
+      async deleteAllPois(floorId) {
+        for (const poi of [...(get().poisByFloor[floorId] ?? [])]) {
+          get().deletePoi(floorId, poi.id)
+          await kit.flush()
+        }
       },
 
       clearError: () => set({ error: null }),

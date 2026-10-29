@@ -171,11 +171,9 @@ describe('deleteAllPois', () => {
     await store.getState().loadFloorPois('B', size)
     store.setState({ poisByFloor: { A: [poi('p1'), poi('p2')], B: [poi('p3', 'B')] } })
 
-    store.getState().deleteAllPois('A')
+    await store.getState().deleteAllPois('A')
     assert.deepEqual(store.getState().poisByFloor['A'], [])
     assert.deepEqual(store.getState().poisByFloor['B']?.map((p) => p.id), ['p3'])
-
-    await store.getState().flush()
     assert.deepEqual(calls.map((c) => c.id).sort(), ['p1', 'p2'])
   })
 
@@ -184,8 +182,7 @@ describe('deleteAllPois', () => {
     await store.getState().loadFloorPois('A', size)
     store.setState({ poisByFloor: { A: [poi('p1'), poi('p2')] } })
 
-    store.getState().deleteAllPois('A')
-    await store.getState().flush()
+    await store.getState().deleteAllPois('A')
     assert.deepEqual(store.getState().poisByFloor['A']?.map((p) => p.id), ['p2'])
     assert.match(store.getState().error ?? '', /Không thể xoá POI/)
   })
@@ -195,9 +192,9 @@ describe('deleteAllPois', () => {
     const { store, calls } = setup({ createPoi: () => slow.promise })
     await store.getState().loadFloorPois('A', size)
     store.getState().createPoi('A', input)
-    store.getState().deleteAllPois('A')
+    const done = store.getState().deleteAllPois('A')
     slow.resolve(poi('real-1'))
-    await store.getState().flush()
+    await done
     assert.deepEqual(calls, [{ op: 'delete', id: 'real-1' }])
     assert.deepEqual(store.getState().poisByFloor['A'], [])
   })

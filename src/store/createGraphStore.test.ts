@@ -276,13 +276,11 @@ describe('deleteAllNodes', () => {
     await store.getState().loadFloorGraph('B', size)
     seed(store)
 
-    store.getState().deleteAllNodes('A')
+    await store.getState().deleteAllNodes('A')
     assert.deepEqual(store.getState().nodesByFloor['A'], [])
     assert.deepEqual(store.getState().edgesByFloor['A'], [])
     assert.equal(store.getState().selectedNodeId, null)
     assert.deepEqual(store.getState().nodesByFloor['B']?.map((n) => n.id), ['n3'])
-
-    await store.getState().flush()
     assert.deepEqual([...calls].sort(), ['deleteNode:n1', 'deleteNode:n2'])
   })
 
@@ -293,8 +291,7 @@ describe('deleteAllNodes', () => {
     await store.getState().loadFloorGraph('A', size)
     seed(store)
 
-    store.getState().deleteAllNodes('A')
-    await store.getState().flush()
+    await store.getState().deleteAllNodes('A')
     assert.deepEqual(store.getState().nodesByFloor['A']?.map((n) => n.id), ['n2'])
     assert.deepEqual(store.getState().edgesByFloor['A'], [])
     assert.match(store.getState().error ?? '', /Không thể xoá node: còn POI/)
@@ -302,9 +299,26 @@ describe('deleteAllNodes', () => {
 
   it('tầng rỗng hoặc chưa tải: không làm gì', async () => {
     const { store, calls } = setup()
-    store.getState().deleteAllNodes('chua-tai')
-    await store.getState().flush()
+    await store.getState().deleteAllNodes('chua-tai')
     assert.deepEqual(calls, [])
+  })
+
+  it('xoá lần lượt: không bao giờ có hai yêu cầu xoá cùng bay một lúc', async () => {
+    let inFlight = 0
+    let peak = 0
+    const { store } = setup({
+      deleteNode: async () => {
+        inFlight += 1
+        peak = Math.max(peak, inFlight)
+        await new Promise((resolve) => setTimeout(resolve, 5))
+        inFlight -= 1
+      },
+    })
+    await store.getState().loadFloorGraph('A', size)
+    store.setState({ nodesByFloor: { A: [node('n1', 'A'), node('n2', 'A'), node('n3', 'A')] }, edgesByFloor: { A: [] } })
+    await store.getState().deleteAllNodes('A')
+    assert.equal(peak, 1)
+    assert.deepEqual(store.getState().nodesByFloor['A'], [])
   })
 })
 

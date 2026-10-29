@@ -196,10 +196,15 @@ export function CanvasBoard() {
     if (!selectedFloorId) return
     const floorId = selectedFloorId
     setEditingPoiId(undefined)
-    deleteAllPois(floorId)
-    if (buildingId) floorConnectors.forEach((connector) => deleteConnector(buildingId, connector.id))
-    await Promise.all([usePoiStore.getState().flush(), useGraphStore.getState().flush()])
-    deleteAllNodes(floorId)
+    // Từng thao tác một: BE khoá dòng tầng ở mỗi lần xoá, gửi dồn sẽ quá hạn giao dịch và trả 500.
+    await deleteAllPois(floorId)
+    if (buildingId) {
+      for (const connector of floorConnectors) {
+        deleteConnector(buildingId, connector.id)
+        await useGraphStore.getState().flush()
+      }
+    }
+    await deleteAllNodes(floorId)
     tool.resetNodeContext()
   }
 

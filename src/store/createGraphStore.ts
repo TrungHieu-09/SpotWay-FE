@@ -24,8 +24,11 @@ export type GraphState = {
   createNode: (floorId: string, input: NewGraphNode, options?: { linkFromNodeId?: string }) => string | null
   moveNode: (floorId: string, nodeId: string, to: PercentPoint) => void
   deleteNode: (floorId: string, nodeId: string) => void
-  /** Xoá mọi node (kèm edge) của tầng; mỗi node tự hoàn tác nếu BE từ chối (vd. còn POI/connector gắn vào). */
-  deleteAllNodes: (floorId: string) => void
+  /**
+   * Xoá mọi node (kèm edge) của tầng, lần lượt từng node: mỗi lần xoá BE khoá dòng tầng để tăng graphVersion,
+   * gửi song song vài chục lần sẽ quá hạn giao dịch và trả 500. Node bị BE từ chối tự hoàn tác, vòng lặp vẫn đi tiếp.
+   */
+  deleteAllNodes: (floorId: string) => Promise<void>
   createEdge: (floorId: string, fromNodeId: string, toNodeId: string) => string | null
   deleteEdge: (floorId: string, edgeId: string) => void
   selectNode: (nodeId: string | null) => void
@@ -266,8 +269,11 @@ export function createGraphSlice(gateway: GraphGateway): StateCreator<GraphState
         )
       },
 
-      deleteAllNodes(floorId) {
-        for (const node of [...(get().nodesByFloor[floorId] ?? [])]) get().deleteNode(floorId, node.id)
+      async deleteAllNodes(floorId) {
+        for (const node of [...(get().nodesByFloor[floorId] ?? [])]) {
+          get().deleteNode(floorId, node.id)
+          await kit.flush()
+        }
       },
 
       createEdge(floorId, rawFromId, rawToId) {
