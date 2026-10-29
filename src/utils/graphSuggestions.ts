@@ -15,7 +15,7 @@ export function suggestEdges(
   nodes: readonly PointWithId[],
   edges: readonly { fromNodeId: string; toNodeId: string }[],
   size: MapSize,
-  options: { maxDistance?: number } = {},
+  options: { maxDistance?: number; /** Cặp node không được nối (vd. đoạn thẳng xuyên tường). */ isBlocked?: (a: PointWithId, b: PointWithId) => boolean } = {},
 ): EdgeSuggestion[] {
   const maxDistance = options.maxDistance ?? Infinity
   const parent = new Map(nodes.map((node) => [node.id, node.id]))
@@ -42,7 +42,7 @@ export function suggestEdges(
   for (let i = 0; i < nodes.length; i += 1) {
     for (let j = i + 1; j < nodes.length; j += 1) {
       const distance = distanceInMapUnits(nodes[i], nodes[j], size)
-      if (distance <= maxDistance) pairs.push({ a: nodes[i], b: nodes[j], distance })
+      if (distance <= maxDistance && !options.isBlocked?.(nodes[i], nodes[j])) pairs.push({ a: nodes[i], b: nodes[j], distance })
     }
   }
   pairs.sort((left, right) => left.distance - right.distance)

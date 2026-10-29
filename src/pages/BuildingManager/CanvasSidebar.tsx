@@ -35,11 +35,14 @@ type CanvasSidebarProps = {
   pois: Poi[]
   floorNameById: ReadonlyMap<string, string>
   isolatedNodeIds?: ReadonlySet<string>
+  /** Edge nghi xuyên tường (theo ảnh sơ đồ). */
+  crossingEdgeIds?: ReadonlySet<string>
   selectedNodeId: string | null
   edgeLength: (edge: GraphEdge) => number
   onSelectNode: (nodeId: string | null) => void
   onDeleteNode: (nodeId: string) => void
   onDeleteEdge: (edgeId: string) => void
+  onDeleteCrossingEdges: () => void
   onCreateConnector: () => void
   onSuggestConnectors: () => void
   onDeleteConnector: (connectorId: string) => void
@@ -56,11 +59,13 @@ export function CanvasSidebar({
   pois,
   floorNameById,
   isolatedNodeIds,
+  crossingEdgeIds,
   selectedNodeId,
   edgeLength,
   onSelectNode,
   onDeleteNode,
   onDeleteEdge,
+  onDeleteCrossingEdges,
   onCreateConnector,
   onSuggestConnectors,
   onDeleteConnector,
@@ -154,6 +159,21 @@ export function CanvasSidebar({
             key: 'edges',
             label: `Edge (${edges.length})`,
             children: (
+              <>
+              {crossingEdgeIds && crossingEdgeIds.size > 0 && (
+                <Popconfirm
+                  title={`Xóa ${crossingEdgeIds.size} edge nghi xuyên tường?`}
+                  description="Đây là kiểm tra theo ảnh nên có thể nhầm; xem các đường đỏ nét đứt trên canvas trước."
+                  onConfirm={onDeleteCrossingEdges}
+                  okText="Xóa"
+                  cancelText="Hủy"
+                  okButtonProps={{ danger: true }}
+                >
+                  <Button danger size="small" block icon={<ClearOutlined />} style={{ marginBottom: 8 }}>
+                    Xóa {crossingEdgeIds.size} edge xuyên tường
+                  </Button>
+                </Popconfirm>
+              )}
               <List
                 size="small"
                 dataSource={edges}
@@ -183,6 +203,7 @@ export function CanvasSidebar({
                     <Space orientation="vertical" size={1}>
                       <AntText style={{ fontSize: 12 }}>
                         #{edge.fromNodeId.slice(0, 5)} → #{edge.toNodeId.slice(0, 5)}
+                        {crossingEdgeIds?.has(edge.id) && <Tag color="error" style={{ marginLeft: 6 }}>Xuyên tường?</Tag>}
                       </AntText>
                       <AntText type="secondary" style={{ fontSize: 11 }}>
                         Khoảng cách: {Math.round(edgeLength(edge))}px bản đồ
@@ -191,6 +212,7 @@ export function CanvasSidebar({
                   </List.Item>
                 )}
               />
+              </>
             ),
           },
           {

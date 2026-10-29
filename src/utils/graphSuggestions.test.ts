@@ -34,6 +34,19 @@ describe('suggestEdges', () => {
     assert.deepEqual([result[0].fromNodeId, result[0].toNodeId].sort(), ['a', 'b'])
   })
 
+  it('isBlocked loại cặp bị chặn: nối đường vòng thay vì xuyên qua', () => {
+    // a-c ở giữa bị chặn (tường); b nằm lệch nên a-b-c vẫn nối được
+    const nodes = [point('a', 0, 0), point('c', 20, 0), point('b', 10, 10)]
+    const result = suggestEdges(nodes, [], size, { isBlocked: (x, y) => [x.id, y.id].sort().join() === 'a,c' })
+    const pairs = result.map((s) => [s.fromNodeId, s.toNodeId].sort().join('-')).sort()
+    assert.deepEqual(pairs, ['a-b', 'b-c'])
+  })
+
+  it('không có cặp nào hợp lệ thì để nguyên các mảnh rời (không ép nối)', () => {
+    const nodes = [point('a', 0, 0), point('b', 10, 0)]
+    assert.deepEqual(suggestEdges(nodes, [], size, { isBlocked: () => true }), [])
+  })
+
   it('edge trỏ tới node không còn trong danh sách không làm hỏng kết quả', () => {
     const nodes = [point('a', 0, 0), point('b', 10, 0)]
     assert.equal(suggestEdges(nodes, [{ fromNodeId: 'a', toNodeId: 'ghost' }], size).length, 1)

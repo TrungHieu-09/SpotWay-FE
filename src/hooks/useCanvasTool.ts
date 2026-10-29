@@ -24,6 +24,8 @@ export function useCanvasTool({ floorId, stageSize, onAddPoi, onError }: UseCanv
   const [nodeName, setNodeName] = useState('')
   const [edgeStartNodeId, setEdgeStartNodeId] = useState<string>()
   const [routeAnchorNodeId, setRouteAnchorNodeId] = useState<string>()
+  /** Tắt để mỗi click chỉ tạo node, không tự nối edge với node trước (tránh edge xuyên tường). */
+  const [autoLink, setAutoLink] = useState(true)
   /** Hai điểm (%) người dùng chấm để hiệu chuẩn tỉ lệ; chấm lần thứ ba thì bắt đầu lại. */
   const [calibrationPoints, setCalibrationPoints] = useState<PercentPoint[]>([])
 
@@ -79,7 +81,7 @@ export function useCanvasTool({ floorId, stageSize, onAddPoi, onError }: UseCanv
     const tempId = createNode(
       floorId,
       { ...at, name: nodeName.trim() || null, type: nodeType, accessible: true },
-      { linkFromNodeId: routeAnchorNodeId },
+      { linkFromNodeId: autoLink ? routeAnchorNodeId : undefined },
     )
     if (tempId) setRouteAnchorNodeId(tempId)
     setNodeName('')
@@ -127,6 +129,8 @@ export function useCanvasTool({ floorId, stageSize, onAddPoi, onError }: UseCanv
     setNodeType,
     nodeName,
     setNodeName,
+    autoLink,
+    setAutoLink,
     edgeStartNodeId,
     routeAnchorNodeId,
     setRouteAnchorNodeId,

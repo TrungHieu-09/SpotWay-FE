@@ -9,6 +9,8 @@ type GraphEdgesLayerProps = {
   nodeById: ReadonlyMap<string, GraphNode>
   draftEdges?: readonly DraftEdge[]
   draftNodeById?: ReadonlyMap<string, DraftNode>
+  /** Edge nghi xuyên tường: vẽ đỏ nét đứt để người vẽ thấy ngay. */
+  flaggedEdgeIds?: ReadonlySet<string>
   /** Edge gợi ý tự động (chưa lưu): vẽ nét đứt xanh lá giữa các node thật. */
   suggestions?: readonly { id: string; fromNodeId: string; toNodeId: string }[]
   size: MapSize
@@ -20,6 +22,7 @@ export const GraphEdgesLayer = memo(function GraphEdgesLayer({
   nodeById,
   draftEdges = [],
   draftNodeById,
+  flaggedEdgeIds,
   suggestions = [],
   size,
 }: GraphEdgesLayerProps) {
@@ -39,7 +42,8 @@ export const GraphEdgesLayer = memo(function GraphEdgesLayer({
           <Line
             key={edge.id}
             points={segment(from, to)}
-            stroke={edge.status === 'BLOCKED' ? '#ef4444' : '#22d3ee'}
+            stroke={flaggedEdgeIds?.has(edge.id) ? '#dc2626' : edge.status === 'BLOCKED' ? '#ef4444' : '#22d3ee'}
+            dash={flaggedEdgeIds?.has(edge.id) ? [10, 6] : undefined}
             strokeWidth={5}
             lineCap="round"
           />

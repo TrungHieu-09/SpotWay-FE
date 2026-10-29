@@ -3,6 +3,7 @@ import {
   Alert,
   Button,
   Card,
+  Checkbox,
   Empty,
   Input,
   message,
@@ -43,6 +44,7 @@ import { MapBackgroundLayer } from '../../components/canvas/MapBackgroundLayer'
 import { PoiEditPopover } from '../../components/canvas/PoiEditPopover'
 import { PoiMarkersLayer } from '../../components/canvas/PoiMarkersLayer'
 import { useCanvasTool } from '../../hooks/useCanvasTool'
+import { useWallMask } from '../../hooks/useWallMask'
 import { useElementSize } from '../../hooks/useElementSize'
 import { useImage } from '../../hooks/useImage'
 import type { FloorPublishStatus } from '../../types/floor'
@@ -51,6 +53,7 @@ import type { Connector, GraphDraft, GraphEdge, GraphNode } from '../../types/gr
 import type { Poi } from '../../types/poi'
 import { distanceInMapUnits, findIsolatedNodeIds } from '../../utils/graphGeometry'
 import { suggestEdges, type EdgeSuggestion } from '../../utils/graphSuggestions'
+import { findWallCrossingEdgeIds, segmentCrossesWall } from '../../utils/wallMask'
 
 const EMPTY_NODES: GraphNode[] = []
 const EMPTY_EDGES: GraphEdge[] = []
@@ -114,6 +117,7 @@ export function CanvasBoard() {
   const updatePoiDetails = usePoiStore((state) => state.updatePoiDetails)
   const mapImageUrl = selectedFloor?.mapImageUrl?.trim() || null
   const mapImage = useImage(mapImageUrl)
+  const wallMask = useWallMask(mapImageUrl)
 
   // Graph nằm trong useGraphStore theo tầng; rời tầng thì dọn để dữ liệu không lọt sang tầng khác
   useEffect(() => {
@@ -162,9 +166,12 @@ export function CanvasBoard() {
 
   function handleSuggestEdges() {
     if (!selectedFloor) return
-    const found = suggestEdges(currentFloorNodes, currentFloorEdges, { width: selectedFloor.mapWidth, height: selectedFloor.mapHeight })
+    const found = suggestEdges(currentFloorNodes, currentFloorEdges, { width: selectedFloor.mapWidth, height: selectedFloor.mapHeight }, {
+      isBlocked: wallMask ? (a, b) => segmentCrossesWall(wallMask, a, b) : undefined,
+    })
     setSuggestedEdges(found)
-    if (found.length === 0) message.info('Các node đã nối liền một mạng, không cần gợi ý thêm.')
+    if (!wallMask) message.warning('Chưa đọc được ảnh sơ đồ nên gợi ý không tránh được tường — hãy kiểm tra kỹ.')
+    else if (found.length === 0) message.info('Không còn cặp node nào nối được mà không xuyên tường (hoặc đã nối liền).')
   }
 
   function handleApplySuggestedEdges() {
@@ -174,6 +181,11 @@ export function CanvasBoard() {
       if (existing.has(edge.fromNodeId) && existing.has(edge.toNodeId)) createEdge(selectedFloorId, edge.fromNodeId, edge.toNodeId)
     }
     setSuggestedEdges([])
+  }
+
+  function handleDeleteCrossingEdges() {
+    if (!selectedFloorId) return
+    crossingEdgeIds?.forEach((edgeId) => deleteEdge(selectedFloorId, edgeId))
   }
 
   function handleDeleteAllNodes() {
@@ -264,6 +276,9 @@ export function CanvasBoard() {
     () => (currentFloorNodes.length > 1 ? findIsolatedNodeIds(currentFloorNodes, currentFloorEdges) : undefined),
     [currentFloorNodes, currentFloorEdges],
   )
+
+  // Edge có đoạn thẳng cắt nét tường trên ảnh sơ đồ: đường đi thật sẽ không đi được như vậy.
+  const crossingEdgeIds = wallMask ? findWallCrossingEdgeIds(wallMask, currentFloorNodes, currentFloorEdges) : undefined
 
   if (!selectedFloor) {
     return (
@@ -427,6 +442,9 @@ export function CanvasBoard() {
                 <Button size="small" onClick={() => tool.setRouteAnchorNodeId(undefined)}>
                   Bắt đầu tuyến mới
                 </Button>
+                <Checkbox checked={tool.autoLink} onChange={(event) => tool.setAutoLink(event.target.checked)}>
+                  Tự nối edge với node trước
+                </Checkbox>
               </>
             )}
           </Space>
@@ -513,6 +531,7 @@ export function CanvasBoard() {
                       nodeById={nodeById}
                       draftEdges={navigationDraft?.edges}
                       draftNodeById={draftNodeById}
+                      flaggedEdgeIds={crossingEdgeIds}
                       suggestions={suggestedEdges}
                       size={stageSize}
                     />
@@ -569,11 +588,13 @@ export function CanvasBoard() {
         pois={pois}
         floorNameById={floorNameById}
         isolatedNodeIds={isolatedNodeIds}
+        crossingEdgeIds={crossingEdgeIds}
         selectedNodeId={selectedNodeId}
         edgeLength={edgeLength}
         onSelectNode={selectNode}
         onDeleteNode={tool.handleNodeDelete}
         onDeleteEdge={handleDeleteEdge}
+        onDeleteCrossingEdges={handleDeleteCrossingEdges}
         onCreateConnector={() => setConnectorModalOpen(true)}
         onSuggestConnectors={() => setSuggestModalOpen(true)}
         onDeleteConnector={(connectorId) => buildingId && deleteConnector(buildingId, connectorId)}
