@@ -9,6 +9,8 @@ export type Floor = {
   mapImageUrl: string | null
   mapWidth: number
   mapHeight: number
+  /** Tỉ lệ mét/pixel; null/thiếu = chưa hiệu chuẩn (BE không cho publish). */
+  metersPerPixel?: number | null
 }
 
 export type CreateFloorPayload = {

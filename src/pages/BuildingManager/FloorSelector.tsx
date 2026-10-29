@@ -16,10 +16,12 @@ import {
   Tooltip,
   Typography,
 } from 'antd'
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import { ColumnWidthOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { useFloorStore } from '../../store/useFloorStore'
 import { usePoiStore } from '../../store/usePoiStore'
-import type { FloorPublishStatus } from '../../types/floor'
+import type { Floor, FloorPublishStatus } from '../../types/floor'
+import { describePublishError } from '../../utils/publishIssues'
+import { FloorCalibrationModal } from './FloorCalibrationModal'
 
 const { Text } = Typography
 
@@ -38,6 +40,7 @@ function floorStatusColor(status: FloorPublishStatus) {
 
 export function FloorSelector({ buildingId }: FloorSelectorProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [calibratingFloor, setCalibratingFloor] = useState<Floor | null>(null)
   const [form] = Form.useForm<CreateFloorFormValues>()
   const floors = useFloorStore((state) => state.floors)
   const poisByFloor = usePoiStore((state) => state.poisByFloor)
@@ -47,7 +50,8 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
   const addFloor = useFloorStore((state) => state.addFloor)
   const deleteFloor = useFloorStore((state) => state.deleteFloor)
   const updateFloorStatus = useFloorStore((state) => state.updateFloorStatus)
-  const { message } = AntApp.useApp()
+  const calibrateFloor = useFloorStore((state) => state.calibrateFloor)
+  const { message, modal } = AntApp.useApp()
   const canDeleteFloor = floors.length > 1
 
   function closeCreateModal() {
@@ -89,7 +93,20 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
       )
       message.success('Cập nhật trạng thái tầng thành công')
     } catch (error) {
-      message.error((error as Error).message)
+      if (!isPublished) {
+        message.error((error as Error).message)
+        return
+      }
+      modal.error({
+        title: 'Chưa thể publish tầng này',
+        content: (
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {describePublishError((error as Error).message).map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        ),
+      })
     }
   }
 
@@ -125,6 +142,7 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
                   <Tag color={floorStatusColor(floor.publishStatus)}>
                     {floor.publishStatus}
                   </Tag>
+                  {floor.metersPerPixel == null && <Tag color="warning">Chưa hiệu chuẩn</Tag>}
                 </Space>
                 <Text type="secondary">Level {floor.level}</Text>
               </div>
@@ -134,6 +152,13 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
                 onClick={(event) => event.stopPropagation()}
               >
                 {poisByFloor[floor.id] && <Tag>{poisByFloor[floor.id].length} POI</Tag>}
+                <Tooltip title="Hiệu chuẩn tỉ lệ mét/pixel">
+                  <Button
+                    size="small"
+                    icon={<ColumnWidthOutlined />}
+                    onClick={() => setCalibratingFloor(floor)}
+                  />
+                </Tooltip>
                 <Switch
                   size="small"
                   checked={floor.publishStatus === 'published'}
@@ -215,6 +240,11 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
           </Form.Item>
         </Form>
       </Modal>
+      <FloorCalibrationModal
+        floor={calibratingFloor}
+        onSubmit={calibrateFloor}
+        onClose={() => setCalibratingFloor(null)}
+      />
     </section>
   )
 }

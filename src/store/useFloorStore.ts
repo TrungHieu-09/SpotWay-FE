@@ -1,9 +1,11 @@
 import { create } from 'zustand'
 import {
+  calibrateFloor as calibrateFloorRequest,
   createFloor,
   deleteFloor as deleteFloorRequest,
   getFloors,
   updateFloor,
+  type CalibrateFloorInput,
 } from '../api/floors'
 import type { Floor, FloorPublishStatus } from '../types/floor'
 
@@ -22,6 +24,8 @@ type FloorState = {
   selectFloor: (floorId?: string) => void
   addFloor: (buildingId: string, floor: NewFloorInput) => Promise<void>
   deleteFloor: (floorId: string) => Promise<void>
+  /** Trả số edge BE đã tính lại độ dài. */
+  calibrateFloor: (floorId: string, input: CalibrateFloorInput) => Promise<number>
   updateFloorStatus: (
     floorId: string,
     publishStatus: FloorPublishStatus,
@@ -119,6 +123,16 @@ export const useFloorStore = create<FloorState>((set, get) => ({
     } finally {
       set({ isFloorLoading: false })
     }
+  },
+
+  async calibrateFloor(floorId, input) {
+    const { metersPerPixel, edgesRecomputed } = await calibrateFloorRequest(floorId, input)
+    const withScale = (floor: Floor): Floor => (floor.id === floorId ? { ...floor, metersPerPixel } : floor)
+    set((state) => ({
+      floors: state.floors.map(withScale),
+      selectedFloor: state.selectedFloor && withScale(state.selectedFloor),
+    }))
+    return edgesRecomputed
   },
 
   async updateFloorStatus(floorId, publishStatus) {

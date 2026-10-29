@@ -5,8 +5,8 @@ import type {
   UpdateFloorPayload,
 } from '../types/floor'
 
-type ApiFloor = { id: string; buildingId: string; floorNumber: number; name: string; mapImageUrl: string | null; mapWidth: number | null; mapHeight: number | null; publishStatus: 'DRAFT' | 'PUBLISHED' }
-function toFloor(floor: ApiFloor): Floor { return { id: floor.id, buildingId: floor.buildingId, name: floor.name, level: floor.floorNumber, publishStatus: floor.publishStatus === 'PUBLISHED' ? 'published' : 'draft', mapImageUrl: floor.mapImageUrl, mapWidth: floor.mapWidth ?? 1200, mapHeight: floor.mapHeight ?? 760 } }
+type ApiFloor = { id: string; buildingId: string; floorNumber: number; name: string; mapImageUrl: string | null; mapWidth: number | null; mapHeight: number | null; metersPerPixel?: number | null; publishStatus: 'DRAFT' | 'PUBLISHED' }
+function toFloor(floor: ApiFloor): Floor { return { id: floor.id, buildingId: floor.buildingId, name: floor.name, level: floor.floorNumber, publishStatus: floor.publishStatus === 'PUBLISHED' ? 'published' : 'draft', mapImageUrl: floor.mapImageUrl, mapWidth: floor.mapWidth ?? 1200, mapHeight: floor.mapHeight ?? 760, metersPerPixel: floor.metersPerPixel ?? null } }
 
 export async function getFloors(buildingId: string) {
   const { data } = await apiClient.get<{ items: ApiFloor[] }>(
@@ -30,6 +30,21 @@ export async function updateFloor(
   }
   const { data } = await apiClient.patch<ApiFloor>(`/floors/${floorId}`, { name: payload.name, mapImageUrl: payload.mapImageUrl, mapWidth: payload.mapWidth, mapHeight: payload.mapHeight })
   return toFloor(data)
+}
+
+type PixelPoint = { x: number; y: number }
+
+/** Một trong hai dạng BE chấp nhận; toạ độ điểm là pixel bản đồ. */
+export type CalibrateFloorInput =
+  | { metersPerPixel: number }
+  | { pointA: PixelPoint; pointB: PixelPoint; realDistanceMeters: number }
+
+export async function calibrateFloor(floorId: string, input: CalibrateFloorInput) {
+  const { data } = await apiClient.patch<{ metersPerPixel: number; edgesRecomputed: number }>(
+    `/floors/${floorId}/calibration`,
+    input,
+  )
+  return data
 }
 
 export async function deleteFloor(floorId: string) {
