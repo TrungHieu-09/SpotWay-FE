@@ -13,8 +13,7 @@ import { INITIAL_SIMULATION, type NavigationDataState, type NavigationState } fr
 
 export type RouteRequestInput = {
   fromNodeId: string
-  toStoreId?: string
-  toNodeId?: string
+  toStoreId: string
   wheelchairMode: boolean
   mode?: 'NORMAL' | 'EVACUATION'
   hazardNodeIds?: string[]
@@ -78,14 +77,24 @@ export function createNavigationDataSlice(
         try {
           const { emergencyMode, activeFireNodeIds } = get()
           const evacuation = emergencyMode === 'FIRE'
-          try {
-            // `toStoreId` của UI là id điểm đến: cửa hàng đi theo store, POI đi theo node neo.
-            const picked = get().destinations.find((item) => item.id === input.toStoreId)
-            const target = picked && picked.type !== 'STORE' ? { toNodeId: picked.nodeId } : { toStoreId: input.toStoreId }
-            const route = await gateway.createRoute({
-              fromNodeId: input.fromNodeId,
+          // `toStoreId` của UI là id điểm đến (cửa hàng hoặc POI).
+          const picked = get().destinations.find((item) => item.id === input.toStoreId)
+          const routeOffline = (destination: PublicSearchResult) =>
+            applyRoute(input.fromNodeId, destination.nodeId, {
+              targetName: destination.name,
               wheelchairMode: input.wheelchairMode,
-              ...target,
+            })
+
+          // /public/routes chỉ nhận cửa hàng hoặc lối thoát làm đích; POI chỉ có node neo nên tính trên graph đã tải.
+          if (picked && picked.type !== 'STORE' && Object.keys(get().mapsByFloorId).length > 0) {
+            const route = routeOffline(picked)
+            if (route || get().routeWarning) return route
+            throw new Error(get().error ?? 'Không tìm thấy tuyến đường phù hợp trên đồ thị.')
+          }
+
+          try {
+            const route = await gateway.createRoute({
+              ...input,
               ...(evacuation ? { mode: 'EVACUATION' as const, hazardNodeIds: activeFireNodeIds } : {}),
             })
             const critical = route.warnings?.find((item) => item.severity === 'CRITICAL') ?? route.warnings?.[0]
@@ -108,12 +117,8 @@ export function createNavigationDataSlice(
             return route
           } catch (apiError) {
             // Backend lỗi/mất mạng: tính tuyến offline bằng Dijkstra cục bộ để không gián đoạn trải nghiệm
-            const destination = get().destinations.find((item) => item.id === input.toStoreId)
-            if (!destination || Object.keys(get().mapsByFloorId).length === 0) throw apiError
-            const route = applyRoute(input.fromNodeId, destination.nodeId, {
-              targetName: destination.name,
-              wheelchairMode: input.wheelchairMode,
-            })
+            if (!picked || Object.keys(get().mapsByFloorId).length === 0) throw apiError
+            const route = routeOffline(picked)
             if (route) {
               set({ routeSource: 'offline' })
               return route

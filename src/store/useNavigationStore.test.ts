@@ -103,15 +103,18 @@ describe('findRoute', () => {
     assert.deepEqual(sent, { ...input, mode: 'EVACUATION', hazardNodeIds: ['exitL'] })
   })
 
-  it('điểm đến là POI: gửi toNodeId (node neo) thay vì toStoreId', async () => {
-    let sent: unknown
+  it('điểm đến là POI: không gọi API (BE chỉ nhận cửa hàng/lối thoát), tính trên graph tới node neo', async () => {
+    let apiCalls = 0
     const poiDestination: PublicSearchResult = { type: 'POI', id: 'poi-1', name: 'WC', floorId: 'f1', nodeId: 'c', x: 300, y: 0 }
     const store = await loaded({
       searchDestinations: async () => [...destinations, poiDestination],
-      createRoute: async (body) => { sent = body; return apiRoute },
+      createRoute: async () => { apiCalls += 1; return apiRoute },
     })
-    await store.getState().findRoute({ fromNodeId: 'a', toStoreId: 'poi-1', wheelchairMode: false })
-    assert.deepEqual(sent, { fromNodeId: 'a', toNodeId: 'c', wheelchairMode: false })
+    const route = await store.getState().findRoute({ fromNodeId: 'a', toStoreId: 'poi-1', wheelchairMode: false })
+    assert.equal(apiCalls, 0)
+    assert.deepEqual(route?.nodeIds, ['a', 'b', 'c'])
+    assert.equal(store.getState().routeSource, 'offline')
+    assert.equal(store.getState().routeTargetName, 'WC')
   })
 
   it('API lỗi: tính offline trên graph đã nạp', async () => {

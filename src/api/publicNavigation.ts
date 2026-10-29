@@ -45,9 +45,7 @@ export async function resolvePublicQrToken(token: string, fallback?: () => Publi
 
 export async function createPublicRoute(input: {
   fromNodeId: string
-  /** Cửa hàng thì gửi `toStoreId`; POI chỉ có node nên gửi `toNodeId` (BE không nhận cả hai). */
-  toStoreId?: string
-  toNodeId?: string
+  toStoreId: string
   wheelchairMode: boolean
   mode?: 'NORMAL' | 'EVACUATION'
   hazardNodeIds?: string[]
