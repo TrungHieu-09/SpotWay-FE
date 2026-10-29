@@ -18,9 +18,9 @@
 | Repo | Đã đọc | Ghi chú |
 |---|---|---|
 | Service-InMap | schema node/edge/poi, DTO POI, `routing.service.ts` (findRoute), `pois.service.ts`, đầu `demo-graph.ts` | đọc kỹ phần liên quan Node/POI/Route |
-| Frontend-InMap-New | cấu trúc `features/`, `manager/routing/{types,routingApi}`, `map/poiRouteSearch.ts`, `HANDOFF.md` | **chưa** đọc `RoutingManager.tsx`, `Floor3D.tsx`, `OutdoorMap.tsx` chi tiết |
-| Mobile-Inmap | `navigation_models.dart`, `map_projection.dart`, thống kê `floor_stack_map`/`indoor_wayfinder_page` | **chưa** đọc thân `indoor_wayfinder_page.dart` (2177 dòng) |
-| FloorPlanTo3D-API-v2 | `plans/routing-nodes/plan.md`, tên hàm viewer, `HANDOFF` | **chưa** đọc `converters.js`/`viewer/index.html` từng hàm |
+| Frontend-InMap-New | cấu trúc `features/`, `manager/routing/*`, `RoutingManager.tsx`, `map/poiRouteSearch.ts`, grep `Floor3DWorkspace`/`RoomManagement` | `FloorsManagement.tsx`, `OutdoorMap.tsx` chưa đọc chi tiết |
+| Mobile-Inmap | `navigation_models.dart`, `map_projection.dart`, grep `indoor_wayfinder_page.dart` (dữ liệu cứng `kRooms`/`kPois`) | thân widget chưa đọc |
+| FloorPlanTo3D-API-v2 | `plans/routing-nodes/plan.md`, `converters.js` (node/graph), `main.js` (công cụ POI/node, kéo node, publish) | phần 3D (Three.js) của `main.js` chưa đọc |
 | Gateway / IAM / Payment | không đọc | không liên quan Node/POI |
 | SpotWay-FE | `types/{poi,navigation}`, `api/{graph,floors}`, `CanvasBoard`, `utils/canvasCoordinates`, stores (chữ ký), `RouteMap` (đầu file) | `useNavigationStore`, `indoorPathfinding` chỉ đọc chữ ký export |
 
@@ -295,3 +295,11 @@ Bước 1-3 mang lại lợi ích lớn nhất, ít phụ thuộc BE. Bước 6 
 6. Phần Frontend-InMap-New (`RoutingManager`, `Floor3D`), `indoor_wayfinder_page.dart`, `converters.js` chưa đọc thân; kết luận về chúng ở §2 chỉ dựa trên cấu trúc, tên hàm và tài liệu đi kèm.
 
 *(Báo cáo này chỉ phân tích/đề xuất; chưa sửa mã nguồn nào.)*
+
+## 7. Bổ sung sau khi đọc chi tiết luồng dựng tầng (Service-InMap + FloorPlanTo3D)
+
+- Thứ tự: hình học (tường/cửa/phòng) → node cửa tự sinh + lưới `auto` (bước `gridSpacing`, mặc định 3 m) → edge tự sinh bằng visibility graph (tầm `max(80, step×2.8)`, không cắt cạnh tường/cửa sổ) → POI là "ghim" gắn vào phòng → publish một lần `complete-setup`.
+- POI trong editor là `detectedRoom` với `points: []` và `center`; BE ghi `coordinates = tâm Space`. `Space.doorNodeId` **không** được gán trong luồng publish (chỉ copy khi clone), nên POI không có liên kết thật tới graph.
+- Mất dữ liệu khi lưu: loại `manual`/`auto`/`ESCALATOR` bị ép về `CORRIDOR`; cạnh dọc giữa tầng bị bỏ vì `nodeIdMap` chỉ chứa node của tầng đang lưu.
+- Rủi ro: lưới giả định cạnh dài nhất toà nhà ≈ 12 m (`pxPerMeter = max(bw,bh)/12`); visibility graph O(n²) chạy lại mỗi lần kéo node; lưu bằng xoá-rồi-chèn làm id node đổi mỗi lần publish.
+- Mobile dùng dữ liệu cứng, chưa gọi API node/POI/routing.

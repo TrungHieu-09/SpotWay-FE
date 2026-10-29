@@ -76,3 +76,24 @@ PoiCategory, Poi {id,floorId,name,category,icon,x,y,nearestNodeId}  // poi.ts
 
 ## 4. Tiêu chí kiểm chứng chung
 `npx tsc -b`, `npm test`, `npm run lint` (so với baseline), kiểm thủ công canvas ở cuối Phase 2/3.
+
+## 5. Tổng hợp việc sau Phase 6
+
+### Đã làm
+| Việc | Kết quả |
+|---|---|
+| Node chưa nối edge | `findIsolatedNodeIds` (có test); vòng đỏ trên canvas + thẻ "Chưa nối Edge" trong danh sách. |
+| Thấy POI snap vào đâu | `PoiMarkersLayer` vẽ đường nét đứt POI → `nearestNodeId`. |
+| UI tạo/xoá connector | `ConnectorFormModal` + `createConnector`/`deleteConnector` trong `useGraphStore` (có test). |
+| Lý do xoá node thất bại | Đã có: lỗi BE hiện qua `message.error` từ `useGraphStore.error`. |
+| Tách `CanvasBoard` | Tách `CanvasSidebar` (970 → ~710 dòng). |
+
+### Chưa làm (cần quyết định)
+| Việc | Lý do chưa làm |
+|---|---|
+| Tách `useNavigationStore` (route / simulation) | Store 598 dòng, mô phỏng lửa tính lại route nên hai phần gắn chặt; chưa có test cho store. Nên viết test hành vi trước khi tách. |
+| `indoorPathfinding` sang toạ độ % | Thuật toán và test dùng pixel + `mapUnitsPerMeter`; đổi đơn vị ảnh hưởng trực tiếp độ dài/hướng rẽ. |
+| `CanvasBoard` ≲ 250 dòng | Phần còn lại là logic tường + nháp điều hướng dùng chung `isGraphSaving`/`graphError`; cần tách thành hook `useNavigationDraft` và `useWallEditor` cùng lúc. |
+| Giới hạn snap 10 m ở client | `Floor` chưa có `metersPerPixel`; client gửi `nodeId` tường minh nên bỏ qua giới hạn của BE. |
+| Gợi ý edge bằng visibility graph | Ý từ FloorPlanTo3D (nối 2 node nếu đoạn thẳng không cắt tường); `buildCorridorDraft` hiện chỉ dựng tuyến mẫu. |
+| Seed node tại cửa | Chưa có khái niệm cửa/phòng trong FE; cần quyết định có thêm `Space` hay không. |
