@@ -605,6 +605,8 @@ export function NavigationPage() {
                 </div>
               )}
 
+              {/* Map Canvas with Animated Radar Pulse & Destination Pin */}
+              <div style={{ flex: 1, position: 'relative' }}>
               {/* Vertical Stacked Floor Switcher (Pill style on the right) */}
               <div className="phone-floor-pills">
                 {sortedFloors.map((floor) => {
@@ -633,8 +635,6 @@ export function NavigationPage() {
                 </div>
               </div>
 
-              {/* Map Canvas with Animated Radar Pulse & Destination Pin */}
-              <div style={{ flex: 1, position: 'relative' }}>
                 <RouteMap
                   map={displayedMap}
                   routeSteps={route?.steps ?? []}
