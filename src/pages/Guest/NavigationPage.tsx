@@ -32,6 +32,7 @@ import { toRouteMapData } from '../../api/graphMapper'
 import { RouteMap } from '../../components/navigation/RouteMap'
 import { useNavigationStore } from '../../store/useNavigationStore'
 import type { Maneuver, PublicQrResolution, RouteStep } from '../../types/navigation'
+import { forgetDestination, recallDestination, rememberDestination } from '../../utils/guestMemory'
 import './NavigationPage.css'
 
 const formatDistance = (distance: number) =>
@@ -82,6 +83,7 @@ export function NavigationPage() {
   const [qrError, setQrError] = useState<string>()
   const [qrLocked, setQrLocked] = useState(true)
   const autoRoutedRef = useRef(false)
+  const resumedForQrRef = useRef<string | undefined>(undefined)
   const buildingId = routeBuildingId ?? qr?.buildingId ?? searchParams.get('buildingId') ?? undefined
 
   const {
@@ -209,6 +211,20 @@ export function NavigationPage() {
     if (!result) return
     setStepIndex(0)
     setSelectedFloorId(result.steps[0]?.floorId)
+    try {
+      if (buildingId) rememberDestination(window.localStorage, buildingId, dest)
+    } catch {
+      // trình duyệt chặn lưu trữ: chỉ mất khả năng tiếp tục chuyến đi sau khi quét mã khác
+    }
+  }
+
+  const handleClearRoute = () => {
+    try {
+      forgetDestination(window.localStorage)
+    } catch {
+      // bỏ qua
+    }
+    clearRoute()
   }
 
   // Deep-link ?toStoreId=: tự chỉ đường khi đã có điểm xuất phát và dữ liệu điểm đến
@@ -221,6 +237,23 @@ export function NavigationPage() {
     // beginRoute phụ thuộc state cục bộ; chỉ cần chạy 1 lần khi đủ dữ liệu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paramToStoreId, isLoading, effectiveFromNodeId, destinations])
+
+  // Quét mã QR khác giữa đường (trang tải lại): tiếp tục tới điểm đến đã chọn, tính lại từ vị trí mới
+  useEffect(() => {
+    if (!qr || !qrToken || paramToStoreId || isLoading || resumedForQrRef.current === qrToken) return
+    let remembered: string | undefined
+    try {
+      remembered = buildingId ? recallDestination(window.localStorage, buildingId) : undefined
+    } catch {
+      remembered = undefined
+    }
+    if (!remembered || !destinations.some((item) => item.id === remembered)) return
+    resumedForQrRef.current = qrToken
+    setDestinationId(remembered)
+    void beginRoute(remembered, qr.nodeId).catch(() => undefined)
+    // beginRoute phụ thuộc state cục bộ; chỉ cần chạy 1 lần cho mỗi mã QR khi đủ dữ liệu
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qr, qrToken, paramToStoreId, isLoading, destinations, buildingId])
 
   // Quick Demo Route (Lecture Hall 301 as in Reference Photo)
   const handleLoadDemoRoute = () => {
@@ -556,7 +589,7 @@ export function NavigationPage() {
                     <button
                       className="bottom-sheet__exit-btn"
                       onClick={() => {
-                        clearRoute()
+                        handleClearRoute()
                         setStepIndex(0)
                       }}
                     >
@@ -678,7 +711,7 @@ export function NavigationPage() {
                   >
                     Tiếp theo
                   </Button>
-                  <Button type="text" danger onClick={clearRoute}>
+                  <Button type="text" danger onClick={handleClearRoute}>
                     Kết thúc
                   </Button>
                 </Space>

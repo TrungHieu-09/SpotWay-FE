@@ -18,6 +18,7 @@ import { Stage } from 'react-konva'
 import {
   ColumnWidthOutlined,
   DeleteOutlined,
+  QrcodeOutlined,
   ThunderboltOutlined,
   LinkOutlined,
   LoadingOutlined,
@@ -35,6 +36,7 @@ import { usePoiStore } from '../../store/usePoiStore'
 import { CanvasSidebar } from './CanvasSidebar'
 import { CalibrationDistanceModal } from '../../components/canvas/CalibrationDistanceModal'
 import { CalibrationLayer } from '../../components/canvas/CalibrationLayer'
+import { QrAnchorModal } from '../../components/canvas/QrAnchorModal'
 import { ConnectorSuggestModal } from '../../components/canvas/ConnectorSuggestModal'
 import { ConnectorFormModal } from '../../components/canvas/ConnectorFormModal'
 import { ConnectorsLayer } from '../../components/canvas/ConnectorsLayer'
@@ -100,6 +102,7 @@ export function CanvasBoard() {
   const [connectorModalOpen, setConnectorModalOpen] = useState(false)
   const [suggestModalOpen, setSuggestModalOpen] = useState(false)
   const [isPromoting, setIsPromoting] = useState(false)
+  const [qrModalOpen, setQrModalOpen] = useState(false)
   const promotingRef = useRef(false)
   const [suggestedEdges, setSuggestedEdges] = useState<EdgeSuggestion[]>([])
   const createEdge = useGraphStore((state) => state.createEdge)
@@ -541,6 +544,9 @@ export function CanvasBoard() {
                     Xóa Node
                   </Button>
                 </Popconfirm>
+                <Button size="small" icon={<QrcodeOutlined />} onClick={() => setQrModalOpen(true)}>
+                  Tạo mã QR
+                </Button>
                 <Button size="small" onClick={() => selectNode(null)}>
                   Bỏ chọn
                 </Button>
@@ -652,6 +658,12 @@ export function CanvasBoard() {
         mapSize={{ width: selectedFloor.mapWidth, height: selectedFloor.mapHeight }}
         onSubmit={handleCalibrate}
         onCancel={tool.clearCalibration}
+      />
+      <QrAnchorModal
+        open={qrModalOpen}
+        buildingId={buildingId}
+        node={selectedNode ? { id: selectedNode.id, name: selectedNode.name } : undefined}
+        onClose={() => setQrModalOpen(false)}
       />
       <ConnectorSuggestModal
         open={suggestModalOpen}
