@@ -65,8 +65,10 @@ apiClient.interceptors.response.use(
   async (error) => {
     const request = error.config as RetriableRequest | undefined
     const isRefreshRequest = request?.url?.includes('/auth/refresh')
+    // Endpoint công khai (trang khách) không cần đăng nhập: 401 ở đó không được kéo người dùng về /login.
+    const isPublicRequest = request?.url?.startsWith('/public/')
 
-    if (error.response?.status === 401 && request && !request._spotwayRetried && !isRefreshRequest) {
+    if (error.response?.status === 401 && request && !request._spotwayRetried && !isRefreshRequest && !isPublicRequest) {
       request._spotwayRetried = true
       try {
         const tokens = await refreshAccessToken()

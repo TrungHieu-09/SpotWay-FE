@@ -1,9 +1,15 @@
 import { apiClient } from './client'
-import type { IndoorRoute, PublicFloor, PublicFloorMap, PublicQrResolution, PublicSearchResult } from '../types/navigation'
+import type { IndoorRoute, PublicFloor, PublicFloorMap, PublicQrResolution, PublicSearchResult, VerticalLink } from '../types/navigation'
 
 export async function getPublicFloors(buildingId: string) {
   const { data } = await apiClient.get<PublicFloor[]>(`/public/buildings/${buildingId}/floors`)
   return data
+}
+
+/** Tổng quan toà nhà công khai; trang khách chỉ cần danh sách liên kết thang (vertical links). */
+export async function getPublicVerticalLinks(buildingId: string) {
+  const { data } = await apiClient.get<{ verticalLinks?: VerticalLink[] }>(`/public/buildings/${buildingId}/overview`, { timeout: 30_000 })
+  return data.verticalLinks ?? []
 }
 
 export async function getPublicFloorMap(floorId: string) {
@@ -34,7 +40,7 @@ const isBackendUnreachable = (error: unknown) =>
  */
 export async function resolvePublicQrToken(token: string, fallback?: () => PublicQrResolution | undefined) {
   try {
-    const { data } = await apiClient.get<PublicQrResolution>(`/public/qr/${encodeURIComponent(token)}`, { timeout: 10_000 })
+    const { data } = await apiClient.get<PublicQrResolution>(`/qr/${encodeURIComponent(token)}`, { timeout: 10_000 })
     return data
   } catch (error) {
     const mock = isBackendUnreachable(error) ? fallback?.() : undefined

@@ -329,3 +329,10 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Điểm xuất phát bị khoá theo mã QR: chữ phải đọc được (mặc định select vô hiệu hoá bị mờ gần như vô hình) */
+.navigation-page .ant-select-disabled .ant-select-selection-item {
+  color: #1e293b;
+  -webkit-text-fill-color: #1e293b;
+  font-weight: 600;
+}

@@ -1,9 +1,9 @@
 import { create } from 'zustand'
-import { getBuildingOverview } from '../api/navigation'
 import {
   createPublicRoute,
   getPublicFloorMap,
   getPublicFloors,
+  getPublicVerticalLinks,
   searchPublicDestinations,
 } from '../api/publicNavigation'
 import { createNavigationDataSlice, type NavigationGateway } from './createNavigationDataSlice'
@@ -22,7 +22,7 @@ const navigationGateway: NavigationGateway = {
   getFloors: getPublicFloors,
   getFloorMap: getPublicFloorMap,
   searchDestinations: searchPublicDestinations,
-  getVerticalLinks: async (buildingId) => (await getBuildingOverview(buildingId)).verticalLinks ?? [],
+  getVerticalLinks: getPublicVerticalLinks,
   createRoute: createPublicRoute,
 }
 
