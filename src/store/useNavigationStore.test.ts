@@ -199,6 +199,27 @@ describe('mô phỏng cháy', () => {
   })
 })
 
+describe('lối thoát khai báo bằng POI EXIT', () => {
+  const noExitMap: PublicFloorMap = {
+    ...map,
+    nodes: map.nodes.map((n) => ({ ...n, type: n.id === 'a' ? 'DOOR' : 'NORMAL' })),
+    pois: [{ id: 'poi-exit', floorId: 'f1', nodeId: 'exitR', name: 'Cửa sau', category: 'EXIT' }],
+  }
+
+  it('không có node EXIT nhưng có POI EXIT: tuyến thoát hiểm tới node neo của POI đó', async () => {
+    const store = await loaded({ getFloorMap: async () => noExitMap })
+    store.getState().triggerFireAlarm(undefined, 'a')
+    assert.equal(store.getState().route?.nodeIds.at(-1), 'exitR')
+    assert.equal(store.getState().routeWarning, undefined)
+  })
+
+  it('kịch bản F4 chạy được và chặn lần lượt lối thoát', async () => {
+    const store = await loaded({ getFloorMap: async () => noExitMap })
+    await store.getState().runDemoScenario('fire-exit-1')
+    assert.deepEqual(store.getState().activeFireNodeIds, ['exitR'])
+  })
+})
+
 describe('runDemoScenario', () => {
   it('chưa có node: báo lỗi và không chạy', async () => {
     const store = setup()

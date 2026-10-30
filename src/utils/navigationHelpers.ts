@@ -20,6 +20,25 @@ export const calibrationOf = (floors: PublicFloor[], key: 'mapUnitsPerMeter' | '
 export const allNodesOf = (mapsByFloorId: Record<string, PublicFloorMap>) =>
   Object.values(mapsByFloorId).flatMap((map) => map.nodes)
 
+/**
+ * Mọi node của toà nhà, trong đó node neo của POI loại EXIT được coi là lối thoát (type EXIT).
+ * Khớp với BE: lúc publish BE chấp nhận "POI EXIT" thay cho node EXIT, nên tuyến thoát hiểm tính trên FE cũng phải vậy.
+ * Node vốn đã là lối thoát hoặc thang giữ nguyên loại.
+ */
+export function nodesWithPoiExits(mapsByFloorId: Record<string, PublicFloorMap>): PublicNode[] {
+  const exitAnchors = new Set(
+    Object.values(mapsByFloorId)
+      .flatMap((map) => map.pois)
+      .filter((poi) => poi.category.toUpperCase() === 'EXIT')
+      .map((poi) => poi.nodeId),
+  )
+  return allNodesOf(mapsByFloorId).map((node) =>
+    exitAnchors.has(node.id) && !['EXIT', 'EMERGENCY_EXIT', 'ELEVATOR', 'STAIR', 'ESCALATOR'].includes(node.type)
+      ? { ...node, type: 'EXIT' }
+      : node,
+  )
+}
+
 export const sortFloors = (floors: PublicFloor[]) => [...floors].sort((a, b) => a.floorNumber - b.floorNumber)
 
 export function pickDefaultStart(floors: PublicFloor[], nodes: PublicNode[]) {

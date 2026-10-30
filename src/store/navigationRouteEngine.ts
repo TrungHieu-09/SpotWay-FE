@@ -3,7 +3,7 @@ import {
   findRouteWithHazardPolicy,
   type RouteTarget,
 } from '../utils/indoorPathfinding.ts'
-import { allNodesOf, calibrationOf, floorLevelsOf, floorNamesOf } from '../utils/navigationHelpers.ts'
+import { allNodesOf, calibrationOf, floorLevelsOf, floorNamesOf, nodesWithPoiExits } from '../utils/navigationHelpers.ts'
 import type { NavigationState, RouteRequest, RouteWarning } from './navigationState.ts'
 
 type StoreSet = (partial: Partial<NavigationState>) => void
@@ -18,7 +18,7 @@ export function createRouteEngine(set: StoreSet, get: StoreGet) {
     const { floors, mapsByFloorId, verticalLinks, emergencyMode, activeFireNodeIds, blockedEdgeIds } = get()
     const maps = Object.values(mapsByFloorId)
     return {
-      nodes: maps.flatMap((map) => map.nodes),
+      nodes: nodesWithPoiExits(mapsByFloorId),
       edges: maps.flatMap((map) => map.edges),
       verticalLinks,
       options: {

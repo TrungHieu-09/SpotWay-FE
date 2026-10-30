@@ -6,6 +6,7 @@ import {
   allNodesOf,
   floorLevelsOf,
   neighborsOf,
+  nodesWithPoiExits,
   pickDefaultStart,
   pickDestination,
   sortFloors,
@@ -134,7 +135,7 @@ export function createSimulationSlice(
 
     const runFireScenario = async (scenarioId: FireScenarioId, defaultStart: string) => {
       const { floors, mapsByFloorId } = get()
-      const nodes = allNodesOf(mapsByFloorId)
+      const nodes = nodesWithPoiExits(mapsByFloorId)
       const isExit = (nodeId: string) => getExitCandidates(nodes, floorLevelsOf(floors)).some((node) => node.id === nodeId)
       const ignite = (nodeIds: string[]) =>
         set({ emergencyMode: 'FIRE', activeFireNodeIds: [...new Set([...get().activeFireNodeIds, ...nodeIds])] })
