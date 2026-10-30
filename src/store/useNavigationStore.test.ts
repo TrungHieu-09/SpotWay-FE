@@ -220,6 +220,27 @@ describe('lối thoát khai báo bằng POI EXIT', () => {
   })
 })
 
+describe('F2 cháy tầng giữa', () => {
+  const floor2: PublicFloor = { ...floor, id: 'f2', floorNumber: 2, name: 'T2' }
+  const n2 = (id: string, x: number, type = 'NORMAL'): PublicNode => ({ id, floorId: 'f2', x, y: 0, type, accessible: true })
+  const upper: PublicFloorMap = {
+    floor: floor2,
+    nodes: [n2('lift2', 200, 'ELEVATOR'), n2('exit2', 210, 'EXIT'), n2('c2', 260), n2('stair2', 400, 'STAIR')],
+    edges: [{ id: 'u1', floorId: 'f2', fromNodeId: 'lift2', toNodeId: 'exit2' }, { id: 'u2', floorId: 'f2', fromNodeId: 'exit2', toNodeId: 'c2' }, { id: 'u3', floorId: 'f2', fromNodeId: 'c2', toNodeId: 'stair2' }],
+    pois: [], stores: [],
+  }
+
+  it('không chọn node lối thoát làm vị trí người dùng (tuyến 0 m vô nghĩa)', async () => {
+    const store = await loaded({
+      getFloors: async () => [floor, floor2],
+      getFloorMap: async (id) => (id === 'f2' ? upper : map),
+    })
+    await store.getState().runDemoScenario('fire-middle-floor')
+    assert.notEqual(store.getState().simulationStartNodeId, 'exit2')
+    assert.ok(store.getState().simulationStartNodeId)
+  })
+})
+
 describe('runDemoScenario', () => {
   it('chưa có node: báo lỗi và không chạy', async () => {
     const store = setup()

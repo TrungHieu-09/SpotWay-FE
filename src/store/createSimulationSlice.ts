@@ -163,7 +163,7 @@ export function createSimulationSlice(
             : floorNodes.slice(Math.floor(floorNodes.length / 2), Math.floor(floorNodes.length / 2) + 1).map((node) => node.id)
           const anchor = elevators[0] ?? floorNodes.find((node) => fire.includes(node.id))
           const start = floorNodes
-            .filter((node) => !fire.includes(node.id) && !['ELEVATOR', 'STAIR', 'ESCALATOR'].includes(node.type))
+            .filter((node) => !fire.includes(node.id) && !['ELEVATOR', 'STAIR', 'ESCALATOR', 'EXIT', 'EMERGENCY_EXIT'].includes(node.type))
             .sort((a, b) => (anchor ? Math.hypot(a.x - anchor.x, a.y - anchor.y) - Math.hypot(b.x - anchor.x, b.y - anchor.y) : 0))[0]
           if (!start) return set({ error: `Tầng ${middle.floorNumber} không có node phù hợp làm vị trí người dùng.` })
           ignite(fire)
