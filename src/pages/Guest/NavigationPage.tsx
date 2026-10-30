@@ -91,6 +91,7 @@ export function NavigationPage() {
   const [qrLocked, setQrLocked] = useState(true)
   const autoRoutedRef = useRef(false)
   const resumedForQrRef = useRef<string | undefined>(undefined)
+  const stageRef = useRef<HTMLDivElement>(null)
   const buildingId = routeBuildingId ?? qr?.buildingId ?? searchParams.get('buildingId') ?? undefined
 
   const {
@@ -320,6 +321,11 @@ export function NavigationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qr, qrToken, paramToStoreId, isLoading, destinations, buildingId])
 
+  // Có tuyến mới (tìm đường, bấm kịch bản demo) thì cuộn tới bản đồ: thanh demo phía trên khá cao nên bản đồ nằm dưới màn hình.
+  useEffect(() => {
+    if (route) stageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [route])
+
   // Mô phỏng đi bộ: mỗi bước dừng lâu theo độ dài (đoạn đi thang cố định ~2,6 s), chia cho tốc độ.
   useEffect(() => {
     if (!walking || !route) return
@@ -502,13 +508,13 @@ export function NavigationPage() {
         </Card>
       ) : viewMode === 'mobile' ? (
         /* ── MOBILE TURN-BY-TURN VIEW (Matching Reference Photo) ── */
-        <div className="phone-mockup-wrapper">
+        <div className="phone-mockup-wrapper" ref={stageRef}>
           <div className="phone-device">
             {/* Status bar & Dynamic Island */}
             <div className="phone-status-bar">
               <span>9:41</span>
               <div className="phone-dynamic-island" />
-              <span>5G 􀛨 100%</span>
+              <span>5G · 100%</span>
             </div>
 
             <div className="phone-screen">
@@ -693,7 +699,7 @@ export function NavigationPage() {
                         setStepIndex(0)
                       }}
                     >
-                      Exit Navigation
+                      Kết thúc chỉ đường
                     </button>
                     <Button
                       type="primary"
@@ -712,7 +718,7 @@ export function NavigationPage() {
         </div>
       ) : (
         /* ── DESKTOP EXPANDED GRID VIEW ── */
-        <div className="navigation-page__grid">
+        <div className="navigation-page__grid" ref={stageRef}>
           <section className="navigation-page__map-panel">
             <div className="navigation-page__floor-tabs" role="tablist">
               {floors.map((floor) => (
@@ -770,13 +776,15 @@ export function NavigationPage() {
             />
             <label className="navigation-page__label">Đi giữa các tầng bằng</label>
             <Segmented
+              block
+              size="small"
               value={transitionPref}
               onChange={(value) => setTransitionPref(value as 'AUTO' | VerticalLinkKind)}
               options={[
                 { label: 'Tự động', value: 'AUTO' },
-                { label: '🛗 Thang máy', value: 'ELEVATOR' },
-                { label: '🪜 Thang bộ', value: 'STAIR' },
-                { label: '↗ Thang cuốn', value: 'ESCALATOR' },
+                { label: '🛗 Máy', value: 'ELEVATOR' },
+                { label: '🪜 Bộ', value: 'STAIR' },
+                { label: '↗ Cuốn', value: 'ESCALATOR' },
               ]}
             />
             <Checkbox

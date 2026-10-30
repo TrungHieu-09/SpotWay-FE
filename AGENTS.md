@@ -197,6 +197,20 @@ interface Connector {
 }
 ```
 
+## Endpoint bổ sung (BE thật, đã dùng ở FE)
+
+```ts
+// Floor có thêm tỉ lệ bản đồ; null/thiếu = chưa hiệu chuẩn → BE không cho publish
+Floor.metersPerPixel?: number | null
+```
+- `PATCH /floors/:id/calibration` — body `{ metersPerPixel }` hoặc `{ pointA, pointB, realDistanceMeters }` (pixel bản đồ). Trả `{ metersPerPixel, edgesRecomputed }`.
+- `POST /floors/:id/graph/validate` — báo cáo trước khi publish `{ valid, issues: [{ code, severity: "ERROR" | "WARNING", message, ids? }] }`; không ghi gì. `POST /floors/:id/publish` trả 400 `The floor cannot be published: a; b` khi còn lỗi.
+- Xoá hàng loạt (một giao dịch, tránh 500 do khoá dòng tầng): `DELETE /floors/:floorId/graph` (node + edge + POI + connector dừng ở tầng; còn cửa hàng/QR anchor thì 409 `NODE_HAS_DEPENDENCIES`), `DELETE /floors/:floorId/pois`.
+- Connector: `GET/POST /buildings/:id/connectors`, `PATCH/DELETE /connectors/:id` (mỗi điểm dừng phải là node đúng loại của connector).
+- QR định vị: `POST /nodes/:nodeId/qr-anchors` `{ label }` → `{ ...anchor, token }` (token chỉ trả lúc tạo), `GET /nodes/:nodeId/qr-anchors`, `DELETE /qr-anchors/:id`, công khai `GET /qr/:token` → `{ nodeId, floorId, buildingId, x, y, label }`. Link cho khách: `/navigate/:buildingId?qr=<token>[&toStoreId=<id>]`.
+- Trang khách chỉ dùng endpoint công khai: `GET /public/buildings/:id/floors|overview|search?type=STORE|POI`, `GET /public/floors/:id/map`, `POST /public/routes`. `/public/routes` chỉ nhận **cửa hàng** (`toStoreId`) hoặc node **EXIT** (`toNodeId`); đích là POI hoặc có chọn loại thang thì FE tự tính trên graph đã tải (`routeSource: "offline"`).
+- Quy ước đích đến: node chỉ để dẫn đường (loại `ELEVATOR`/`STAIR`/`ESCALATOR`/`EXIT` quyết định cách đi qua nó), POI/cửa hàng là nơi khách muốn tới. POI loại `exit` được coi là lối thoát khi tính tuyến thoát hiểm.
+
 ## Khi thêm endpoint/field mới
 1. Thêm định nghĩa vào đúng mục trong file này trước.
 2. Cập nhật type tương ứng trong `src/types/`.

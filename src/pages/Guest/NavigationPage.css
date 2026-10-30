@@ -412,3 +412,24 @@
 .phone-turn-banner .ant-select input::placeholder {
   color: #64748b !important;
 }
+
+/* Cột điều khiển bản máy tính: ô chọn/nút không được tràn ra ngoài cột 360px */
+.navigation-page__panel {
+  min-width: 0;
+}
+
+.navigation-page__panel > *,
+.navigation-page__guidance > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.navigation-page__panel .ant-select,
+.navigation-page__panel .ant-input-affix-wrapper {
+  width: 100%;
+}
+
+.navigation-page__panel .ant-steps-item-title,
+.navigation-page__panel .ant-steps-item-description {
+  overflow-wrap: anywhere;
+}

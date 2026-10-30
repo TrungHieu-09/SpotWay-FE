@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Empty } from 'antd'
 import { publicMapSize } from '../../api/graphMapper'
 import type { PercentPoint } from '../../types/geometry'
@@ -55,6 +56,23 @@ export function RouteMap({
   onSelectPoint,
   onSelectNode,
 }: RouteMapProps) {
+  const svgRef = useRef<SVGSVGElement>(null)
+  // Số pixel màn hình trên mỗi đơn vị bản đồ: ký hiệu chỗ lên thang đặt theo pixel màn hình để to vừa phải
+  // dù bản đồ đang thu nhỏ trong khung điện thoại hay phóng lớn ở bản máy tính.
+  const [scale, setScale] = useState(0)
+  useLayoutEffect(() => {
+    const read = () => {
+      const a = svgRef.current?.getScreenCTM()?.a
+      if (a && a > 0) setScale((current) => (Math.abs(current - a) > 0.001 ? a : current))
+    }
+    read()
+    const svg = svgRef.current
+    if (!svg || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(read)
+    observer.observe(svg)
+    return () => observer.disconnect()
+  })
+
   if (!map) return <Empty description="Không có dữ liệu tầng này" />
 
   const { width, height } = publicMapSize(map.floor)
@@ -86,7 +104,7 @@ export function RouteMap({
       : []
   })
   // Ký hiệu chỗ lên/xuống thang phải đọc được cả khi bản đồ chính bị thu nhỏ trong khung điện thoại.
-  const tk = compact ? 1 : 2.2
+  const u = (screenPixels: number) => (scale > 0 ? screenPixels / scale : screenPixels * 3)
   // Bản thu nhỏ phóng vào khoảng chứa tuyến (kèm lề) thay vì hiện cả sơ đồ nhỏ xíu.
   let viewBox = `0 0 ${width} ${height}`
   if (compact && floorSteps.length > 0) {
@@ -119,6 +137,7 @@ export function RouteMap({
       aria-label={`Bản đồ ${map.floor.name}`}
     >
       <svg
+        ref={svgRef}
         viewBox={viewBox}
         onClick={handleBackgroundClick}
         role="img"
@@ -255,15 +274,15 @@ export function RouteMap({
         {/* Chỗ lên thang: biểu tượng + "→ Tầng N" để thấy rõ phải đi thang nào, lên tầng nào */}
         {boardings.map(({ step, index }) => {
           const style = TRANSITION_STYLE[step.transition ?? ''] ?? TRANSITION_STYLE.ELEVATOR
+          const label = `${style.verb} → ${floorLabel(step.targetFloorId)}`
+          const labelWidth = label.length * u(6.4) + u(20)
           return (
             <g key={`board-${index}`} className="route-map__transition">
-              <circle cx={step.x} cy={step.y} r={20 * s * tk} fill={style.color} stroke="#ffffff" strokeWidth={3 * s * tk} />
-              <text x={step.x} y={step.y + 7 * s * tk} textAnchor="middle" fontSize={20 * s * tk}>{style.icon}</text>
-              <g transform={`translate(${step.x}, ${step.y - 34 * s * tk})`}>
-                <rect x={-72 * s * tk} y={-14 * s * tk} width={144 * s * tk} height={24 * s * tk} rx={8 * s * tk} fill={style.color} />
-                <text x={0} y={3 * s * tk} textAnchor="middle" fontSize={12 * s * tk} fill="#ffffff" fontWeight="700">
-                  {`${style.verb} → ${floorLabel(step.targetFloorId)}`}
-                </text>
+              <circle cx={step.x} cy={step.y} r={u(15)} fill={style.color} stroke="#ffffff" strokeWidth={u(2.5)} />
+              <text x={step.x} y={step.y + u(5.5)} textAnchor="middle" fontSize={u(15)}>{style.icon}</text>
+              <g transform={`translate(${step.x}, ${step.y - u(28)})`}>
+                <rect x={-labelWidth / 2} y={-u(11)} width={labelWidth} height={u(22)} rx={u(7)} fill={style.color} />
+                <text x={0} y={u(4)} textAnchor="middle" fontSize={u(11.5)} fill="#ffffff" fontWeight="700">{label}</text>
               </g>
             </g>
           )
@@ -272,15 +291,15 @@ export function RouteMap({
         {/* Chỗ bước ra khỏi thang ở tầng đến */}
         {exits.map(({ step, kind }) => {
           const style = TRANSITION_STYLE[kind] ?? TRANSITION_STYLE.ELEVATOR
+          const label = `Ra khỏi ${style.verb.toLowerCase()}`
+          const labelWidth = label.length * u(6.4) + u(20)
           return (
             <g key={`exit-${step.nodeId}`} className="route-map__transition">
-              <circle cx={step.x} cy={step.y} r={20 * s * tk} fill="#ffffff" stroke={style.color} strokeWidth={4 * s * tk} />
-              <text x={step.x} y={step.y + 7 * s * tk} textAnchor="middle" fontSize={20 * s * tk}>{style.icon}</text>
-              <g transform={`translate(${step.x}, ${step.y - 34 * s * tk})`}>
-                <rect x={-66 * s * tk} y={-14 * s * tk} width={132 * s * tk} height={24 * s * tk} rx={8 * s * tk} fill="#ffffff" stroke={style.color} strokeWidth={2 * s * tk} />
-                <text x={0} y={3 * s * tk} textAnchor="middle" fontSize={12 * s * tk} fill={style.color} fontWeight="700">
-                  {`Ra khỏi ${style.verb.toLowerCase()}`}
-                </text>
+              <circle cx={step.x} cy={step.y} r={u(15)} fill="#ffffff" stroke={style.color} strokeWidth={u(3)} />
+              <text x={step.x} y={step.y + u(5.5)} textAnchor="middle" fontSize={u(15)}>{style.icon}</text>
+              <g transform={`translate(${step.x}, ${step.y - u(28)})`}>
+                <rect x={-labelWidth / 2} y={-u(11)} width={labelWidth} height={u(22)} rx={u(7)} fill="#ffffff" stroke={style.color} strokeWidth={u(1.5)} />
+                <text x={0} y={u(4)} textAnchor="middle" fontSize={u(11.5)} fill={style.color} fontWeight="700">{label}</text>
               </g>
             </g>
           )
