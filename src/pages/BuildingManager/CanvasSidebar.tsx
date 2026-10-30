@@ -1,5 +1,5 @@
 import { Button, Card, List, Popconfirm, Space, Tabs, Tag, Typography } from 'antd'
-import { ClearOutlined, DeleteOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, ClearOutlined, DeleteOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { CONNECTOR_STYLE } from '../../components/canvas/ConnectorsLayer'
 import type { Connector, GraphEdge, GraphNode } from '../../types/graph'
 import type { Poi } from '../../types/poi'
@@ -49,6 +49,9 @@ type CanvasSidebarProps = {
   onDeletePoi: (poiId: string) => void
   onDeleteAllNodes: () => void
   onDeleteAllPois: () => void
+  /** Số POI thang máy/lối ra chưa có node trung chuyển đúng loại. */
+  promotablePoiCount: number
+  onPromotePois: () => void
 }
 
 /** Cột bên phải của canvas: danh sách Node / Edge / Connector / POI của tầng đang mở. */
@@ -72,6 +75,8 @@ export function CanvasSidebar({
   onDeletePoi,
   onDeleteAllNodes,
   onDeleteAllPois,
+  promotablePoiCount,
+  onPromotePois,
 }: CanvasSidebarProps) {
   return (
     <Card
@@ -278,6 +283,19 @@ export function CanvasSidebar({
             label: `POI (${pois.length})`,
             children: (
               <>
+              {promotablePoiCount > 0 && (
+                <Popconfirm
+                  title={`Tạo node cho ${promotablePoiCount} POI thang máy / lối ra?`}
+                  description="Mỗi POI được thêm một node cùng loại tại vị trí của nó, nối edge tới node hành lang đang gắn, rồi POI gắn lại vào node mới. Kiểm tra edge đỏ nét đứt nếu đoạn nối cắt tường."
+                  onConfirm={onPromotePois}
+                  okText="Tạo node"
+                  cancelText="Hủy"
+                >
+                  <Button size="small" block icon={<ApartmentOutlined />} style={{ marginBottom: 8 }}>
+                    Nâng {promotablePoiCount} POI thành node
+                  </Button>
+                </Popconfirm>
+              )}
               <DeleteAllButton
                 count={pois.length}
                 label="POI"

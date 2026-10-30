@@ -53,6 +53,7 @@ import type { Connector, GraphDraft, GraphEdge, GraphNode } from '../../types/gr
 import type { Poi } from '../../types/poi'
 import { distanceInMapUnits, findIsolatedNodeIds } from '../../utils/graphGeometry'
 import { suggestEdges, type EdgeSuggestion } from '../../utils/graphSuggestions'
+import { planPoiPromotions } from '../../utils/poiPromotion'
 import { findWallCrossingEdgeIds, segmentCrossesWall } from '../../utils/wallMask'
 
 const EMPTY_NODES: GraphNode[] = []
@@ -100,6 +101,7 @@ export function CanvasBoard() {
   const [suggestModalOpen, setSuggestModalOpen] = useState(false)
   const [suggestedEdges, setSuggestedEdges] = useState<EdgeSuggestion[]>([])
   const createEdge = useGraphStore((state) => state.createEdge)
+  const createNode = useGraphStore((state) => state.createNode)
   const floors = useFloorStore((state) => state.floors)
   const calibrateFloor = useFloorStore((state) => state.calibrateFloor)
   const [editingPoiId, setEditingPoiId] = useState<string>()
@@ -202,6 +204,24 @@ export function CanvasBoard() {
     if (!deleted) return
     void loadFloorPois(floor.id, { width: floor.mapWidth, height: floor.mapHeight })
     if (floor.buildingId) void loadConnectors(floor.buildingId)
+  }
+
+  /**
+   * POI thang máy / lối ra → thêm node cùng loại tại chỗ POI (nối edge tới node hành lang POI đang gắn), rồi cho POI
+   * snap lại vào node mới. Từng POI một: chờ node có id thật trước khi gắn POI, và tránh dồn giao dịch lên BE.
+   */
+  async function handlePromotePois() {
+    if (!selectedFloorId) return
+    const floorId = selectedFloorId
+    const plans = planPoiPromotions(pois, currentFloorNodes)
+    for (const plan of plans) {
+      createNode(floorId, { ...plan.at, name: plan.name, type: plan.nodeType, accessible: true }, { linkFromNodeId: plan.anchorNodeId ?? undefined })
+      await useGraphStore.getState().flush()
+      movePoi(floorId, plan.poiId, plan.at)
+      await usePoiStore.getState().flush()
+    }
+    selectNode(null)
+    message.success(`Đã tạo node cho ${plans.length} POI. Kiểm tra các edge nối vào hành lang rồi tạo connector.`)
   }
 
   function handleDeleteAllPois() {
@@ -611,6 +631,8 @@ export function CanvasBoard() {
         onDeletePoi={(poiId) => deletePoi(selectedFloor.id, poiId)}
         onDeleteAllNodes={() => void handleDeleteAllNodes()}
         onDeleteAllPois={handleDeleteAllPois}
+        promotablePoiCount={planPoiPromotions(pois, currentFloorNodes).length}
+        onPromotePois={() => void handlePromotePois()}
       />
       <CalibrationDistanceModal
         points={tool.calibrationPoints}
