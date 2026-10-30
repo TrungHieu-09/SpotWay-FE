@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { App as AntApp, Button, Form, InputNumber, Modal, Select, Spin } from 'antd'
 import {
@@ -67,20 +68,42 @@ export function OwnerSubscriptionPage() {
       {/* ── Header ── */}
       <section className="subp-header">
         <div>
-          <span className="subp-header__eyebrow">Building Owner</span>
+          <span className="subp-header__eyebrow">Chủ tòa nhà</span>
           <h1 className="subp-header__title">Gói dịch vụ</h1>
           <p className="subp-header__sub">
             Quản lý gói đăng ký, gia hạn và lịch sử thanh toán.
           </p>
         </div>
-        <Button
-          type="primary"
-          size="large"
-          icon={<ThunderboltOutlined />}
-          onClick={() => setOpen(true)}
-        >
-          Gia hạn / Nâng cấp
-        </Button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <Link
+            to="/pricing"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              borderRadius: '999px',
+              border: '1px solid rgba(34, 211, 238, 0.4)',
+              color: '#22d3ee',
+              background: 'rgba(34, 211, 238, 0.08)',
+              fontSize: '14px',
+              fontWeight: 500,
+              textDecoration: 'none'
+            }}
+          >
+            <ThunderboltOutlined /> Bảng giá &amp; Tính năng v2.4
+          </Link>
+          <Button
+            type="primary"
+            size="large"
+            icon={<ThunderboltOutlined />}
+            onClick={() => setOpen(true)}
+          >
+            Gia hạn / Nâng cấp
+          </Button>
+        </div>
       </section>
 
       {!overview ? (

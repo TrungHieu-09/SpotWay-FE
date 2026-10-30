@@ -136,7 +136,7 @@ export function OwnerStaffPage() {
       {/* ── Header ── */}
       <section className="osp-header">
         <div>
-          <span className="osp-header__eyebrow">Building Owner</span>
+          <span className="osp-header__eyebrow">Chủ tòa nhà</span>
           <h1 className="osp-header__title">{title}</h1>
           <p className="osp-header__sub">
             Phân quyền, khu vực và tài khoản vận hành của doanh nghiệp.

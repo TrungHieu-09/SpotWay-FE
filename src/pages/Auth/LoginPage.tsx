@@ -46,7 +46,7 @@ export function LoginPage() {
   const [loginError, setLoginError] = useState<string | null>(null)
   const [attemptsRemaining, setAttemptsRemaining] = useState<number>(3)
   const [activeFloor, setActiveFloor] = useState<'1F' | '2F' | '3F'>('2F')
-  const [lang, setLang] = useState<'EN' | 'VI'>('EN')
+  const [lang, setLang] = useState<'EN' | 'VI'>('VI')
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -580,11 +580,11 @@ export function LoginPage() {
         <section className="auth-right-panel">
           {/* Top Right Auxiliary Direct Link */}
           <div className="auth-top-auxiliary">
-            <Link to="/guest" className="guest-terminal-link" title="Open Guest Navigation">
+            <Link to="/guest" className="guest-terminal-link" title="Mở bản đồ dẫn đường khách">
               <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#5de6ff' }}>
                 qr_code_scanner
               </span>
-              <span>Zero-Download Guest Terminal</span>
+              <span>Cổng dẫn đường khách (Kiosk 3D)</span>
             </Link>
           </div>
 
@@ -594,11 +594,11 @@ export function LoginPage() {
             <div className="auth-header-group">
               <div className="secure-badge">
                 <span className="secure-badge-dot" />
-                <span className="secure-badge-text">SECURE SPATIAL ACCESS</span>
+                <span className="secure-badge-text">TRUY CẬP KHÔNG GIAN BẢO MẬT</span>
               </div>
-              <h1 className="auth-form-title">Welcome back</h1>
+              <h1 className="auth-form-title">Chào mừng trở lại</h1>
               <p className="auth-form-subtitle">
-                Sign in to manage your spaces and floor telemetry.
+                Đăng nhập để quản lý không gian và dữ liệu sơ đồ của bạn.
               </p>
             </div>
 
@@ -657,7 +657,7 @@ export function LoginPage() {
                   />
                   <div className="field-suffix-badge">.spotway.app</div>
                 </div>
-                <p className="field-helper-text">Your organization's spatial workspace handle</p>
+                <p className="field-helper-text">Mã định danh không gian tổ chức của bạn</p>
               </div>
 
               {/* Email Address Input */}
@@ -743,11 +743,11 @@ export function LoginPage() {
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="custom-checkbox"
                   />
-                  <span>Remember me for 30 days</span>
+                  <span>Ghi nhớ đăng nhập trong 30 ngày</span>
                 </label>
 
                 <Link to="/forgot-password" className="forgot-password-link">
-                  Forgot password?
+                  Quên mật khẩu?
                 </Link>
               </div>
 
@@ -770,7 +770,7 @@ export function LoginPage() {
                   </>
                 ) : (
                   <>
-                    <span>Sign in</span>
+                    <span>Đăng nhập</span>
                     <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
                       arrow_forward
                     </span>
@@ -843,7 +843,7 @@ export function LoginPage() {
                   <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#d0bcff' }}>
                     qr_code
                   </span>
-                  <span>Continue as temporary visitor via QR Kiosk</span>
+                  <span>Trải nghiệm nhanh cho khách qua Kiosk 3D</span>
                 </Link>
               </div>
             </div>
@@ -852,12 +852,12 @@ export function LoginPage() {
           {/* Right Panel Footer Utility Bar */}
           <footer className="auth-panel-footer">
             <div className="footer-legal-links">
-              <a href="#terms" onClick={(e) => { e.preventDefault(); message.info('SpotWay Terms of Service v2.4') }}>
+              <a href="#terms" onClick={(e) => { e.preventDefault(); message.info('SpotWay Điều khoản dịch vụ v2.4') }}>
                 Terms of Service
               </a>
               <span>·</span>
               <a href="#privacy" onClick={(e) => { e.preventDefault(); message.info('SpotWay Privacy & Spatial Data Policy') }}>
-                Privacy Policy
+                Chính sách bảo mật
               </a>
               <span>·</span>
               <a href="#compliance" onClick={(e) => { e.preventDefault(); message.info('SpotWay ISO 27001 Certified Infrastructure') }}>

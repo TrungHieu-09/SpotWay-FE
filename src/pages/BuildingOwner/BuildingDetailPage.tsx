@@ -102,15 +102,15 @@ export function BuildingDetailPage() {
           Danh sách
         </Button>
         <div className="bdp-header__text">
-          <span className="bdp-header__eyebrow">Building Owner</span>
+          <span className="bdp-header__eyebrow">Chủ tòa nhà</span>
           <h1 className="bdp-header__title">
-            {building?.name ?? 'Building detail'}
+            {building?.name ?? 'Chi tiết tòa nhà'}
           </h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {buildingId && (
             <Button icon={<TeamOutlined />} onClick={() => setAssignManagerOpen(true)}>
-              Gán Manager
+              Gán Quản lý
             </Button>
           )}
           {buildingId && (

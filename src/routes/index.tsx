@@ -13,6 +13,12 @@ import { ChangePasswordPage } from '../pages/Auth/ChangePasswordPage'
 import { ForgotPasswordPage } from '../pages/Auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '../pages/Auth/ResetPasswordPage'
 
+const PricingPage = lazy(() =>
+  import('../pages/Pricing/PricingPage').then((module) => ({
+    default: module.PricingPage,
+  })),
+)
+
 const HomePage = lazy(() =>
   import('../pages/Home/HomePage').then((module) => ({
     default: module.HomePage,
@@ -116,6 +122,7 @@ function lazyElement(element: ReactNode) {
 export const router = createBrowserRouter([
   // ── SpotWay Premium Landing Page & Auth ──
   { path: '/', element: <LandingPage /> },
+  { path: 'pricing', element: lazyElement(<PricingPage />) },
   { path: 'login', element: <LoginPage /> },
 
   // ── Building Owner section with sidebar ──

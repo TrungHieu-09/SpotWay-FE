@@ -50,7 +50,7 @@ export function OwnerDashboardPage() {
       {/* ── Header ── */}
       <section className="odp-header">
         <div>
-          <span className="odp-header__eyebrow">Building Owner</span>
+          <span className="odp-header__eyebrow">Chủ tòa nhà</span>
           <h1 className="odp-header__title">Tổng quan doanh nghiệp</h1>
           <p className="odp-header__sub">
             Tổng quan nhanh về tài sản, đội ngũ và mức sử dụng gói dịch vụ.

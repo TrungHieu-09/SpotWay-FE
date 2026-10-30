@@ -107,10 +107,10 @@ export function LandingPage() {
           </Link>
 
           <nav className="lp-nav__links">
-            <a href="#features">Features</a>
-            <a href="#solutions">Solutions</a>
-            <a href="#analytics">Analytics</a>
-            <a href="#pricing">Pricing</a>
+            <a href="#features">Tính năng</a>
+            <a href="#solutions">Giải pháp</a>
+            <a href="#analytics">Phân tích</a>
+            <Link to="/pricing">Bảng giá</Link>
           </nav>
 
           <div className="lp-nav__cta">
@@ -158,7 +158,7 @@ export function LandingPage() {
         <div className="lp-hero__content">
           <div className="lp-hero__badge" data-reveal="fade-down" data-reveal-delay="100">
             <span className="lp-dot lp-dot--cyan" />
-            v2.4 Spatial Intelligence Live
+            v2.4 Trí tuệ Không gian Trực tuyến
           </div>
 
           <h1 className="lp-hero__title" data-reveal="fade-up" data-reveal-delay="160">
@@ -209,17 +209,17 @@ export function LandingPage() {
           <div className="lp-hero__stats" data-reveal="fade-up" data-reveal-delay="340">
             <div className="lp-hero__stat">
               <span className="lp-hero__stat-value">500+</span>
-              <span className="lp-hero__stat-label">Global Facilities</span>
+              <span className="lp-hero__stat-label">Tòa nhà & Tổ hợp</span>
             </div>
             <div className="lp-hero__stat-divider" />
             <div className="lp-hero__stat">
               <span className="lp-hero__stat-value">12M+</span>
-              <span className="lp-hero__stat-label">Monthly Navigations</span>
+              <span className="lp-hero__stat-label">Lượt điều hướng/tháng</span>
             </div>
             <div className="lp-hero__stat-divider" />
             <div className="lp-hero__stat">
               <span className="lp-hero__stat-value">±0.25m</span>
-              <span className="lp-hero__stat-label">Positioning Precision</span>
+              <span className="lp-hero__stat-label">Độ chính xác định vị</span>
             </div>
           </div>
         </div>
@@ -473,7 +473,7 @@ export function LandingPage() {
 
       {/* ── 3. LOGOS ── */}
       <section className="lp-logos">
-        <p className="lp-logos__label" data-reveal="fade-up" data-reveal-delay="0">Trusted by world-class facilities</p>
+        <p className="lp-logos__label" data-reveal="fade-up" data-reveal-delay="0">Được tin dùng bởi các tổ hợp & trung tâm thương mại hàng đầu</p>
         <div className="lp-logos__grid">
           {['HEATHROW T5', 'WESTFIELD', 'CHANGI SIN', 'MAYO CLINIC', 'BROOKFIELD', 'HUDSON YARDS'].map((name, i) => (
             <div key={name} className="lp-logos__item" data-reveal="scale-up" data-reveal-delay={String(i * 60)}>{name}</div>
@@ -485,7 +485,7 @@ export function LandingPage() {
       <section className="lp-section" id="features">
         <div className="lp-section__label" data-reveal="fade-down" data-reveal-delay="0">Spatial Engine Capabilities</div>
         <h2 className="lp-section__title" data-reveal="fade-up" data-reveal-delay="80">
-          Precision telemetry engineering for<br />high-density physical assets
+          Đo đạc và điều hướng không gian chính xác cao<br />cho các tổ hợp mật độ lớn
         </h2>
         <p className="lp-section__sub" data-reveal="fade-up" data-reveal-delay="140">
           Engineered specifically for mega-facilities where GPS fails. Sub-meter multi-floor localization and live routing.
@@ -498,7 +498,7 @@ export function LandingPage() {
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
             </div>
             <span className="lp-feature-eyebrow lp-feature-eyebrow--cyan">Volumetric Modeling</span>
-            <h3 className="lp-feature-title">3D Multi-Floor Digital Twin</h3>
+            <h3 className="lp-feature-title">Bản sao số 3D đa tầng (Digital Twin)</h3>
             <p className="lp-feature-body">Interactive structural layer toggling with real-time CAD sync, volumetric mesh slicing, and sub-meter indoor elevation mapping across high-rise campuses.</p>
             <div className="lp-feature-metrics">
               <div className="lp-metric"><span className="lp-metric__label">ELEVATION</span><span className="lp-metric__value lp-metric__value--cyan">±0.25m</span><span className="lp-metric__sub">Barometric altitude lock</span></div>
@@ -512,7 +512,7 @@ export function LandingPage() {
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 16h7M14 19h7"/></svg>
             </div>
             <span className="lp-feature-eyebrow lp-feature-eyebrow--cyan">Zero Friction</span>
-            <h3 className="lp-feature-title">Instant QR & Beacon Positioning</h3>
+            <h3 className="lp-feature-title">Định vị tức thì qua QR & Beacon</h3>
             <p className="lp-feature-body">Zero app download required. Visitors scan physical QR codes or walk within BLE / UWB zones for instant browser orientation.</p>
             <div className="lp-code-badge"><span className="lp-code-badge__label">App install required:</span><span className="lp-code-badge__value">0 MB (Web-First)</span></div>
           </div>
@@ -522,7 +522,7 @@ export function LandingPage() {
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
             </div>
             <span className="lp-feature-eyebrow lp-feature-eyebrow--fuchsia">Inclusive Spatial</span>
-            <h3 className="lp-feature-title">Turn-by-Turn Wayfinding</h3>
+            <h3 className="lp-feature-title">Dẫn đường chi tiết từng khúc cua</h3>
             <p className="lp-feature-body">ADA-compliant route calculation. Automatically prioritizes elevators and ramps over escalators and stairs when requested.</p>
             <div className="lp-check-list">
               <div className="lp-check-item"><span className="lp-check-item__dot" />Audio guidance & high-contrast</div>
@@ -536,7 +536,7 @@ export function LandingPage() {
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 2v10l6.5 6.5"/></svg>
             </div>
             <span className="lp-feature-eyebrow lp-feature-eyebrow--cyan">Generative AI</span>
-            <h3 className="lp-feature-title">AI Floor-Plan Vectorization</h3>
+            <h3 className="lp-feature-title">Số hóa sơ đồ tầng tự động bằng AI</h3>
             <p className="lp-feature-body">Transform raster drawings and 3D environments into fully navigable 2D omni-directional graph maps. Automated POI extraction and routing edge classification.</p>
             <div className="lp-tag-row">
               {['AutoCAD Import', 'PDF Parsing', 'BIM Compatible', 'Point Cloud Sync'].map((t) => (<span key={t} className="lp-tag">{t}</span>))}
@@ -548,7 +548,7 @@ export function LandingPage() {
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
             </div>
             <span className="lp-feature-eyebrow lp-feature-eyebrow--violet">Real-Time Intelligence</span>
-            <h3 className="lp-feature-title">Heatmap & Density Analytics</h3>
+            <h3 className="lp-feature-title">Bản đồ nhiệt & Mật độ dòng người</h3>
             <p className="lp-feature-body">Live occupancy thermal imaging, dwell-time analysis, and predictive crowd flow modelling across any floor.</p>
           </div>
 
@@ -557,7 +557,7 @@ export function LandingPage() {
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             </div>
             <span className="lp-feature-eyebrow lp-feature-eyebrow--fuchsia">Multi-Tenant SaaS</span>
-            <h3 className="lp-feature-title">Dynamic POI & Zone Management</h3>
+            <h3 className="lp-feature-title">Quản lý POI & Khu vực linh hoạt</h3>
             <p className="lp-feature-body">Atomic namespace isolation. Configure tenant-specific devices, zones, and complex container modules from a unified control plane.</p>
             <div className="lp-code-badge"><span className="lp-code-badge__label">Tenant Agents available:</span><span className="lp-code-badge__value">SaaS Enabled</span></div>
           </div>
@@ -568,7 +568,7 @@ export function LandingPage() {
       <section className="lp-section" id="solutions">
         <div className="lp-section__label" data-reveal="fade-down" data-reveal-delay="0">Building Ecosystem</div>
         <h2 className="lp-section__title" data-reveal="fade-up" data-reveal-delay="80">
-          Engineered for every lens of<br />the building ecosystem
+          Được xây dựng chuyên sâu cho<br />mọi vai trò trong tòa nhà
         </h2>
         <p className="lp-section__sub" data-reveal="fade-up" data-reveal-delay="140">
           Fine-tuned permission planes and purpose-built dashboards for passengers, tenants, and executives.
@@ -576,10 +576,10 @@ export function LandingPage() {
 
         <div className="lp-roles">
           {[
-            { role: 'Guest', icon: '👤', color: 'cyan',    desc: 'Instant wayfinding without apps. QR-scan to navigate, discover stores, and find facilities across every floor in real-time.' },
+            { role: 'Khách tham quan', icon: '👤', color: 'cyan', desc: 'Dẫn đường tức thì không cần cài app. Quét mã QR để xem vị trí, tìm kiếm cửa hàng và tiện ích ở mọi tầng.' },
             { role: 'Store Owner', icon: '🏪', color: 'violet',  desc: 'Manage your storefront presence, promotions, and real-time foot traffic data from a tenant dashboard.' },
             { role: 'Building Manager', icon: '🏢', color: 'fuchsia', desc: 'Configure floor maps, POI nodes, routing graphs, and publish spatial updates with zero downtime.' },
-            { role: 'Asset Owner', icon: '💼', color: 'green',   desc: 'Portfolio-level analytics, SaaS tenant management, and revenue intelligence across all your properties.' },
+            { role: 'Chủ tòa nhà', icon: '💼', color: 'green', desc: 'Báo cáo số liệu toàn diện, quản lý gói dịch vụ, phân bổ gian hàng và tối ưu hóa doanh thu bất động sản.' },
             { role: 'System Admin', icon: '⚙️', color: 'cyan',    desc: 'Full infrastructure control, tenant isolation, resource quotas, and system-wide monitoring at scale.' },
           ].map((item, i) => (
             <div key={item.role} className={`lp-role-card lp-role-card--${item.color}`} data-reveal="scale-up" data-reveal-delay={String(i * 80)}>
@@ -592,7 +592,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── 6. HOW IT WORKS ── */}
+      {/* ── 6. QUY TRÌNH VẬN HÀNH ── */}
       <section className="lp-section lp-section--dark" id="analytics">
         <div className="lp-section__label" data-reveal="fade-down" data-reveal-delay="0">Implementation</div>
         <h2 className="lp-section__title" data-reveal="fade-up" data-reveal-delay="80">
@@ -606,7 +606,7 @@ export function LandingPage() {
           {[
             { num: '01', icon: '📄', title: 'Upload 2D CAD or PDF', sub: 'Drag blueprints. Our pipeline parses walls, doors, rooms, and circulation axes automatically. AutoCAD / Revit / PDF — all accepted.', tags: ['DWG / DXF', 'Revit BIM', 'PDF', 'Image OCR'] },
             { num: '02', icon: '🤖', title: 'AI Generates 3D Navmesh', sub: 'Our continuous spatial-graph model builds a fully navigable 3D waypoint network in under 30 seconds. Automatic POI placement from labels.', tags: ['GPT-4 Vision', 'Point Cloud', 'Auto POI'] },
-            { num: '03', icon: '🚀', title: 'Publish & Navigate', sub: 'Deploy to 3D displays, interactive kiosks, or your app in one click. Analytics dashboard reflects live foot traffic immediately.', tags: ['5 min deploy', 'Real Status: Live'] },
+            { num: '03', icon: '🚀', title: 'Xuất bản & Điều hướng tức thì', sub: 'Kích hoạt ngay cho Kiosk 3D, màn hình chỉ dẫn hoặc web di động chỉ trong 1 click. Số liệu lưu lượng cập nhật theo thời gian thực.', tags: ['Kích hoạt tức thì', 'Trạng thái: Trực tuyến'] },
           ].map((step, i) => (
             <div key={step.num} className="lp-step" data-reveal="flip-up" data-reveal-delay={String(i * 120)}>
               <div className="lp-step__num">{step.num}</div>
@@ -676,19 +676,59 @@ export function LandingPage() {
 
       {/* ── 8. PRICING ── */}
       <section className="lp-section" id="pricing">
-        <div className="lp-section__label" data-reveal="fade-down" data-reveal-delay="0">Scale Indoor Spatial Intelligence Effortlessly</div>
+        <div className="lp-section__label" data-reveal="fade-down" data-reveal-delay="0">BẢNG GIÁ DỊCH VỤ MINH BẠCH</div>
         <h2 className="lp-section__title" data-reveal="fade-up" data-reveal-delay="80">
-          Transparent tiers based on building size,<br />usage per visitor charges.
+          Chi phí rõ ràng, linh hoạt theo quy mô tòa nhà<br />và nhu cầu vận hành thực tế.
         </h2>
 
         <div className="lp-pricing">
           {[
-            { name: 'Regional Facility',    price: '$249', period: '/month', featured: false, features: ['Up to 5 buildings','20 floors/building','QR + BLE Beacons','Basic Analytics','Email Support'] },
-            { name: 'Multi-Floor Campus',   price: '$799', period: '/month', featured: true,  features: ['Unlimited buildings','Unlimited floors','AI Floor-Plan AI','Advanced Analytics','Priority 24/7 Support','White-label branding','Multi-tenant SaaS'] },
-            { name: 'Global Infrastructure',price: 'Custom', period: '',    featured: false, features: ['Dedicated cloud','Custom SLA 99.99%','On-premise option','Custom integrations','Dedicated TAM','Compliance tools'] },
+            {
+              name: 'Gói Cơ bản',
+              price: '1.990.000 ₫',
+              period: '/tháng',
+              featured: false,
+              features: [
+                'Tối đa 2 tòa nhà',
+                '3 tài khoản quản lý',
+                '20 gian hàng đối tác',
+                'Định vị QR Code & Beacon',
+                'Báo cáo thống kê cơ bản',
+                'Hỗ trợ kỹ thuật qua Email & Chat'
+              ]
+            },
+            {
+              name: 'Gói Chuyên nghiệp',
+              price: '4.990.000 ₫',
+              period: '/tháng',
+              featured: true,
+              features: [
+                'Tối đa 5 tòa nhà',
+                '6 tài khoản quản lý',
+                '100 gian hàng đối tác',
+                'Số hóa sơ đồ tầng tự động bằng AI',
+                'Bản đồ nhiệt & Phân tích chuyên sâu',
+                'Hỗ trợ ưu tiên 24/7',
+                'Tùy biến thương hiệu (White-label)'
+              ]
+            },
+            {
+              name: 'Gói Doanh nghiệp',
+              price: 'Liên hệ',
+              period: '',
+              featured: false,
+              features: [
+                'Không giới hạn tòa nhà & tầng',
+                'Không giới hạn quản lý & gian hàng',
+                'Triển khai Private Cloud hoặc On-Premise',
+                'Cam kết chất lượng SLA 99.99%',
+                'Tích hợp API & SDK chuyên biệt',
+                'Kỹ sư hỗ trợ đồng hành riêng'
+              ]
+            },
           ].map((plan, i) => (
             <div key={plan.name} className={`lp-plan ${plan.featured ? 'lp-plan--featured' : ''}`} data-reveal="scale-up" data-reveal-delay={String(i * 100)}>
-              {plan.featured && <div className="lp-plan__badge">Most Popular</div>}
+              {plan.featured && <div className="lp-plan__badge">Khuyên dùng</div>}
               <h3 className="lp-plan__name">{plan.name}</h3>
               <div className="lp-plan__price">
                 <span className="lp-plan__amount">{plan.price}</span>
@@ -714,12 +754,12 @@ export function LandingPage() {
       <section className="lp-cta">
         <div className="lp-cta__glow-violet" />
         <div className="lp-cta__glow-cyan" />
-        <div className="lp-section__label" data-reveal="fade-down" data-reveal-delay="0">Ready to transform?</div>
+        <div className="lp-section__label" data-reveal="fade-down" data-reveal-delay="0">SẴN SÀNG NÂNG TẦM KHÔNG GIAN?</div>
         <h2 className="lp-cta__title" data-reveal="fade-up" data-reveal-delay="80">
-          Ready to transform your physical space<br />into an intelligent digital twin?
+          Chuyển đổi mặt bằng vật lý của bạn<br />thành bản sao số 3D thông minh ngay hôm nay
         </h2>
         <p className="lp-cta__sub" data-reveal="fade-up" data-reveal-delay="140">
-          Join 60+ global deployments. Select your building, upload your blueprint, and be live in hours — no proof of concept needed.
+          Hơn 500+ dự án đã ứng dụng thành công. Chọn tòa nhà của bạn, tải lên sơ đồ và kích hoạt hệ thống trong vài giờ.
         </p>
         <div className="lp-cta__actions" data-reveal="scale-up" data-reveal-delay="200">
           <Link to={user ? getPortalRoute(user.role) : '/login'} className="lp-btn lp-btn--primary lp-btn--lg">
@@ -746,7 +786,7 @@ export function LandingPage() {
               </div>
               <span>SpotWay</span>
             </div>
-            <p className="lp-footer__tagline">Next-Gen Indoor Spatial Intelligence for complex multi-tenant environments.</p>
+            <p className="lp-footer__tagline">Nền tảng bản đồ số 3D trong nhà thế hệ mới cho các tổ hợp đa tòa nhà hiện đại.</p>
           </div>
 
           {[
@@ -765,7 +805,7 @@ export function LandingPage() {
         </div>
 
         <div className="lp-footer__bottom">
-          <span>© 2026 SpotWay Technologies. All rights reserved.</span>
+          <span>© 2026 SpotWay Technologies. Toàn bộ quyền được bảo lưu.</span>
           <span>Built with ❤️ in Hồ Chí Minh City</span>
         </div>
       </footer>

@@ -72,10 +72,10 @@ export function BuildingListPage() {
       {/* ── Page header ── */}
       <section className="blp-header">
         <div className="blp-header__text">
-          <span className="blp-header__eyebrow">Building Owner</span>
-          <h1 className="blp-header__title">Owned buildings</h1>
+          <span className="blp-header__eyebrow">Chủ tòa nhà</span>
+          <h1 className="blp-header__title">Danh sách tòa nhà</h1>
           <p className="blp-header__sub">
-            Manage your building portfolio and floor configurations
+            Quản lý danh mục tòa nhà và cấu hình mặt bằng các tầng
           </p>
         </div>
 
@@ -87,7 +87,7 @@ export function BuildingListPage() {
             className="blp-create-btn"
             onClick={() => setIsCreateOpen(true)}
           >
-            Tạo building mới
+            Thêm tòa nhà mới
           </Button>
         </div>
       </section>
@@ -96,23 +96,23 @@ export function BuildingListPage() {
       <div className="blp-stats">
         <StatCard
           icon={<ApartmentOutlined />}
-          label="Total Buildings"
+          label="Tổng số tòa nhà"
           value={buildings.length}
-          sub="in your portfolio"
+          sub="trong danh mục quản lý"
           accent="violet"
         />
         <StatCard
           icon={<AppstoreOutlined />}
-          label="Total Floors"
+          label="Tổng số tầng"
           value={totalFloors}
-          sub="across all buildings"
+          sub="trên tất cả tòa nhà"
           accent="cyan"
         />
         <StatCard
           icon={<BuildOutlined />}
-          label="Active"
+          label="Đang hoạt động"
           value={activeCount}
-          sub={`${buildings.length - activeCount} in draft`}
+          sub={`${buildings.length - activeCount} bản nháp`}
           accent="fuchsia"
         />
       </div>
@@ -144,7 +144,7 @@ export function BuildingListPage() {
             aria-label="Add new building"
           >
             <PlusOutlined className="blp-add-card__icon" />
-            <span>Add Building</span>
+            <span>Thêm tòa nhà</span>
           </button>
         </div>
       )}
@@ -229,7 +229,7 @@ function BuildingCard({ building, delay, onView, onEdit, onDelete }: BuildingCar
         <div className="blp-card__meta">
           <span className="blp-card__meta-item">
             <AppstoreOutlined />
-            {building.floorCount} floors
+            {building.floorCount} tầng
           </span>
           <span className="blp-card__meta-item">
             {new Intl.DateTimeFormat('vi-VN').format(new Date(building.createdAt))}

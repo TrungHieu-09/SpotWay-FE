@@ -99,14 +99,14 @@ export function ManagerLayout() {
               <ApartmentOutlined />
             </div>
             <div>
-              <Text className="ml-sidebar__eyebrow">Building Manager</Text>
-              <h1 className="ml-sidebar__title">Floor Editor</h1>
+              <Text className="ml-sidebar__eyebrow">Quản lý tòa nhà</Text>
+              <h1 className="ml-sidebar__title">Biên tập mặt bằng</h1>
             </div>
           </div>
 
           {/* Building selector */}
           <div className="ml-sidebar__section">
-            <span className="ml-sidebar__section-label">Select Building</span>
+            <span className="ml-sidebar__section-label">Chọn tòa nhà</span>
             <Select
               className="full-width"
               loading={isBuildingLoading}
@@ -116,7 +116,7 @@ export function ManagerLayout() {
                 value: building.id,
                 label: building.name,
               }))}
-              placeholder="Choose a building…"
+              placeholder="Chọn tòa nhà…"
             />
           </div>
 
@@ -124,11 +124,11 @@ export function ManagerLayout() {
           {selectedBuilding && (
             <div className="ml-sidebar__meta">
               <div className="ml-sidebar__meta-row">
-                <span className="ml-sidebar__meta-label">Address</span>
+                <span className="ml-sidebar__meta-label">Địa chỉ</span>
                 <span className="ml-sidebar__meta-value">{selectedBuilding.address}</span>
               </div>
               <div className="ml-sidebar__meta-row">
-                <span className="ml-sidebar__meta-label">Floors</span>
+                <span className="ml-sidebar__meta-label">Số tầng</span>
                 <span className="ml-sidebar__meta-value">{selectedBuilding.floorCount}</span>
               </div>
             </div>

@@ -53,7 +53,7 @@ export function AppLayout() {
           <div className="brand-text">
             <span className="brand-name">SpotWay</span>
             <span className="brand-tagline">
-              {isAdmin ? 'System Admin' : 'Indoor Spatial'}
+              {isAdmin ? 'Quản trị hệ thống' : 'Không gian số'}
             </span>
           </div>
         </div>

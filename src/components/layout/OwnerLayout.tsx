@@ -110,7 +110,7 @@ export function OwnerLayout() {
               <span className="ol-brand__name">SpotWay</span>
               <span className="ol-brand__badge">
                 <span className="ol-brand__dot" />
-                Owner Portal
+                Chủ tòa nhà
               </span>
             </div>
           </div>
