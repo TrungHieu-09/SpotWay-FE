@@ -83,13 +83,20 @@ export function createNavigationDataSlice(
             applyRoute(input.fromNodeId, destination.nodeId, {
               targetName: destination.name,
               wheelchairMode: input.wheelchairMode,
+              allowedTransitions: input.transitions?.length ? new Set(input.transitions) : undefined,
             })
 
           // /public/routes chỉ nhận cửa hàng hoặc lối thoát làm đích; POI chỉ có node neo nên tính trên graph đã tải.
-          if (picked && picked.type !== 'STORE' && Object.keys(get().mapsByFloorId).length > 0) {
+          // Chọn riêng loại thang cũng tính tại chỗ vì API không có tham số này.
+          const needsLocal = (picked && picked.type !== 'STORE') || Boolean(input.transitions?.length)
+          if (picked && needsLocal && Object.keys(get().mapsByFloorId).length > 0) {
             const route = routeOffline(picked)
             if (route || get().routeWarning) return route
-            throw new Error(get().error ?? 'Không tìm thấy tuyến đường phù hợp trên đồ thị.')
+            throw new Error(
+              input.transitions?.length
+                ? 'Không có tuyến chỉ dùng loại thang đã chọn — đổi sang "Tự động" hoặc loại thang khác.'
+                : (get().error ?? 'Không tìm thấy tuyến đường phù hợp trên đồ thị.'),
+            )
           }
 
           try {

@@ -61,7 +61,13 @@ export type NavigationDataState = {
   routeSource?: 'api' | 'offline'
   load: (buildingId: string) => Promise<void>
   search: (query: string) => Promise<void>
-  findRoute: (input: { fromNodeId: string; toStoreId: string; wheelchairMode: boolean }) => Promise<IndoorRoute | undefined>
+  findRoute: (input: {
+    fromNodeId: string
+    toStoreId: string
+    wheelchairMode: boolean
+    /** Chỉ dùng các loại thang này khi đổi tầng (vd. ['ELEVATOR']); bỏ trống = tự chọn rẻ nhất. */
+    transitions?: VerticalLinkKind[]
+  }) => Promise<IndoorRoute | undefined>
   clearRoute: () => void
 }
 
@@ -82,7 +88,8 @@ export type NavigationSimulationState = {
   setInteractiveFireMode: (enabled: boolean, currentNodeId?: string) => void
   extinguishAllFires: () => void
   resetSimulation: () => void
-  runDemoScenario: (scenarioId: DemoScenarioId) => Promise<void>
+  /** `startNodeId`: xuất phát từ node người dùng đã chọn thay vì node mặc định ở tầng thấp nhất. */
+  runDemoScenario: (scenarioId: DemoScenarioId, startNodeId?: string) => Promise<void>
 }
 
 export type NavigationState = NavigationDataState & NavigationSimulationState

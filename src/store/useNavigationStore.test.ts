@@ -241,6 +241,62 @@ describe('F2 cháy tầng giữa', () => {
   })
 })
 
+describe('ưu tiên loại thang và xuất phát tự chọn', () => {
+  const floor2: PublicFloor = { ...floor, id: 'f2', floorNumber: 2, name: 'T2' }
+  const at = (id: string, floorId: string, x: number, type = 'NORMAL'): PublicNode => ({ id, floorId, x, y: 0, type, accessible: true })
+  const edgeOf = (id: string, floorId: string, from: string, to: string) => ({ id, floorId, fromNodeId: from, toNodeId: to })
+  // Thang bộ gần điểm xuất phát nên tự động chọn thang bộ; thang máy xa hơn.
+  const lower: PublicFloorMap = {
+    floor, pois: [], stores: [],
+    nodes: [at('s', 'f1', 0), at('stairA', 'f1', 100, 'STAIR'), at('liftA', 'f1', 300, 'ELEVATOR')],
+    edges: [edgeOf('l1', 'f1', 's', 'stairA'), edgeOf('l2', 'f1', 's', 'liftA')],
+  }
+  const upper: PublicFloorMap = {
+    floor: floor2, pois: [], stores: [],
+    nodes: [at('stairB', 'f2', 100, 'STAIR'), at('liftB', 'f2', 300, 'ELEVATOR'), at('shop', 'f2', 400)],
+    edges: [edgeOf('u1', 'f2', 'stairB', 'shop'), edgeOf('u2', 'f2', 'liftB', 'shop')],
+  }
+  const shopPoi: PublicSearchResult = { type: 'POI', id: 'shop-poi', name: 'Cửa hàng T2', floorId: 'f2', nodeId: 'shop', x: 400, y: 0 }
+  const twoFloors: Partial<NavigationGateway> = {
+    getFloors: async () => [floor, floor2],
+    getFloorMap: async (id) => (id === 'f2' ? upper : lower),
+    searchDestinations: async () => [shopPoi],
+    getVerticalLinks: async () => [
+      { nodeIdFrom: 'stairA', nodeIdTo: 'stairB', kind: 'STAIR' },
+      { nodeIdFrom: 'liftA', nodeIdTo: 'liftB', kind: 'ELEVATOR' },
+    ],
+  }
+  const kinds = (route?: IndoorRoute) => route?.steps.flatMap((step) => (step.transition ? [step.transition] : []))
+
+  it('tự động: chọn đường rẻ nhất (thang bộ vì ở gần)', async () => {
+    const store = await loaded(twoFloors)
+    const route = await store.getState().findRoute({ fromNodeId: 's', toStoreId: 'shop-poi', wheelchairMode: false })
+    assert.deepEqual(kinds(route), ['STAIR'])
+  })
+
+  it('chọn thang máy: đi thang máy dù xa hơn', async () => {
+    const store = await loaded(twoFloors)
+    const route = await store.getState().findRoute({ fromNodeId: 's', toStoreId: 'shop-poi', wheelchairMode: false, transitions: ['ELEVATOR'] })
+    assert.deepEqual(kinds(route), ['ELEVATOR'])
+  })
+
+  it('chọn thang cuốn khi tòa nhà không có: báo lỗi rõ ràng, không rơi sang loại khác', async () => {
+    const store = await loaded(twoFloors)
+    await assert.rejects(
+      () => store.getState().findRoute({ fromNodeId: 's', toStoreId: 'shop-poi', wheelchairMode: false, transitions: ['ESCALATOR'] }),
+      /loại thang đã chọn/,
+    )
+  })
+
+  it('kịch bản demo xuất phát từ node người dùng đã chọn thay vì node mặc định', async () => {
+    const store = await loaded()
+    await store.getState().runDemoScenario('same-floor-shortest', 'c')
+    assert.equal(store.getState().simulationStartNodeId, 'c')
+    await store.getState().runDemoScenario('same-floor-shortest', 'node-khong-ton-tai')
+    assert.equal(store.getState().simulationStartNodeId, 'a')
+  })
+})
+
 describe('runDemoScenario', () => {
   it('chưa có node: báo lỗi và không chạy', async () => {
     const store = setup()

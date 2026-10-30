@@ -9,6 +9,8 @@ import {
 type DemoSimulationToolbarProps = {
   /** Node người dùng đang đứng (bước hiện tại của tuyến), dùng làm điểm tái định tuyến khi đặt lửa */
   currentNodeId?: string
+  /** Điểm xuất phát người dùng đã tự chọn (hoặc từ mã QR): các kịch bản demo xuất phát từ đây. */
+  startNodeId?: string
 }
 
 type ScenarioButton<T extends DemoScenarioId> = { id: T; label: string; hint: string }
@@ -35,7 +37,7 @@ const FIRE_SCENARIOS: ScenarioButton<FireScenarioId>[] = [
   { id: 'interactive-fire', label: 'F6. Đặt lửa tương tác', hint: 'Chạm node trên bản đồ để đốt/dập, tuyến tự cập nhật' },
 ]
 
-export function DemoSimulationToolbar({ currentNodeId }: DemoSimulationToolbarProps) {
+export function DemoSimulationToolbar({ currentNodeId, startNodeId }: DemoSimulationToolbarProps) {
   const emergencyMode = useNavigationStore((state) => state.emergencyMode)
   const activeFireNodeIds = useNavigationStore((state) => state.activeFireNodeIds)
   const isDemoRunning = useNavigationStore((state) => state.isDemoRunning)
@@ -57,7 +59,7 @@ export function DemoSimulationToolbar({ currentNodeId }: DemoSimulationToolbarPr
           type={activeScenarioId === scenario.id ? 'primary' : 'default'}
           loading={isDemoRunning && activeScenarioId === scenario.id}
           disabled={isDemoRunning && activeScenarioId !== scenario.id}
-          onClick={() => void runDemoScenario(scenario.id)}
+          onClick={() => void runDemoScenario(scenario.id, startNodeId)}
         >
           {scenario.label}
         </Button>

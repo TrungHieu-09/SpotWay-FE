@@ -35,7 +35,7 @@ import { RouteFloorsOverview } from '../../components/navigation/RouteFloorsOver
 import { QrScanModal } from '../../components/navigation/QrScanModal'
 import { RouteMap } from '../../components/navigation/RouteMap'
 import { useNavigationStore } from '../../store/useNavigationStore'
-import type { Maneuver, PublicQrResolution, RouteStep } from '../../types/navigation'
+import type { Maneuver, PublicQrResolution, RouteStep, VerticalLinkKind } from '../../types/navigation'
 import type { PercentPoint } from '../../types/geometry'
 import { findNearestNode } from '../../utils/graphGeometry'
 import { forgetDestination, recallDestination, rememberDestination } from '../../utils/guestMemory'
@@ -124,6 +124,8 @@ export function NavigationPage() {
   const [walking, setWalking] = useState(false)
   const [scanOpen, setScanOpen] = useState(false)
   const [walkSpeed, setWalkSpeed] = useState(1)
+  // Loại thang dùng khi đổi tầng; mặc định tự chọn đường rẻ nhất (thường là thang bộ khi hai tầng liền nhau).
+  const [transitionPref, setTransitionPref] = useState<'AUTO' | VerticalLinkKind>('AUTO')
   const [trackedRoute, setTrackedRoute] = useState(route)
 
   // Tuyến mới (tìm đường, demo, tái định tuyến khi cháy) luôn bắt đầu lại từ bước đầu
@@ -269,6 +271,7 @@ export function NavigationPage() {
       fromNodeId: from,
       toStoreId: dest,
       wheelchairMode,
+      transitions: transitionPref === 'AUTO' ? undefined : [transitionPref],
     })
     if (!result) return
     setStepIndex(0)
@@ -451,7 +454,7 @@ export function NavigationPage() {
         />
       )}
 
-      <DemoSimulationToolbar currentNodeId={currentStep?.nodeId} />
+      <DemoSimulationToolbar currentNodeId={currentStep?.nodeId} startNodeId={fromNodeId ?? qr?.nodeId} />
 
       {routeWarning && (
         <Alert
@@ -581,6 +584,17 @@ export function NavigationPage() {
                     >
                       Bắt đầu chỉ đường
                     </Button>
+                    <Segmented
+                      size="small"
+                      block
+                      value={transitionPref}
+                      onChange={(value) => setTransitionPref(value as 'AUTO' | VerticalLinkKind)}
+                      options={[
+                        { label: 'Tự động', value: 'AUTO' },
+                        { label: '🛗 Thang máy', value: 'ELEVATOR' },
+                        { label: '🪜 Thang bộ', value: 'STAIR' },
+                      ]}
+                    />
                     <Button size="small" block icon={<CameraOutlined />} onClick={() => setScanOpen(true)}>
                       Quét QR để lấy vị trí
                     </Button>
@@ -753,6 +767,17 @@ export function NavigationPage() {
               placeholder="Chọn cửa hàng"
               showSearch
               optionFilterProp="label"
+            />
+            <label className="navigation-page__label">Đi giữa các tầng bằng</label>
+            <Segmented
+              value={transitionPref}
+              onChange={(value) => setTransitionPref(value as 'AUTO' | VerticalLinkKind)}
+              options={[
+                { label: 'Tự động', value: 'AUTO' },
+                { label: '🛗 Thang máy', value: 'ELEVATOR' },
+                { label: '🪜 Thang bộ', value: 'STAIR' },
+                { label: '↗ Thang cuốn', value: 'ESCALATOR' },
+              ]}
             />
             <Checkbox
               checked={wheelchairMode}

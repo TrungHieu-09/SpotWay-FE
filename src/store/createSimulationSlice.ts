@@ -265,12 +265,13 @@ export function createSimulationSlice(
         set({ ...INITIAL_SIMULATION, route: undefined, error: undefined })
       },
 
-      async runDemoScenario(scenarioId) {
+      async runDemoScenario(scenarioId, startNodeId) {
         if (scenarioId === 'reset') {
           get().resetSimulation()
           return
         }
-        const defaultStart = pickDefaultStart(get().floors, allNodesOf(get().mapsByFloorId))
+        const chosen = startNodeId && allNodesOf(get().mapsByFloorId).some((node) => node.id === startNodeId) ? startNodeId : undefined
+        const defaultStart = chosen ?? pickDefaultStart(get().floors, allNodesOf(get().mapsByFloorId))
         if (!defaultStart) {
           set({ error: 'Tòa nhà chưa có node điều hướng để chạy demo.' })
           return
