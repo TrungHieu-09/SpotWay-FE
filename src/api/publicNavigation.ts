@@ -56,6 +56,7 @@ export async function createPublicRoute(input: {
   mode?: 'NORMAL' | 'EVACUATION'
   hazardNodeIds?: string[]
 }) {
-  const { data } = await apiClient.post<IndoorRoute>('/public/routes', input)
+  // lang: 'vi' để BE trả chỉ dẫn tiếng Việt (mặc định BE giữ tiếng Anh cho client cũ)
+  const { data } = await apiClient.post<IndoorRoute>('/public/routes', { lang: 'vi', ...input })
   return data
 }

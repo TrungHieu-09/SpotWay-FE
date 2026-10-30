@@ -560,7 +560,7 @@ export function BuildingOverviewPage() {
                 <div>building_id: <span style={{ color: '#94a3b8' }}>{buildingId?.slice(0, 10)}</span></div>
                 <div>floor_count: <span style={{ color: '#94a3b8' }}>{overview.floors.length} Floors (T1, T2, T3)</span></div>
                 <div>publish_status: <span style={{ color: '#34d399', fontWeight: 700 }}>PUBLISHED</span></div>
-                <div>elevator_links: <span style={{ color: '#94a3b8' }}>{overview.verticalLinks?.length ? `${overview.verticalLinks.length} Active Shafts` : 'Node_E1 ⇄ Node_E2'}</span></div>
+                <div>vertical_links: <span style={{ color: '#94a3b8' }}>{overview.verticalLinks?.length ? `${overview.verticalLinks.length} Active Shafts` : 'Node_E1 ⇄ Node_E2'}</span></div>
               </div>
 
               {/* Col 2: Dijkstra Calculated Nodes */}

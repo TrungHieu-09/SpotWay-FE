@@ -51,7 +51,7 @@ export type BuildingOverview = {
     publishStatus?: string
     mapRevision?: Pick<FloorPlanRevision, 'version' | 'publishedAt' | 'editorState'> | null
   }>
-  verticalLinks: Array<{ id?: string; nodeIdFrom: string; nodeIdTo: string; kind: 'ELEVATOR' }>
+  verticalLinks: Array<{ id?: string; nodeIdFrom: string; nodeIdTo: string; kind: 'ELEVATOR' | 'STAIR' | 'ESCALATOR' }>
   nodes?: OverviewNode[]
   edges?: OverviewEdge[]
   pois?: OverviewPoi[]
