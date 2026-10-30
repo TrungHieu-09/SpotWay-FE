@@ -2,7 +2,7 @@ import { Empty } from 'antd'
 import { publicMapSize } from '../../api/graphMapper'
 import type { PercentPoint } from '../../types/geometry'
 import type { RouteMapData, RouteStep } from '../../types/navigation'
-import { percentToPixel } from '../../utils/canvasCoordinates'
+import { percentToPixel, pixelToPercent } from '../../utils/canvasCoordinates'
 import './RouteMap.css'
 
 /** Biểu tượng theo loại POI; loại lạ dùng ghim chung. */
@@ -17,6 +17,13 @@ const POI_ICON: Record<string, string> = {
 }
 const poiIcon = (category: string) => POI_ICON[category.toUpperCase()] ?? '📍'
 
+/** Màu và biểu tượng theo loại thang để người dùng nhận ra chỗ phải lên thang. */
+const TRANSITION_STYLE: Record<string, { icon: string; color: string; verb: string }> = {
+  ELEVATOR: { icon: '🛗', color: '#7c3aed', verb: 'Thang máy' },
+  STAIR: { icon: '🪜', color: '#d97706', verb: 'Thang bộ' },
+  ESCALATOR: { icon: '↗', color: '#0d9488', verb: 'Thang cuốn' },
+}
+
 type RouteMapProps = {
   map?: RouteMapData
   routeSteps: RouteStep[]
@@ -26,6 +33,12 @@ type RouteMapProps = {
   interactiveFireMode?: boolean
   /** Hiện toàn bộ đồ thị đi bộ (để gỡ lỗi); mặc định ẩn cho bản đồ gọn. */
   showGraph?: boolean
+  /** Tên tầng theo id, để ghi "→ Tầng 3" ở chỗ lên thang. */
+  floorNameById?: Record<string, string>
+  /** Bản thu nhỏ cho phần tổng quan nhiều tầng: chỉ giữ tuyến, điểm đầu/cuối và chỗ lên thang. */
+  compact?: boolean
+  /** Chạm vào chỗ trống trên bản đồ: toạ độ % trên tầng này (dùng để tự đặt vị trí hiện tại). */
+  onSelectPoint?: (floorId: string, point: PercentPoint) => void
   onSelectNode: (nodeId: string) => void
 }
 
@@ -37,6 +50,9 @@ export function RouteMap({
   hazardNodeIds = [],
   interactiveFireMode = false,
   showGraph = false,
+  floorNameById = {},
+  compact = false,
+  onSelectPoint,
   onSelectNode,
 }: RouteMapProps) {
   if (!map) return <Empty description="Không có dữ liệu tầng này" />
@@ -59,6 +75,43 @@ export function RouteMap({
   const destinationStep = isDestinationFloor
     ? routeSteps[routeSteps.length - 1]
     : undefined
+  // Chỗ lên thang (tầng này là tầng đi) và chỗ bước ra khỏi thang (tầng này là tầng đến).
+  const boardings = routeSteps.flatMap((step, index) =>
+    step.floorId === map.floor.id && step.transition ? [{ step, index }] : [],
+  )
+  const exits = routeSteps.flatMap((step, index) => {
+    const previous = routeSteps[index - 1]
+    return index > 0 && previous?.transition && previous.floorId !== step.floorId && step.floorId === map.floor.id
+      ? [{ step, kind: previous.transition }]
+      : []
+  })
+  // Ký hiệu chỗ lên/xuống thang phải đọc được cả khi bản đồ chính bị thu nhỏ trong khung điện thoại.
+  const tk = compact ? 1 : 2.2
+  // Bản thu nhỏ phóng vào khoảng chứa tuyến (kèm lề) thay vì hiện cả sơ đồ nhỏ xíu.
+  let viewBox = `0 0 ${width} ${height}`
+  if (compact && floorSteps.length > 0) {
+    const xs = floorSteps.map((step) => step.x)
+    const ys = floorSteps.map((step) => step.y)
+    const pad = Math.max(110 * s, 0.12 * Math.max(width, height))
+    const x0 = Math.max(0, Math.min(...xs) - pad)
+    const y0 = Math.max(0, Math.min(...ys) - pad)
+    const x1 = Math.min(width, Math.max(...xs) + pad)
+    const y1 = Math.min(height, Math.max(...ys) + pad)
+    viewBox = `${x0} ${y0} ${x1 - x0} ${y1 - y0}`
+  }
+  const floorLabel = (floorId?: string) => (floorId ? floorNameById[floorId] ?? 'tầng khác' : 'tầng khác')
+
+  function handleBackgroundClick(event: React.MouseEvent<SVGSVGElement>) {
+    if (!onSelectPoint) return
+    const svg = event.currentTarget
+    const matrix = svg.getScreenCTM()
+    if (!matrix) return
+    const point = svg.createSVGPoint()
+    point.x = event.clientX
+    point.y = event.clientY
+    const local = point.matrixTransform(matrix.inverse())
+    onSelectPoint(map!.floor.id, pixelToPercent(local.x, local.y, width, height))
+  }
 
   return (
     <div
@@ -66,7 +119,8 @@ export function RouteMap({
       aria-label={`Bản đồ ${map.floor.name}`}
     >
       <svg
-        viewBox={`0 0 ${width} ${height}`}
+        viewBox={viewBox}
+        onClick={handleBackgroundClick}
         role="img"
         preserveAspectRatio="xMidYMid meet"
       >
@@ -94,7 +148,7 @@ export function RouteMap({
         )}
 
         {/* Graph edges: chỉ khi gỡ lỗi hoặc đang đặt lửa, để bản đồ không rối */}
-        {(showGraph || interactiveFireMode) && map.edges.map((edge) => {
+        {!compact && (showGraph || interactiveFireMode) && map.edges.map((edge) => {
           const from = nodeById.get(edge.fromNodeId)
           const to = nodeById.get(edge.toNodeId)
           if (!from || !to) return null
@@ -124,7 +178,7 @@ export function RouteMap({
         )}
 
         {/* POI: biểu tượng theo loại + tên, bỏ POI đang là đích (đã có ghim đích) */}
-        {map.pois
+        {!compact && map.pois
           .filter((poi) => poi.floorId === map.floor.id && poi.nodeId !== destinationStep?.nodeId)
           .map((poi) => {
             const node = nodeById.get(poi.nodeId)
@@ -144,7 +198,7 @@ export function RouteMap({
           })}
 
         {/* Regular Nodes */}
-        {map.nodes.map((node) => {
+        {!compact && map.nodes.map((node) => {
           const isOnRoute = floorSteps.some((step) => step.nodeId === node.id)
           const isActive = activeStep?.nodeId === node.id
           if (isActive) return null // Handled with custom user radar below
@@ -154,7 +208,10 @@ export function RouteMap({
             <g
               key={node.id}
               className="route-map__node"
-              onClick={() => onSelectNode(node.id)}
+              onClick={(event) => {
+                event.stopPropagation()
+                onSelectNode(node.id)
+              }}
             >
               <circle cx={p.x} cy={p.y} r={16 * s} fill="transparent" />
               <circle
@@ -172,10 +229,10 @@ export function RouteMap({
         })}
 
         {/* Step Numbers (only intermediate steps) */}
-        {floorSteps.map((step, index) => {
+        {!compact && floorSteps.map((step, index) => {
           const isCurrent = activeStep?.nodeId === step.nodeId
           const isDest = destinationStep?.nodeId === step.nodeId
-          if (isCurrent || isDest) return null
+          if (isCurrent || isDest || step.transition) return null
 
           return (
             <g key={`${step.nodeId}-${index}`} className="route-map__step-label">
@@ -183,6 +240,48 @@ export function RouteMap({
               <text x={step.x} y={step.y + 4} textAnchor="middle">
                 {index + 1}
               </text>
+            </g>
+          )
+        })}
+
+        {/* Điểm xuất phát (chỉ ở bản thu nhỏ; bản chính có chấm vị trí hiện tại) */}
+        {compact && floorSteps[0] && routeSteps[0]?.floorId === map.floor.id && (
+          <g>
+            <circle cx={floorSteps[0].x} cy={floorSteps[0].y} r={14 * s} className="radar-core" />
+            <text x={floorSteps[0].x} y={floorSteps[0].y + 5 * s} textAnchor="middle" fontSize={14 * s} fill="#ffffff" fontWeight="700">A</text>
+          </g>
+        )}
+
+        {/* Chỗ lên thang: biểu tượng + "→ Tầng N" để thấy rõ phải đi thang nào, lên tầng nào */}
+        {boardings.map(({ step, index }) => {
+          const style = TRANSITION_STYLE[step.transition ?? ''] ?? TRANSITION_STYLE.ELEVATOR
+          return (
+            <g key={`board-${index}`} className="route-map__transition">
+              <circle cx={step.x} cy={step.y} r={20 * s * tk} fill={style.color} stroke="#ffffff" strokeWidth={3 * s * tk} />
+              <text x={step.x} y={step.y + 7 * s * tk} textAnchor="middle" fontSize={20 * s * tk}>{style.icon}</text>
+              <g transform={`translate(${step.x}, ${step.y - 34 * s * tk})`}>
+                <rect x={-72 * s * tk} y={-14 * s * tk} width={144 * s * tk} height={24 * s * tk} rx={8 * s * tk} fill={style.color} />
+                <text x={0} y={3 * s * tk} textAnchor="middle" fontSize={12 * s * tk} fill="#ffffff" fontWeight="700">
+                  {`${style.verb} → ${floorLabel(step.targetFloorId)}`}
+                </text>
+              </g>
+            </g>
+          )
+        })}
+
+        {/* Chỗ bước ra khỏi thang ở tầng đến */}
+        {exits.map(({ step, kind }) => {
+          const style = TRANSITION_STYLE[kind] ?? TRANSITION_STYLE.ELEVATOR
+          return (
+            <g key={`exit-${step.nodeId}`} className="route-map__transition">
+              <circle cx={step.x} cy={step.y} r={20 * s * tk} fill="#ffffff" stroke={style.color} strokeWidth={4 * s * tk} />
+              <text x={step.x} y={step.y + 7 * s * tk} textAnchor="middle" fontSize={20 * s * tk}>{style.icon}</text>
+              <g transform={`translate(${step.x}, ${step.y - 34 * s * tk})`}>
+                <rect x={-66 * s * tk} y={-14 * s * tk} width={132 * s * tk} height={24 * s * tk} rx={8 * s * tk} fill="#ffffff" stroke={style.color} strokeWidth={2 * s * tk} />
+                <text x={0} y={3 * s * tk} textAnchor="middle" fontSize={12 * s * tk} fill={style.color} fontWeight="700">
+                  {`Ra khỏi ${style.verb.toLowerCase()}`}
+                </text>
+              </g>
             </g>
           )
         })}
@@ -248,8 +347,11 @@ export function RouteMap({
           })}
 
         {/* Current User Location Arrow with Radar Wave (matching the photo) */}
-        {activeStep && (
-          <g transform={`translate(${activeStep.x}, ${activeStep.y})`}>
+        {!compact && activeStep && activeStep.floorId === map.floor.id && (
+          <g
+            key={map.floor.id}
+            style={{ transform: `translate(${activeStep.x}px, ${activeStep.y}px)`, transition: 'transform 0.9s ease-in-out' }}
+          >
             {/* Radar Wave Pulse */}
             <circle cx="0" cy="0" r="44" className="radar-wave" />
             <circle cx="0" cy="0" r="26" fill="url(#userRadarGlow)" />

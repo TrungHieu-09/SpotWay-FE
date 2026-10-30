@@ -639,11 +639,17 @@ export function findIndoorRoute(
   }
 
   const path = nodeIds.map((id) => nodeById.get(id) as PathfindingNode)
-  const { instructions, steps } = buildTurnByTurn(path, arcs, options)
-  const walkArcs = arcs.filter((arc) => arc.kind === 'WALK')
+  // Thang máy đi liền nhiều tầng (T1→T2→T3 là hai cạnh liên kết) chỉ phải chờ một lần ở lần lên đầu tiên.
+  const ridden = arcs.map((arc, index) =>
+    arc.kind === 'ELEVATOR' && arcs[index - 1]?.kind === 'ELEVATOR' && arc.waitSeconds > 0
+      ? { ...arc, seconds: arc.seconds - arc.waitSeconds, waitSeconds: 0 }
+      : arc,
+  )
+  const { instructions, steps } = buildTurnByTurn(path, ridden, options)
+  const walkArcs = ridden.filter((arc) => arc.kind === 'WALK')
   const walkingDurationSeconds = Math.round(walkArcs.reduce((sum, arc) => sum + arc.seconds, 0))
   const transitionDurationSeconds = Math.round(
-    arcs.filter((arc) => arc.kind !== 'WALK').reduce((sum, arc) => sum + arc.seconds, 0),
+    ridden.filter((arc) => arc.kind !== 'WALK').reduce((sum, arc) => sum + arc.seconds, 0),
   )
   return {
     totalDistance: round2(walkArcs.reduce((sum, arc) => sum + arc.meters, 0)),

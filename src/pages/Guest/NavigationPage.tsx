@@ -14,10 +14,12 @@ import {
   Steps,
   Tag,
   Typography,
+  message,
 } from 'antd'
 import {
   AimOutlined,
   ArrowLeftOutlined,
+  CameraOutlined,
   EnvironmentOutlined,
   FundProjectionScreenOutlined,
   MenuOutlined,
@@ -28,11 +30,16 @@ import {
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { resolvePublicQrToken } from '../../api/publicNavigation'
 import { DemoSimulationToolbar } from '../../components/navigation/DemoSimulationToolbar'
-import { toRouteMapData } from '../../api/graphMapper'
+import { publicMapSize, toRouteMapData } from '../../api/graphMapper'
+import { RouteFloorsOverview } from '../../components/navigation/RouteFloorsOverview'
+import { QrScanModal } from '../../components/navigation/QrScanModal'
 import { RouteMap } from '../../components/navigation/RouteMap'
 import { useNavigationStore } from '../../store/useNavigationStore'
 import type { Maneuver, PublicQrResolution, RouteStep } from '../../types/navigation'
+import type { PercentPoint } from '../../types/geometry'
+import { findNearestNode } from '../../utils/graphGeometry'
 import { forgetDestination, recallDestination, rememberDestination } from '../../utils/guestMemory'
+import { floorsOnRoute } from '../../utils/routeSegments'
 import './NavigationPage.css'
 
 const formatDistance = (distance: number) =>
@@ -113,12 +120,17 @@ export function NavigationPage() {
   const [stepIndex, setStepIndex] = useState(0)
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile')
   const [stepsDrawerOpen, setStepsDrawerOpen] = useState(false)
+  // Mô phỏng đi bộ để trình diễn: tự chạy lần lượt các bước (kể cả chờ thang và đổi tầng).
+  const [walking, setWalking] = useState(false)
+  const [scanOpen, setScanOpen] = useState(false)
+  const [walkSpeed, setWalkSpeed] = useState(1)
   const [trackedRoute, setTrackedRoute] = useState(route)
 
   // Tuyến mới (tìm đường, demo, tái định tuyến khi cháy) luôn bắt đầu lại từ bước đầu
   if (route !== trackedRoute) {
     setTrackedRoute(route)
     setStepIndex(0)
+    setWalking(false)
     if (route?.steps[0]) setSelectedFloorId(route.steps[0].floorId)
   }
 
@@ -159,6 +171,9 @@ export function NavigationPage() {
     return [...floors].sort((a, b) => b.floorNumber - a.floorNumber) // Descending for vertical stack
   }, [floors])
 
+  const floorNameById = useMemo(() => Object.fromEntries(floors.map((floor) => [floor.id, `Tầng ${floor.floorNumber}`])), [floors])
+  const routeFloorIds = useMemo(() => (route ? floorsOnRoute(route.steps) : []), [route])
+
   const sourceOptions = useMemo(
     () =>
       Object.values(mapsByFloorId).flatMap((map) =>
@@ -193,7 +208,54 @@ export function NavigationPage() {
 
   const handleSelectNode = (nodeId: string) => {
     if (interactiveFireMode) toggleFireNode(nodeId, currentStep?.nodeId)
-    else if (!fromLocked) setFromNodeId(nodeId)
+    else relocate(nodeId)
+  }
+
+  /** Người dùng tự báo "tôi đang ở đây" (không cần quét mã): đặt điểm xuất phát, đã có tuyến thì tính lại từ đây. */
+  const relocate = (nodeId: string) => {
+    setQrLocked(false)
+    setFromNodeId(nodeId)
+    setWalking(false)
+    if (route && destinationId) void beginRoute(destinationId, nodeId).catch(() => undefined)
+  }
+
+  /** Chạm vào chỗ trống trên bản đồ: lấy node gần nhất làm vị trí hiện tại. */
+  const handleSelectPoint = (floorId: string, point: PercentPoint) => {
+    if (interactiveFireMode) return
+    const publicMap = mapsByFloorId[floorId]
+    if (!publicMap) return
+    const nearest = findNearestNode(point, toRouteMapData(publicMap).nodes, publicMapSize(publicMap.floor))
+    if (!nearest) return
+    relocate(nearest.id)
+    message.info(`Đã đặt vị trí hiện tại ở ${floorNameById[floorId] ?? 'tầng này'}${route ? ' — đang tính lại tuyến' : ''}`)
+  }
+
+  /** Quét mã ngay trong ứng dụng: cập nhật vị trí và giữ nguyên điểm đến, đang có tuyến thì tính lại từ chỗ mới. */
+  const handleScannedToken = (token: string) => {
+    setScanOpen(false)
+    resolvePublicQrToken(token)
+      .then((resolved) => {
+        setQr(resolved)
+        setQrError(undefined)
+        setQrLocked(true)
+        setSelectedFloorId(resolved.floorId)
+        setWalking(false)
+        message.success(`Đã cập nhật vị trí: ${resolved.label}`)
+        if (route && destinationId) void beginRoute(destinationId, resolved.nodeId).catch(() => undefined)
+      })
+      .catch((reason: unknown) => message.error(reason instanceof Error ? reason.message : 'Mã QR không hợp lệ.'))
+  }
+
+  const jumpToStep = (index: number) => {
+    setStepIndex(index)
+    const floorId = route?.steps[index]?.floorId
+    if (floorId) setSelectedFloorId(floorId)
+  }
+
+  const jumpToTransition = (kinds: string[]) => {
+    const index = route?.steps.findIndex((step) => step.transition && kinds.includes(step.transition)) ?? -1
+    if (index >= 0) jumpToStep(index)
+    else message.info('Tuyến này không đi qua loại thang đó.')
   }
 
   const destinationObj = destinations.find((d) => d.id === destinationId)
@@ -254,6 +316,24 @@ export function NavigationPage() {
     // beginRoute phụ thuộc state cục bộ; chỉ cần chạy 1 lần cho mỗi mã QR khi đủ dữ liệu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qr, qrToken, paramToStoreId, isLoading, destinations, buildingId])
+
+  // Mô phỏng đi bộ: mỗi bước dừng lâu theo độ dài (đoạn đi thang cố định ~2,6 s), chia cho tốc độ.
+  useEffect(() => {
+    if (!walking || !route) return
+    if (stepIndex >= route.steps.length - 1) {
+      setWalking(false)
+      return
+    }
+    const step = route.steps[stepIndex]
+    const base = step.transition ? 2600 : Math.min(3500, Math.max(1200, (step.distanceMeters ?? 5) * 90))
+    const timer = setTimeout(() => {
+      const next = stepIndex + 1
+      setStepIndex(next)
+      const floorId = route.steps[next]?.floorId
+      if (floorId) setSelectedFloorId(floorId)
+    }, base / walkSpeed)
+    return () => clearTimeout(timer)
+  }, [walking, stepIndex, route, walkSpeed])
 
   // Quick Demo Route (Lecture Hall 301 as in Reference Photo)
   const handleLoadDemoRoute = () => {
@@ -501,6 +581,12 @@ export function NavigationPage() {
                     >
                       Bắt đầu chỉ đường
                     </Button>
+                    <Button size="small" block icon={<CameraOutlined />} onClick={() => setScanOpen(true)}>
+                      Quét QR để lấy vị trí
+                    </Button>
+                    <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                      Không quét được mã? Chạm lên bản đồ để chọn vị trí của bạn.
+                    </Typography.Text>
                   </Space>
                 </div>
               )}
@@ -512,7 +598,7 @@ export function NavigationPage() {
                   return (
                     <button
                       key={floor.id}
-                      className={`phone-floor-pill-btn ${isActive ? 'active' : ''}`}
+                      className={`phone-floor-pill-btn ${isActive ? 'active' : ''} ${routeFloorIds.includes(floor.id) ? 'on-route' : ''}`}
                       onClick={() => setSelectedFloorId(floor.id)}
                     >
                       {floor.floorNumber === 1 ? 'G' : floor.floorNumber}
@@ -521,33 +607,15 @@ export function NavigationPage() {
                 })}
               </div>
 
-              {/* Left Transition Shortcuts */}
+              {/* Left Transition Shortcuts: nhảy tới chỗ lên thang đúng loại trong tuyến */}
               <div className="phone-transition-shortcuts">
-                <div
-                  className="phone-shortcut-card"
-                  onClick={() => {
-                    const elevStep = route?.steps.find((s) => s.transition === 'ELEVATOR')
-                    if (elevStep) {
-                      setStepIndex(route?.steps.indexOf(elevStep) ?? 0)
-                      setSelectedFloorId(elevStep.floorId)
-                    }
-                  }}
-                >
+                <div className="phone-shortcut-card" onClick={() => jumpToTransition(['STAIR', 'ESCALATOR'])}>
                   <span>🪜</span>
-                  <span>Stairs</span>
+                  <span>Thang bộ</span>
                 </div>
-                <div
-                  className="phone-shortcut-card"
-                  onClick={() => {
-                    const elevStep = route?.steps.find((s) => s.transition === 'ELEVATOR')
-                    if (elevStep) {
-                      setStepIndex(route?.steps.indexOf(elevStep) ?? 0)
-                      setSelectedFloorId(elevStep.floorId)
-                    }
-                  }}
-                >
+                <div className="phone-shortcut-card" onClick={() => jumpToTransition(['ELEVATOR'])}>
                   <span>🛗</span>
-                  <span>Lift</span>
+                  <span>Thang máy</span>
                 </div>
               </div>
 
@@ -560,6 +628,8 @@ export function NavigationPage() {
                   destinationName={destinationName}
                   hazardNodeIds={activeFireNodeIds}
                   interactiveFireMode={interactiveFireMode}
+                  floorNameById={floorNameById}
+                  onSelectPoint={handleSelectPoint}
                   onSelectNode={handleSelectNode}
                 />
               </div>
@@ -576,6 +646,22 @@ export function NavigationPage() {
                       <div style={{ color: '#2563eb' }}>{formatDuration(route.estimatedDurationSeconds)}</div>
                       <div style={{ fontSize: 12, color: '#64748b' }}>{formatDistance(route.totalDistance)}</div>
                     </div>
+                  </div>
+
+                  <div className="bottom-sheet__sim">
+                    <Button size="small" type="primary" ghost={!walking} style={{ borderColor: '#2563eb', color: walking ? undefined : '#2563eb' }} onClick={() => setWalking((value) => !value)} disabled={stepIndex >= route.steps.length - 1}>
+                      {walking ? '⏸ Dừng mô phỏng' : '▶ Mô phỏng đi bộ'}
+                    </Button>
+                    <Segmented
+                      size="small"
+                      value={walkSpeed}
+                      onChange={(value) => setWalkSpeed(Number(value))}
+                      options={[{ label: '1x', value: 1 }, { label: '3x', value: 3 }, { label: '6x', value: 6 }]}
+                    />
+                    <Button size="small" icon={<CameraOutlined />} onClick={() => setScanOpen(true)}>
+                      Quét QR
+                    </Button>
+                    <span className="bottom-sheet__hint">Hoặc chạm bản đồ để đặt lại vị trí</span>
                   </div>
 
                   <div className="bottom-sheet__actions">
@@ -632,6 +718,8 @@ export function NavigationPage() {
               destinationName={destinationName}
               hazardNodeIds={activeFireNodeIds}
               interactiveFireMode={interactiveFireMode}
+              floorNameById={floorNameById}
+              onSelectPoint={handleSelectPoint}
               onSelectNode={handleSelectNode}
             />
           </section>
@@ -720,6 +808,19 @@ export function NavigationPage() {
           </aside>
         </div>
       )}
+
+      {!isLoading && route && (
+        <RouteFloorsOverview
+          route={route}
+          floors={floors}
+          mapsByFloorId={mapsByFloorId}
+          activeStepIndex={stepIndex}
+          destinationName={destinationName}
+          onJump={jumpToStep}
+        />
+      )}
+
+      <QrScanModal open={scanOpen} onClose={() => setScanOpen(false)} onToken={handleScannedToken} />
 
       {/* Turn-by-Turn Steps Drawer for Mobile Mode */}
       <Drawer

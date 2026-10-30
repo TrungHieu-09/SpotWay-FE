@@ -75,6 +75,28 @@ describe('đường ngắn nhất cùng tầng', () => {
   })
 })
 
+describe('thang máy đi liền nhiều tầng', () => {
+  // T1 -> T2 -> T3 là hai liên kết riêng (BE trả theo cặp tầng liền kề): chỉ chờ thang một lần.
+  const nodes = [
+    node('s', 'G', 0, 0), node('liftG', 'G', 100, 0, 'ELEVATOR'),
+    node('liftF2', 'F2', 100, 0, 'ELEVATOR'), node('liftF3', 'F3', 100, 0, 'ELEVATOR'), node('shop', 'F3', 200, 0),
+  ]
+  const edges = [edge('s', 'liftG', 'G'), edge('liftF3', 'shop', 'F3')]
+  const links = [
+    { nodeIdFrom: 'liftG', nodeIdTo: 'liftF2', kind: 'ELEVATOR' as const },
+    { nodeIdFrom: 'liftF2', nodeIdTo: 'liftF3', kind: 'ELEVATOR' as const },
+  ]
+  const options = { floorLevels: { G: 1, F2: 2, F3: 3 }, mapUnitsPerMeter: { G: 10, F2: 10, F3: 10 } }
+
+  it('chỉ tính thời gian chờ ở lần lên đầu tiên', () => {
+    const route = findIndoorRoute('s', 'shop', nodes, edges, links, options)!
+    const waits = route.steps.flatMap((step) => (step.waitSeconds ? [step.waitSeconds] : []))
+    assert.deepEqual(waits, [30])
+    // 30 chờ + 2 nấc * 4 giây di chuyển
+    assert.equal(route.transitionDurationSeconds, 38)
+  })
+})
+
 describe('chế độ xe lăn', () => {
   const nodes = [
     node('start', 'G', 0, 0), node('lobby', 'G', 100, 0), node('stairG', 'G', 100, 100, 'STAIR'), node('escG', 'G', 200, 100, 'ESCALATOR'), node('elevG', 'G', 300, 100, 'ELEVATOR'),

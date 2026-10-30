@@ -336,3 +336,33 @@
   -webkit-text-fill-color: #1e293b;
   font-weight: 600;
 }
+
+/* Tầng nằm trên tuyến: viền xanh + chấm để thấy ngay tuyến đi qua những tầng nào */
+.phone-floor-pill-btn.on-route:not(.active) {
+  box-shadow: inset 0 0 0 2px #2563eb;
+  position: relative;
+}
+
+.phone-floor-pill-btn.on-route::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f97316;
+}
+
+.bottom-sheet__sim {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.bottom-sheet__hint {
+  font-size: 11px;
+  color: #94a3b8;
+}
