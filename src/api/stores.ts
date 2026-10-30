@@ -28,13 +28,13 @@ export async function getStore(storeId: string): Promise<Store> {
 }
 
 export async function getStoresByFloor(floorId: string): Promise<Store[]> {
-  const { data } = await apiClient.get<Store[]>(`/stores?floorId=${encodeURIComponent(floorId)}`)
-  return data
+  const { data } = await apiClient.get<Store[]>(`/floors/${encodeURIComponent(floorId)}/stores`)
+  return Array.isArray(data) ? data : []
 }
 
 export async function getStoresByOwner(ownerId: string): Promise<Store[]> {
-  const { data } = await apiClient.get<Store[]>(`/stores?ownerId=${encodeURIComponent(ownerId)}`)
-  return data
+  const { data } = await apiClient.get<Store[]>(`/owners/${encodeURIComponent(ownerId)}/stores`)
+  return Array.isArray(data) ? data : []
 }
 
 export async function updateStoreStatus(storeId: string, status: 'ACTIVE' | 'PENDING' | 'CLOSED' | 'active' | 'inactive') {

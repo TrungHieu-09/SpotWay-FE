@@ -1,6 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
 type TokenPair = {
   accessToken: string
@@ -16,6 +16,7 @@ function clearSession() {
   window.localStorage.removeItem('spotway.refreshToken')
   window.localStorage.removeItem('spotway.role')
   window.localStorage.removeItem('auth:token')
+  window.localStorage.removeItem('spotway.user')
 }
 
 async function refreshAccessToken() {

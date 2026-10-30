@@ -682,7 +682,7 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
             >
               <Space>
                 <Tag color="cyan">{selectedNode.type}</Tag>
-                <AntText strong>Node #{selectedNode.id.slice(0, 8)}</AntText>
+                <AntText strong>Node #{(selectedNode.id ?? '').slice(0, 8)}</AntText>
                 <AntText type="secondary">
                   ({Math.round((selectedNode.x / selectedFloor.mapWidth) * 100)}%,{' '}
                   {Math.round((selectedNode.y / selectedFloor.mapHeight) * 100)}%)
@@ -954,7 +954,7 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
                           </React.Fragment>
                         )
                       })}
-                      {navigationDraft?.nodes.map((node) => <Circle key={node.id} x={node.x / selectedFloor.mapWidth * stageSize.width} y={node.y / selectedFloor.mapHeight * stageSize.height} radius={10} fill="#facc15" stroke="#854d0e" strokeWidth={2} draggable onDragEnd={(event) => moveDraftNode(node.id, event.target.x() / stageSize.width * selectedFloor.mapWidth, event.target.y() / stageSize.height * selectedFloor.mapHeight)} />)}
+                      {navigationDraft?.nodes?.map((node) => <Circle key={node.id} x={node.x / selectedFloor.mapWidth * stageSize.width} y={node.y / selectedFloor.mapHeight * stageSize.height} radius={10} fill="#facc15" stroke="#854d0e" strokeWidth={2} draggable onDragEnd={(event) => moveDraftNode(node.id, event.target.x() / stageSize.width * selectedFloor.mapWidth, event.target.y() / stageSize.height * selectedFloor.mapHeight)} />)}
                       {pois.map((poi) => {
                         const { pixelX, pixelY } = percentToPixel(
                           poi.x,
@@ -1061,7 +1061,7 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
                             {node.type}
                           </Tag>
                           <AntText strong style={{ fontSize: 12 }}>
-                            #{node.id.slice(0, 6)}
+                            #{(node.id ?? '').slice(0, 6)}
                           </AntText>
                         </Space>
                         <AntText type="secondary" style={{ fontSize: 11 }}>
@@ -1106,7 +1106,7 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
                     >
                       <Space orientation="vertical" size={1}>
                         <AntText style={{ fontSize: 12 }}>
-                          #{edge.fromNodeId.slice(0, 5)} → #{edge.toNodeId.slice(0, 5)}
+                          #{(edge.fromNodeId ?? '').slice(0, 5)} → #{(edge.toNodeId ?? '').slice(0, 5)}
                         </AntText>
                         <AntText type="secondary" style={{ fontSize: 11 }}>
                           Khoảng cách: {Math.round(edge.weight)}px

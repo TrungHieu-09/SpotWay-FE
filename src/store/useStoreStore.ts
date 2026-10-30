@@ -64,7 +64,7 @@ export const useStoreStore = create<StoreState>((set) => ({
     try {
       const stores = await getStoresByOwner(ownerId)
       set({
-        ownerStores: stores,
+        ownerStores: Array.isArray(stores) ? stores : [],
       })
     } catch (error) {
       set({ error: (error as Error).message })

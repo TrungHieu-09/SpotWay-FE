@@ -372,6 +372,75 @@
 }
 .lp-nav__links a:hover { color: var(--sw-text-primary); }
 
+
+/* ── Logged in User Menu in Navbar ── */
+.lp-user-menu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lp-user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 14px 0 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lp-user-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(34, 211, 238, 0.4);
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.25);
+  transform: translateY(-1px);
+}
+
+.lp-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--sw-violet), var(--sw-cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+  flex-shrink: 0;
+}
+
+.lp-user-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.2;
+}
+
+.lp-user-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--sw-text-primary);
+  max-width: 130px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lp-user-role {
+  font-size: 10px;
+  color: var(--sw-cyan);
+  font-weight: 500;
+}
+
 .lp-nav__cta {
   display: flex;
   align-items: center;
@@ -392,6 +461,13 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: 100px 40px 80px;
+}
+
+.lp-hero__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
 }
 
 .lp-hero__badge {
@@ -427,7 +503,10 @@
   font-size: 17px;
   line-height: 1.65;
   color: var(--sw-text-secondary);
-  max-/* ── Hero Visual Container ── */
+  max-width: 520px;
+}
+
+/* ── Hero Visual Container ── */
 .lp-hero__visual {
   position: relative;
   width: 100%;
@@ -801,6 +880,8 @@
 .path-dash-animate {
   stroke-dasharray: 6 6;
   animation: beam-flow 2s linear infinite;
+}
+
 /* ═══════════════════════════════════════════════════
    LOGOS SECTION
 ═══════════════════════════════════════════════════ */

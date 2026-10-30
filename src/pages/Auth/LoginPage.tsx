@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { App as AntApp } from 'antd'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { roleLabel, useAuthStore } from '../../auth/store'
 import type { Role } from '../../types/auth'
 import './LoginPage.css'
@@ -52,22 +52,22 @@ export function LoginPage() {
   const location = useLocation()
   const { message } = AntApp.useApp()
   const user = useAuthStore((state) => state.user)
+  const isInitializing = useAuthStore((state) => state.isInitializing)
   const login = useAuthStore((state) => state.login)
 
   // Auto redirect if already authenticated
-  useEffect(() => {
-    if (user) {
-      const redirect = new URLSearchParams(location.search).get('redirect')
-      const nextPath = redirect?.startsWith('/') ? redirect : undefined
-      navigate(nextPath ?? homeForRole(user.role), { replace: true })
-    }
-  }, [navigate, user, location.search])
+  if (user) {
+    const redirect = new URLSearchParams(location.search).get('redirect')
+    const nextPath = redirect?.startsWith('/') ? redirect : undefined
+    return <Navigate to={nextPath ?? homeForRole(user.role)} replace />
+  }
 
   const handleSelectDemo = (account: DemoAccount) => {
     setSelectedDemoRole(account.role)
     setEmail(account.email)
     setPassword('Demo@123')
     setLoginError(null)
+    setAttemptsRemaining(3)
   }
 
   const performLogin = async (loginEmail: string, loginPass: string) => {

@@ -8,6 +8,7 @@ export async function login(email: string, password: string) {
 }
 
 export function saveSession(tokens: TokenPair) {
+  window.localStorage.setItem('auth:token', tokens.accessToken)
   window.localStorage.setItem('spotway.accessToken', tokens.accessToken)
   window.localStorage.setItem('spotway.refreshToken', tokens.refreshToken)
   const payload = JSON.parse(atob(tokens.accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as { role?: string }
@@ -15,7 +16,9 @@ export function saveSession(tokens: TokenPair) {
 }
 
 export function clearSession() {
+  window.localStorage.removeItem('auth:token')
   window.localStorage.removeItem('spotway.accessToken')
   window.localStorage.removeItem('spotway.refreshToken')
   window.localStorage.removeItem('spotway.role')
+  window.localStorage.removeItem('spotway.user')
 }

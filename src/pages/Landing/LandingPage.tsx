@@ -1,6 +1,7 @@
 import { useRef, useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useScrollReveal } from '../../hooks/useScrollReveal'
+import { roleLabel, useAuthStore } from '../../auth/store'
 import './LandingPage.css'
 
 type LevelId = 'L1' | 'L2' | 'L3'
@@ -38,10 +39,28 @@ const LEVEL_INFO: Record<
   },
 }
 
+function getPortalRoute(role?: string) {
+  switch (role) {
+    case 'admin':
+      return '/admin'
+    case 'building_owner':
+      return '/owner/dashboard'
+    case 'building_manager':
+      return '/manager'
+    case 'store_owner':
+      return '/store/profile'
+    default:
+      return '/owner/dashboard'
+  }
+}
+
 export function LandingPage() {
   const pageRef = useScrollReveal()
   const isoRef = useRef<HTMLDivElement>(null)
   const [activeLevel, setActiveLevel] = useState<LevelId>('L3')
+  const user = useAuthStore((state) => state.user)
+  const logout = useAuthStore((state) => state.logout)
+  const userInitial = (user?.name || user?.email || 'U').slice(0, 1).toUpperCase()
 
   const handleIsoMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!isoRef.current) return
@@ -95,12 +114,41 @@ export function LandingPage() {
           </nav>
 
           <div className="lp-nav__cta">
-            <Link to="/login" className="lp-btn lp-btn--ghost">
-              Sign In
-            </Link>
-            <Link to="/login" className="lp-btn lp-btn--primary">
-              Launch Spatial HUD
-            </Link>
+            {user ? (
+              <div className="lp-user-menu">
+                <Link
+                  to={getPortalRoute(user.role)}
+                  className="lp-user-chip"
+                  title={`Đang đăng nhập: ${user.name || user.email}`}
+                >
+                  <div className="lp-user-avatar">{userInitial}</div>
+                  <div className="lp-user-details">
+                    <span className="lp-user-name">{user.name || 'Người dùng'}</span>
+                    <span className="lp-user-role">{roleLabel(user.role)}</span>
+                  </div>
+                </Link>
+                <Link to={getPortalRoute(user.role)} className="lp-btn lp-btn--primary">
+                  Vào hệ thống
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void logout()}
+                  className="lp-btn lp-btn--ghost"
+                  title="Đăng xuất"
+                >
+                  Đăng xuất
+                </button>
+              </div>
+            ) : (
+              <>
+                <Link to="/login" className="lp-btn lp-btn--ghost">
+                  Đăng ký
+                </Link>
+                <Link to="/login" className="lp-btn lp-btn--primary">
+                  Đăng nhập
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -125,18 +173,37 @@ export function LandingPage() {
           </p>
 
           <div className="lp-hero__actions" data-reveal="fade-up" data-reveal-delay="280">
-            <Link to="/login" className="lp-btn lp-btn--primary lp-btn--lg">
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                rocket_launch
-              </span>
-              Start Free Trial
-            </Link>
-            <Link to="/manager" className="lp-btn lp-btn--ghost lp-btn--lg">
-              <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#5de6ff' }}>
-                play_circle
-              </span>
-              Book Live 3D Demo
-            </Link>
+            {user ? (
+              <>
+                <Link to={getPortalRoute(user.role)} className="lp-btn lp-btn--primary lp-btn--lg">
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                    dashboard
+                  </span>
+                  Vào bảng điều khiển
+                </Link>
+                <Link to="/guest" className="lp-btn lp-btn--ghost lp-btn--lg">
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#5de6ff' }}>
+                    map
+                  </span>
+                  Bản đồ 3D Kiosk
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="lp-btn lp-btn--primary lp-btn--lg">
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                    rocket_launch
+                  </span>
+                  Đăng ký dùng thử
+                </Link>
+                <Link to="/guest" className="lp-btn lp-btn--ghost lp-btn--lg">
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#5de6ff' }}>
+                    play_circle
+                  </span>
+                  Trải nghiệm bản đồ 3D
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="lp-hero__stats" data-reveal="fade-up" data-reveal-delay="340">
@@ -428,7 +495,7 @@ export function LandingPage() {
           <div className="lp-bento__card lp-bento__card--wide lp-bento__card--violet" data-reveal="fade-up" data-reveal-delay="0">
             <div className="lp-bento__card-glow" />
             <div className="lp-feature-icon lp-feature-icon--violet">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
             </div>
             <span className="lp-feature-eyebrow lp-feature-eyebrow--cyan">Volumetric Modeling</span>
             <h3 className="lp-feature-title">3D Multi-Floor Digital Twin</h3>
@@ -442,7 +509,7 @@ export function LandingPage() {
 
           <div className="lp-bento__card lp-bento__card--cyan" data-reveal="fade-left" data-reveal-delay="80">
             <div className="lp-feature-icon lp-feature-icon--cyan">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 16h7M14 19h7"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 16h7M14 19h7"/></svg>
             </div>
             <span className="lp-feature-eyebrow lp-feature-eyebrow--cyan">Zero Friction</span>
             <h3 className="lp-feature-title">Instant QR & Beacon Positioning</h3>
@@ -452,7 +519,7 @@ export function LandingPage() {
 
           <div className="lp-bento__card lp-bento__card--fuchsia" data-reveal="fade-right" data-reveal-delay="80">
             <div className="lp-feature-icon lp-feature-icon--fuchsia">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
             </div>
             <span className="lp-feature-eyebrow lp-feature-eyebrow--fuchsia">Inclusive Spatial</span>
             <h3 className="lp-feature-title">Turn-by-Turn Wayfinding</h3>
@@ -466,7 +533,7 @@ export function LandingPage() {
           <div className="lp-bento__card lp-bento__card--wide lp-bento__card--cyan" data-reveal="fade-up" data-reveal-delay="120">
             <div className="lp-bento__card-glow lp-bento__card-glow--cyan" />
             <div className="lp-feature-icon lp-feature-icon--cyan">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 2v10l6.5 6.5"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 2v10l6.5 6.5"/></svg>
             </div>
             <span className="lp-feature-eyebrow lp-feature-eyebrow--cyan">Generative AI</span>
             <h3 className="lp-feature-title">AI Floor-Plan Vectorization</h3>
@@ -478,7 +545,7 @@ export function LandingPage() {
 
           <div className="lp-bento__card" data-reveal="fade-up" data-reveal-delay="60">
             <div className="lp-feature-icon lp-feature-icon--violet">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
             </div>
             <span className="lp-feature-eyebrow lp-feature-eyebrow--violet">Real-Time Intelligence</span>
             <h3 className="lp-feature-title">Heatmap & Density Analytics</h3>
@@ -487,7 +554,7 @@ export function LandingPage() {
 
           <div className="lp-bento__card lp-bento__card--fuchsia-soft" data-reveal="fade-up" data-reveal-delay="120">
             <div className="lp-feature-icon lp-feature-icon--fuchsia">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             </div>
             <span className="lp-feature-eyebrow lp-feature-eyebrow--fuchsia">Multi-Tenant SaaS</span>
             <h3 className="lp-feature-title">Dynamic POI & Zone Management</h3>
@@ -655,13 +722,13 @@ export function LandingPage() {
           Join 60+ global deployments. Select your building, upload your blueprint, and be live in hours — no proof of concept needed.
         </p>
         <div className="lp-cta__actions" data-reveal="scale-up" data-reveal-delay="200">
-          <Link to="/owner/buildings" className="lp-btn lp-btn--primary lp-btn--lg">
+          <Link to={user ? getPortalRoute(user.role) : '/login'} className="lp-btn lp-btn--primary lp-btn--lg">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-            Start For Free
+            {user ? 'Vào hệ thống quản lý' : 'Đăng ký dùng thử'}
           </Link>
-          <Link to="/manager" className="lp-btn lp-btn--ghost lp-btn--lg">
+          <Link to="/guest" className="lp-btn lp-btn--ghost lp-btn--lg">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-            Schedule 3D Walkthrough
+            Bản đồ 3D Kiosk
           </Link>
         </div>
       </section>
