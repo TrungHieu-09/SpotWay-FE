@@ -20,13 +20,16 @@ export type PoiPromotion = {
 
 type PromotablePoi = PercentPoint & { id: string; name: string; category: PoiCategory; nearestNodeId: string | null }
 
+/** Đã có node cùng loại cách POI không quá ngần này (% bản đồ) thì coi như POI đã có node, không tạo thêm. */
+const SAME_SPOT_PERCENT = 2
+
 /**
- * Các POI thang máy / lối ra mà node neo hiện tại chưa đúng loại. POI đã gắn vào node đúng loại thì bỏ qua,
- * nên chạy lại nhiều lần không tạo node trùng.
+ * Các POI thang máy / lối ra chưa có node đúng loại: node neo không đúng loại và cũng chưa có node cùng loại
+ * nằm ngay tại chỗ POI. Nhờ vậy chạy lại (hoặc bấm hai lần) không tạo node trùng.
  */
 export function planPoiPromotions(
   pois: readonly PromotablePoi[],
-  nodes: readonly { id: string; type: NodeType }[],
+  nodes: readonly (PercentPoint & { id: string; type: NodeType })[],
 ): PoiPromotion[] {
   const typeById = new Map(nodes.map((node) => [node.id, node.type]))
   return pois.flatMap((poi) => {
@@ -34,6 +37,7 @@ export function planPoiPromotions(
     if (!nodeType) return []
     const anchorType = poi.nearestNodeId ? typeById.get(poi.nearestNodeId) : undefined
     if (anchorType === nodeType) return []
+    if (nodes.some((node) => node.type === nodeType && Math.hypot(node.x - poi.x, node.y - poi.y) <= SAME_SPOT_PERCENT)) return []
     const anchorNodeId = poi.nearestNodeId && typeById.has(poi.nearestNodeId) ? poi.nearestNodeId : null
     return [{ poiId: poi.id, name: poi.name, nodeType, at: { x: poi.x, y: poi.y }, anchorNodeId }]
   })

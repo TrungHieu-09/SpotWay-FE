@@ -99,6 +99,8 @@ export function CanvasBoard() {
   const deleteConnector = useGraphStore((state) => state.deleteConnector)
   const [connectorModalOpen, setConnectorModalOpen] = useState(false)
   const [suggestModalOpen, setSuggestModalOpen] = useState(false)
+  const [isPromoting, setIsPromoting] = useState(false)
+  const promotingRef = useRef(false)
   const [suggestedEdges, setSuggestedEdges] = useState<EdgeSuggestion[]>([])
   const createEdge = useGraphStore((state) => state.createEdge)
   const createNode = useGraphStore((state) => state.createNode)
@@ -211,17 +213,28 @@ export function CanvasBoard() {
    * snap lại vào node mới. Từng POI một: chờ node có id thật trước khi gắn POI, và tránh dồn giao dịch lên BE.
    */
   async function handlePromotePois() {
-    if (!selectedFloorId) return
+    if (!selectedFloorId || promotingRef.current) return
+    promotingRef.current = true
+    setIsPromoting(true)
     const floorId = selectedFloorId
-    const plans = planPoiPromotions(pois, currentFloorNodes)
-    for (const plan of plans) {
-      createNode(floorId, { ...plan.at, name: plan.name, type: plan.nodeType, accessible: true }, { linkFromNodeId: plan.anchorNodeId ?? undefined })
-      await useGraphStore.getState().flush()
-      movePoi(floorId, plan.poiId, plan.at)
-      await usePoiStore.getState().flush()
+    try {
+      let created = 0
+      // Tính lại kế hoạch từ store sau mỗi POI để không dựa vào ảnh chụp cũ (tránh tạo trùng).
+      for (let guard = 0; guard < 100; guard += 1) {
+        const plan = planPoiPromotions(usePoiStore.getState().poisByFloor[floorId] ?? [], useGraphStore.getState().nodesByFloor[floorId] ?? [])[0]
+        if (!plan) break
+        createNode(floorId, { ...plan.at, name: plan.name, type: plan.nodeType, accessible: true }, { linkFromNodeId: plan.anchorNodeId ?? undefined })
+        await useGraphStore.getState().flush()
+        movePoi(floorId, plan.poiId, plan.at)
+        await usePoiStore.getState().flush()
+        created += 1
+      }
+      selectNode(null)
+      if (created > 0) message.success(`Đã tạo node cho ${created} POI. Kiểm tra các edge nối vào hành lang rồi tạo connector.`)
+    } finally {
+      promotingRef.current = false
+      setIsPromoting(false)
     }
-    selectNode(null)
-    message.success(`Đã tạo node cho ${plans.length} POI. Kiểm tra các edge nối vào hành lang rồi tạo connector.`)
   }
 
   function handleDeleteAllPois() {
@@ -631,7 +644,7 @@ export function CanvasBoard() {
         onDeletePoi={(poiId) => deletePoi(selectedFloor.id, poiId)}
         onDeleteAllNodes={() => void handleDeleteAllNodes()}
         onDeleteAllPois={handleDeleteAllPois}
-        promotablePoiCount={planPoiPromotions(pois, currentFloorNodes).length}
+        promotablePoiCount={isPromoting ? 0 : planPoiPromotions(pois, currentFloorNodes).length}
         onPromotePois={() => void handlePromotePois()}
       />
       <CalibrationDistanceModal

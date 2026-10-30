@@ -5,7 +5,7 @@ import type { PoiCategory } from '../types/poi.ts'
 import { planPoiPromotions } from './poiPromotion.ts'
 
 const poi = (id: string, category: PoiCategory, nearestNodeId: string | null, x = 10, y = 20) => ({ id, name: `POI ${id}`, category, nearestNodeId, x, y })
-const node = (id: string, type: NodeType = 'NORMAL') => ({ id, type })
+const node = (id: string, type: NodeType = 'NORMAL', x = 80, y = 80) => ({ id, type, x, y })
 
 describe('planPoiPromotions', () => {
   it('POI thang máy và lối ra gắn vào node thường: lên kế hoạch tạo node đúng loại tại vị trí POI', () => {
@@ -30,6 +30,13 @@ describe('planPoiPromotions', () => {
     const plans = planPoiPromotions([poi('b', 'exit', 'lift')], [node('lift', 'ELEVATOR')])
     assert.equal(plans[0].nodeType, 'EXIT')
     assert.equal(plans[0].anchorNodeId, 'lift')
+  })
+
+  it('đã có node cùng loại ngay tại chỗ POI (vd. bấm hai lần) thì không tạo trùng, dù POI chưa gắn vào nó', () => {
+    const nodes = [node('n1'), node('lift', 'ELEVATOR', 10.5, 20.5)]
+    assert.deepEqual(planPoiPromotions([poi('a', 'elevator', 'n1', 10, 20)], nodes), [])
+    // node cùng loại nhưng ở xa thì vẫn phải tạo
+    assert.equal(planPoiPromotions([poi('a', 'elevator', 'n1', 10, 20)], [node('n1'), node('far', 'ELEVATOR', 60, 60)]).length, 1)
   })
 
   it('POI chưa có node neo hoặc node neo không còn: anchorNodeId = null', () => {
