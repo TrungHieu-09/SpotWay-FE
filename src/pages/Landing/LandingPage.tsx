@@ -576,17 +576,16 @@ export function LandingPage() {
 
         <div className="lp-roles">
           {[
-            { role: 'Khách tham quan', icon: '👤', color: 'cyan', desc: 'Dẫn đường tức thì không cần cài app. Quét mã QR để xem vị trí, tìm kiếm cửa hàng và tiện ích ở mọi tầng.' },
-            { role: 'Store Owner', icon: '🏪', color: 'violet',  desc: 'Manage your storefront presence, promotions, and real-time foot traffic data from a tenant dashboard.' },
-            { role: 'Building Manager', icon: '🏢', color: 'fuchsia', desc: 'Configure floor maps, POI nodes, routing graphs, and publish spatial updates with zero downtime.' },
-            { role: 'Chủ tòa nhà', icon: '💼', color: 'green', desc: 'Báo cáo số liệu toàn diện, quản lý gói dịch vụ, phân bổ gian hàng và tối ưu hóa doanh thu bất động sản.' },
-            { role: 'System Admin', icon: '⚙️', color: 'cyan',    desc: 'Full infrastructure control, tenant isolation, resource quotas, and system-wide monitoring at scale.' },
+            { role: 'Khách tham quan', color: 'cyan', desc: 'Dẫn đường tức thì không cần cài app. Quét mã QR để xem vị trí, tìm kiếm cửa hàng và tiện ích ở mọi tầng.' },
+            { role: 'Chủ gian hàng', color: 'violet', desc: 'Quản lý thông tin gian hàng, chương trình ưu đãi và theo dõi lưu lượng khách ghé thăm theo thời gian thực.' },
+            { role: 'Ban Quản lý tòa nhà', color: 'fuchsia', desc: 'Cấu hình bản đồ tầng, nút POI, đồ thị dẫn đường và xuất bản cập nhật không gian không gián đoạn.' },
+            { role: 'Chủ tòa nhà', color: 'green', desc: 'Báo cáo số liệu toàn diện, quản lý gói dịch vụ, phân bổ gian hàng và tối ưu hóa doanh thu bất động sản.' },
+            { role: 'Quản trị viên hệ thống', color: 'cyan', desc: 'Kiểm soát toàn bộ hạ tầng, cách ly khách thuê, định mức tài nguyên và giám sát toàn hệ thống.' },
           ].map((item, i) => (
             <div key={item.role} className={`lp-role-card lp-role-card--${item.color}`} data-reveal="scale-up" data-reveal-delay={String(i * 80)}>
-              <div className="lp-role-card__icon">{item.icon}</div>
               <h3 className="lp-role-card__title">{item.role}</h3>
               <p className="lp-role-card__desc">{item.desc}</p>
-              <div className="lp-role-card__cta">Learn more →</div>
+              <div className="lp-role-card__cta">Tìm hiểu thêm →</div>
             </div>
           ))}
         </div>
@@ -604,13 +603,12 @@ export function LandingPage() {
 
         <div className="lp-steps">
           {[
-            { num: '01', icon: '📄', title: 'Upload 2D CAD or PDF', sub: 'Drag blueprints. Our pipeline parses walls, doors, rooms, and circulation axes automatically. AutoCAD / Revit / PDF — all accepted.', tags: ['DWG / DXF', 'Revit BIM', 'PDF', 'Image OCR'] },
-            { num: '02', icon: '🤖', title: 'AI Generates 3D Navmesh', sub: 'Our continuous spatial-graph model builds a fully navigable 3D waypoint network in under 30 seconds. Automatic POI placement from labels.', tags: ['GPT-4 Vision', 'Point Cloud', 'Auto POI'] },
-            { num: '03', icon: '🚀', title: 'Xuất bản & Điều hướng tức thì', sub: 'Kích hoạt ngay cho Kiosk 3D, màn hình chỉ dẫn hoặc web di động chỉ trong 1 click. Số liệu lưu lượng cập nhật theo thời gian thực.', tags: ['Kích hoạt tức thì', 'Trạng thái: Trực tuyến'] },
+            { num: '01', title: 'Tải lên bản vẽ 2D CAD hoặc PDF', sub: 'Kéo thả bản vẽ mặt bằng. Hệ thống tự động phân tích tường, cửa, phòng và các trục lưu thông. Hỗ trợ AutoCAD / Revit / PDF.', tags: ['DWG / DXF', 'Revit BIM', 'Bản vẽ PDF', 'Nhận diện OCR'] },
+            { num: '02', title: 'AI tự động tạo lưới 3D Navmesh', sub: 'Mô hình đồ thị không gian liên tục tạo mạng lưới điểm điều hướng 3D hoàn chỉnh dưới 30 giây. Tự động định vị POI từ nhãn bản vẽ.', tags: ['Thị giác AI', 'Đám mây điểm', 'Tự động tạo POI'] },
+            { num: '03', title: 'Xuất bản & Điều hướng tức thì', sub: 'Kích hoạt ngay cho Kiosk 3D, màn hình chỉ dẫn hoặc web di động chỉ trong 1 click. Số liệu lưu lượng cập nhật theo thời gian thực.', tags: ['Kích hoạt tức thì', 'Trạng thái: Trực tuyến'] },
           ].map((step, i) => (
             <div key={step.num} className="lp-step" data-reveal="flip-up" data-reveal-delay={String(i * 120)}>
               <div className="lp-step__num">{step.num}</div>
-              <div className="lp-step__icon">{step.icon}</div>
               <h3 className="lp-step__title">{step.title}</h3>
               <p className="lp-step__sub">{step.sub}</p>
               <div className="lp-tag-row">{step.tags.map((t) => <span key={t} className="lp-tag">{t}</span>)}</div>
