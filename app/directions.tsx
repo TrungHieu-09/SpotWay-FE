@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Animated,
@@ -16,16 +16,19 @@ import Svg, { Circle, Defs, G, Line, Path, Pattern, Polyline, Rect, Text as SvgT
 
 import { StoreIcon, wrapLabel } from '@/components/floor-plan-parts';
 import {
+  EVAC_START_NODE,
   FLOOR_VIEWBOX,
   FLOORS,
   getStores,
-  STAIRS,
+  STAIRWELL_EXIT_ID,
   WALK_SPEED_MPS,
   zoneOf,
   type Floor,
 } from '@/data/mock-floor';
-import { planRoute, stepHeadline, type StepKind } from '@/data/route-steps';
+import { planEvacuation, planRoute, stepHeadline, type Point, type StepKind } from '@/data/route-steps';
 import { useActiveStep } from '@/hooks/use-active-step';
+import { setIncident } from '@/hooks/use-incident';
+import { useWalkSimulation } from '@/hooks/use-walk-simulation';
 
 const BLUE = '#1C4E9C';
 const INK = '#14213D';
@@ -42,9 +45,12 @@ const STEP_ICON: Record<StepKind, keyof typeof MaterialIcons.glyphMap> = {
   left: 'turn-left',
   right: 'turn-right',
   arrive: 'flag',
+  stairs: 'stairs',
 };
 
 type Focus = 'follow' | 'stairs' | 'elevator';
+
+const NO_CORNERS: Point[] = [];
 
 const lowerFirst = (s: string) => (s ? s.charAt(0).toLowerCase() + s.slice(1) : s);
 
@@ -58,13 +64,29 @@ export default function DirectionsScreen() {
     dest,
     floor: floorParam,
     from,
-  } = useLocalSearchParams<{ to?: string; dest?: string; floor?: string; from?: string }>();
+    mode,
+  } = useLocalSearchParams<{
+    to?: string;
+    dest?: string;
+    floor?: string;
+    from?: string;
+    mode?: string;
+  }>();
+  const evac = mode === 'evac';
   const destId = to ?? dest ?? '';
   const floor: Floor = FLOORS.includes(floorParam as Floor) ? (floorParam as Floor) : '1';
 
-  const plan = useMemo(() => planRoute(floor, destId), [floor, destId]);
-  const [active, setActive] = useActiveStep(`${floor}:${destId}`);
-  const [viewFloor, setViewFloor] = useState<Floor>(floor);
+  // Evacuation routes span floors: one leg per floor, joined by a 'stairs' step.
+  const legs = useMemo(() => (evac ? planEvacuation(floor, EVAC_START_NODE) : null), [evac, floor]);
+  const [legIndex, setLegIndex] = useState(0);
+  const plan = useMemo(
+    () => (evac ? (legs?.[legIndex] ?? null) : planRoute(floor, destId)),
+    [evac, legs, legIndex, floor, destId],
+  );
+  const routeFloor: Floor = evac ? (legs?.[legIndex]?.floor ?? floor) : floor;
+  const [active, setActive] = useActiveStep(evac ? `evac:${legIndex}` : `${floor}:${destId}`);
+  const [viewFloor, setViewFloor] = useState<Floor>(routeFloor);
+  useEffect(() => setViewFloor(routeFloor), [routeFloor]);
   const [focus, setFocus] = useState<Focus>('follow');
 
   const pulse = useRef(new Animated.Value(0)).current;
@@ -83,8 +105,42 @@ export default function DirectionsScreen() {
   const pulseR = pulse.interpolate({ inputRange: [0, 1], outputRange: [10, 28] });
   const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0] });
 
+  // Simulated walker: drives the active step; external step changes (card tap, list) seek it.
+  const corners = plan?.route.corners ?? NO_CORNERS;
+  const sim = useWalkSimulation(corners);
+  const { segmentIndex, seekToSegment } = sim;
+  useEffect(() => {
+    setActive(segmentIndex);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [segmentIndex]);
+
+  // The step list can change the active step while this screen is hidden: seek when we come back.
+  // (Seeking only on explicit actions avoids the sim and the store chasing each other.)
+  const latest = useRef({ active, segmentIndex });
+  latest.current = { active, segmentIndex };
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      if (latest.current.active !== latest.current.segmentIndex) seekToSegment(latest.current.active);
+    }, [seekToSegment]),
+  );
+
+  // Reaching the stairwell hands over to the next floor's leg after a short pause.
+  const lastStep = plan?.route.steps[plan.route.steps.length - 1];
+  const atStairs = evac && lastStep?.kind === 'stairs' && sim.finished;
+  useEffect(() => {
+    if (!atStairs || !legs || legIndex >= legs.length - 1) return;
+    const id = setTimeout(() => setLegIndex((i) => i + 1), 2000);
+    return () => clearTimeout(id);
+  }, [atStairs, legs, legIndex]);
+
   const stores = useMemo(() => getStores(viewFloor), [viewFloor]);
   const elevator = stores.find((s) => s.category === 'elevator') ?? null;
+  const stairwell = stores.find((s) => s.id === STAIRWELL_EXIT_ID) ?? null;
 
   if (!plan) {
     return (
@@ -98,26 +154,32 @@ export default function DirectionsScreen() {
   }
 
   const { store, route } = plan;
-  const { corners, steps } = route;
+  const { steps } = route;
+  const accent = evac ? DANGER : BLUE;
   const legCount = corners.length - 1;
   const current = Math.min(active, steps.length - 1);
   const step = steps[current];
   const next = steps[current + 1];
-  const onRouteFloor = viewFloor === floor;
+  const onRouteFloor = viewFloor === routeFloor;
 
-  // Position + heading of the walker.
-  const position = corners[Math.min(current, legCount)];
+  // Position + heading come from the walk simulation; leg bounds still drive the camera.
+  const { position, heading } = sim;
   const legFrom = corners[Math.min(current, legCount - 1)];
   const legTo = corners[Math.min(current + 1, legCount)];
-  const heading = (Math.atan2(legTo.x - legFrom.x, -(legTo.y - legFrom.y)) * 180) / Math.PI;
+  const legLeft = step.kind === 'arrive' ? 0 : Math.max(1, Math.ceil(step.meters * (1 - sim.progress)));
 
-  const remainingMeters = steps.slice(current).reduce((sum, s) => sum + s.meters, 0);
+  const remainingMeters =
+    legLeft + steps.slice(current + 1).reduce((sum, s) => sum + s.meters, 0);
+  const arrived = step.kind === 'arrive' && sim.finished;
+  const safe = evac && arrived && legIndex === (legs?.length ?? 1) - 1;
   const remainingMinutes = Math.max(1, Math.ceil(remainingMeters / WALK_SPEED_MPS / 60));
 
   // Camera: follow the current leg, or jump to a facility the user asked about.
   const focusPoint =
     focus === 'stairs'
-      ? { x: STAIRS.x, y: STAIRS.y }
+      ? stairwell
+        ? { x: stairwell.x + stairwell.width / 2, y: stairwell.y + stairwell.height / 2 }
+        : null
       : focus === 'elevator' && elevator
         ? { x: elevator.x + elevator.width / 2, y: elevator.y + elevator.height / 2 }
         : null;
@@ -149,11 +211,11 @@ export default function DirectionsScreen() {
   const viewBox = `${vbX} ${vbY} ${vbW} ${vbH}`;
 
   const pts = (list: { x: number; y: number }[]) => list.map((p) => `${p.x},${p.y}`).join(' ');
-  const done = current > 0 ? corners.slice(0, Math.min(current, legCount) + 1) : [];
-  const now = current < legCount ? [corners[current], corners[current + 1]] : [];
+  const done = current >= legCount ? corners : [...corners.slice(0, current + 1), position];
+  const now = current < legCount ? [position, corners[current + 1]] : [];
   const upcoming = current + 1 < legCount ? corners.slice(current + 1) : [];
 
-  const sub = step.kind === 'arrive' ? store.name : step.landmark
+  const sub = step.kind === 'arrive' || step.kind === 'stairs' ? store.name : step.landmark
     ? t('dir.toward', { place: step.landmark })
     : t(`store.zone.${zoneOf(store.corridor)}`);
   const afterText = next
@@ -213,24 +275,11 @@ export default function DirectionsScreen() {
             );
           })}
 
-          {/* stairwell */}
-          <Circle cx={STAIRS.x} cy={STAIRS.y} r={STAIRS.r} fill="#FFFFFF" stroke={BLUE} strokeWidth={3} />
-          <G transform={`translate(${STAIRS.x}, ${STAIRS.y})`}>
-            <Path
-              d="M-8 7 H-3 V3 H1 V-1 H5 V-5 H8"
-              fill="none"
-              stroke={BLUE}
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </G>
-
           {onRouteFloor && done.length > 1 && (
             <Polyline
               points={pts(done)}
               fill="none"
-              stroke={BLUE}
+              stroke={accent}
               strokeWidth={3}
               strokeOpacity={0.25}
               strokeDasharray={[8, 4, 2, 4]}
@@ -241,7 +290,7 @@ export default function DirectionsScreen() {
             <Polyline
               points={pts([corners[current + 1], ...upcoming.slice(1)])}
               fill="none"
-              stroke={BLUE}
+              stroke={accent}
               strokeWidth={3}
               strokeDasharray={[8, 4, 2, 4]}
               strokeLinejoin="round"
@@ -251,7 +300,7 @@ export default function DirectionsScreen() {
             <Polyline
               points={pts(now)}
               fill="none"
-              stroke={BLUE}
+              stroke={accent}
               strokeWidth={6}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -264,13 +313,13 @@ export default function DirectionsScreen() {
                 cx={position.x}
                 cy={position.y}
                 r={pulseR}
-                fill={BLUE}
+                fill={accent}
                 opacity={pulseOpacity}
               />
               <G transform={`translate(${position.x}, ${position.y}) rotate(${heading})`}>
                 <Path
                   d="M0 -11 L8 9 L0 4 L-8 9 Z"
-                  fill={BLUE}
+                  fill={accent}
                   stroke="#FFFFFF"
                   strokeWidth={2.5}
                   strokeLinejoin="round"
@@ -282,16 +331,26 @@ export default function DirectionsScreen() {
       </View>
 
       <SafeAreaView edges={['top']} style={styles.overlay} pointerEvents="box-none">
+        {evac && (
+          <View style={styles.evacBanner}>
+            <MaterialIcons name="warning" size={26} color="#FFFFFF" />
+            <Text style={styles.evacBannerText}>{t('evac.header')}</Text>
+          </View>
+        )}
         <Pressable
           accessibilityRole="button"
-          onPress={() => setActive(Math.min(current + 1, steps.length - 1))}
-          style={styles.card}>
-          <View style={styles.cardIcon}>
+          onPress={() => {
+            const nextStep = Math.min(current + 1, steps.length - 1);
+            setActive(nextStep);
+            seekToSegment(nextStep);
+          }}
+          style={[styles.card, evac && styles.cardEvac]}>
+          <View style={[styles.cardIcon, evac && { backgroundColor: DANGER }]}>
             <MaterialIcons name={STEP_ICON[step.kind]} size={44} color="#FFFFFF" />
           </View>
           <View style={styles.cardBody}>
-            <Text style={styles.cardMain} numberOfLines={1}>
-              {stepHeadline(t, step)}
+            <Text style={[styles.cardMain, evac && styles.cardMainEvac]} numberOfLines={evac ? 2 : 1}>
+              {stepHeadline(t, { ...step, meters: legLeft })}
             </Text>
             <Text style={styles.cardSub} numberOfLines={1}>
               {sub}
@@ -307,7 +366,8 @@ export default function DirectionsScreen() {
             accessibilityLabel={t('dir.list')}
             hitSlop={10}
             onPress={() =>
-              router.push({ pathname: '/directions-list', params: { to: destId, floor, from } })
+              router.push({ pathname: '/directions-list', params: { to: destId, floor, from, mode, leg: String(legIndex) },
+              })
             }
             style={styles.menu}>
             <MaterialIcons name="menu" size={24} color={INK} />
@@ -315,7 +375,7 @@ export default function DirectionsScreen() {
         </Pressable>
       </SafeAreaView>
 
-      <View style={[styles.sideLeft, { top: insets.top + 150 }]} pointerEvents="box-none">
+      <View style={[styles.sideLeft, { top: insets.top + 150 + (evac ? 70 : 0) }]} pointerEvents="box-none">
         <Pressable
           accessibilityRole="button"
           accessibilityState={{ selected: focus === 'stairs' }}
@@ -338,7 +398,7 @@ export default function DirectionsScreen() {
         </Pressable>
       </View>
 
-      <View style={[styles.sideRight, { top: insets.top + 150 }]} pointerEvents="box-none">
+      <View style={[styles.sideRight, { top: insets.top + 150 + (evac ? 70 : 0) }]} pointerEvents="box-none">
         <View style={styles.floorColumn}>
           {[...FLOORS].reverse().map((f) => {
             const on = f === viewFloor;
@@ -360,15 +420,39 @@ export default function DirectionsScreen() {
         </View>
       </View>
 
-      <View style={[styles.bottom, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View style={[
+          styles.bottom,
+          evac && { backgroundColor: '#FDECEC' },
+          { paddingBottom: Math.max(insets.bottom, 12) },
+        ]}>
         <View style={styles.bottomInfo}>
           <Text style={styles.bottomName} numberOfLines={1}>
             {store.name}
           </Text>
           <Text style={styles.bottomMeta}>
-            {t('dir.time', { minutes: remainingMinutes, meters: remainingMeters })}
+            {arrived
+              ? t('dir.youArrived')
+              : t('dir.time', { minutes: remainingMinutes, meters: remainingMeters })}
           </Text>
         </View>
+        {!sim.finished && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={sim.playing ? t('dir.pause') : t('dir.resume')}
+            onPress={sim.playing ? sim.pause : sim.play}
+            hitSlop={6}
+            style={styles.simBtn}>
+            <MaterialIcons name={sim.playing ? 'pause' : 'play-arrow'} size={22} color={BLUE} />
+          </Pressable>
+        )}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('dir.restart')}
+          onPress={sim.restart}
+          hitSlop={6}
+          style={styles.simBtn}>
+          <MaterialIcons name="replay" size={22} color={BLUE} />
+        </Pressable>
         <Pressable
           accessibilityRole="button"
           onPress={() =>
@@ -378,6 +462,22 @@ export default function DirectionsScreen() {
           <Text style={styles.exit}>{t('dir.exit')}</Text>
         </Pressable>
       </View>
+      {safe && (
+        <View style={styles.safe}>
+          <MaterialIcons name="verified-user" size={96} color="#FFFFFF" />
+          <Text style={styles.safeTitle}>{t('evac.safeTitle')}</Text>
+          <Text style={styles.safeDesc}>{t('evac.safeDesc')}</Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              setIncident(null);
+              router.dismissTo({ pathname: '/map', params: { from, floor: routeFloor, ts: String(Date.now()) } });
+            }}
+            style={styles.safeBtn}>
+            <Text style={styles.safeBtnText}>{t('evac.safeBack')}</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
@@ -403,6 +503,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     ...shadow,
   },
+  cardEvac: { borderWidth: 3, borderColor: DANGER },
+  cardMainEvac: { fontSize: 28 },
+  evacBanner: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: DANGER,
+  },
+  evacBannerText: { flex: 1, fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
+  safe: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    padding: 32,
+    backgroundColor: '#2E9E5B',
+  },
+  safeTitle: { fontSize: 32, fontWeight: '800', color: '#FFFFFF' },
+  safeDesc: { fontSize: 16, textAlign: 'center', color: '#FFFFFF' },
+  safeBtn: {
+    marginTop: 16,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+  },
+  safeBtnText: { fontSize: 16, fontWeight: '800', color: '#2E9E5B' },
   cardIcon: {
     width: 68,
     height: 68,
@@ -477,6 +607,14 @@ const styles = StyleSheet.create({
   bottomInfo: { flex: 1 },
   bottomName: { fontSize: 16, fontWeight: '800', color: INK },
   bottomMeta: { fontSize: 13, color: MUTED, marginTop: 2 },
+  simBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: ACTIVE_BG,
+  },
   exit: { fontSize: 15, fontWeight: '800', color: DANGER },
   emptyBack: { padding: 16 },
   empty: { padding: 24, textAlign: 'center', color: MUTED },

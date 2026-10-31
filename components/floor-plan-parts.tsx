@@ -3,9 +3,10 @@ import { G, Path } from 'react-native-svg';
 import type { StoreCategory } from '@/data/mock-floor';
 
 const INK = '#14213D';
+const EXIT_GREEN = '#2E9E5B';
 
 /** Icon paths drawn in a 16x16 box centred on (0,0). */
-const ICONS: Partial<Record<StoreCategory, { d: string; fill?: boolean }[]>> = {
+const ICONS: Partial<Record<StoreCategory, { d: string; fill?: boolean; color?: string }[]>> = {
   coffee: [
     { d: 'M-5 -3 H3 V2 a3 3 0 0 1 -3 3 H-2 a3 3 0 0 1 -3 -3 Z' },
     { d: 'M3 -2 H4.5 a1.8 1.8 0 0 1 0 3.6 H3' },
@@ -38,6 +39,10 @@ const ICONS: Partial<Record<StoreCategory, { d: string; fill?: boolean }[]>> = {
     { d: 'M-7 -5 H-4 L-2 3 H5 L6.5 -3 H-4.5' },
     { d: 'M-1 6 a1 1 0 1 0 2 0 a1 1 0 1 0 -2 0 M4 6 a1 1 0 1 0 2 0 a1 1 0 1 0 -2 0' },
   ],
+  exit: [
+    { d: 'M-1 -7 H6 V7 H-1', color: EXIT_GREEN },
+    { d: 'M-7 0 H2 M-1 -3 L2 0 L-1 3', color: EXIT_GREEN },
+  ],
   pharmacy: [{ d: 'M-2 -6 H2 V-2 H6 V2 H2 V6 H-2 V2 H-6 V-2 H-2 Z' }],
 };
 
@@ -51,7 +56,7 @@ export function StoreIcon({ category, x, y }: { category: StoreCategory; x: numb
           key={i}
           d={p.d}
           fill={p.fill ? INK : 'none'}
-          stroke={INK}
+          stroke={p.color ?? INK}
           strokeWidth={1.2}
           strokeLinecap="round"
           strokeLinejoin="round"

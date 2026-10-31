@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { isVenueCode } from '@/data/mock-floor';
+
 const BLUE = '#1C4E9C';
 const ORANGE = '#F2641E';
 const INK = '#14213D';
@@ -31,11 +33,16 @@ export default function ScanScreen() {
   const [torch, setTorch] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [code, setCode] = useState('');
+  const [codeError, setCodeError] = useState(false);
   const handled = useRef(false);
 
   const openVenue = (value: string) => {
-    const trimmed = value.trim();
+    const trimmed = value.trim().toUpperCase();
     if (!trimmed || handled.current) return;
+    if (!isVenueCode(trimmed)) {
+      setCodeError(true);
+      return;
+    }
     handled.current = true;
     setManualOpen(false);
     router.replace({ pathname: '/map', params: { from: trimmed } });
@@ -159,7 +166,10 @@ export default function ScanScreen() {
               <Text style={styles.sheetDesc}>{t('scan.modalDesc')}</Text>
               <TextInput
                 value={code}
-                onChangeText={setCode}
+                onChangeText={(v) => {
+                  setCode(v);
+                  setCodeError(false);
+                }}
                 placeholder={t('scan.modalPlaceholder')}
                 placeholderTextColor="#737782"
                 autoCapitalize="characters"
@@ -169,6 +179,7 @@ export default function ScanScreen() {
                 onSubmitEditing={() => openVenue(code)}
                 style={styles.input}
               />
+              {codeError && <Text style={styles.inputError}>{t('scan.invalidCode')}</Text>}
               <Pressable
                 accessibilityRole="button"
                 onPress={() => openVenue(code)}
@@ -244,6 +255,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   bottomInner: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, gap: 12, alignItems: 'center' },
+  inputError: { marginTop: 8, fontSize: 13, color: '#D64545' },
   manualButton: {
     width: '100%',
     height: 50,

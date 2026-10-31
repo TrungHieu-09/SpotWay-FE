@@ -4,9 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FLOORS } from '@/data/mock-floor';
 import { useAccessibilityMode } from '@/hooks/use-accessibility-mode';
+import { useIncident } from '@/hooks/use-incident';
 
 const BLUE = '#1C4E9C';
+const DANGER = '#D64545';
 const INK = '#14213D';
 const MUTED = '#5B6B88';
 const BORDER = '#E2E8F0';
@@ -23,6 +26,7 @@ export default function AccessibilityScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const [enabled, setEnabled] = useAccessibilityMode();
+  const [incident, setIncident] = useIncident();
 
   return (
     <SafeAreaView style={styles.root}>
@@ -72,6 +76,28 @@ export default function AccessibilityScreen() {
               </View>
             </View>
           ))}
+        </View>
+
+        <View style={styles.demoCard}>
+          <Text style={styles.demoTitle}>{t('evac.demoTitle')}</Text>
+          <Text style={styles.desc}>{t('evac.demoDesc')}</Text>
+          <View style={styles.demoFloors}>
+            {FLOORS.map((f) => (
+              <Pressable
+                key={f}
+                accessibilityRole="button"
+                accessibilityState={{ selected: incident === f }}
+                onPress={() => setIncident(f)}
+                style={[styles.demoFloor, incident === f && styles.demoFloorOn]}>
+                <Text style={[styles.demoFloorText, incident === f && { color: '#FFFFFF' }]}>{f}</Text>
+              </Pressable>
+            ))}
+          </View>
+          {incident && (
+            <Pressable accessibilityRole="button" onPress={() => setIncident(null)}>
+              <Text style={styles.demoOff}>{t('evac.demoOff')}</Text>
+            </Pressable>
+          )}
         </View>
 
         <Text style={styles.footnote}>{t('access.footnote')}</Text>
@@ -157,5 +183,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: TINT,
   },
+  demoCard: {
+    padding: 20,
+    marginBottom: 24,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: DANGER,
+  },
+  demoTitle: { fontSize: 16, fontWeight: '700', color: DANGER },
+  demoFloors: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  demoFloor: {
+    minWidth: 44,
+    height: 36,
+    paddingHorizontal: 10,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: DANGER,
+  },
+  demoFloorOn: { backgroundColor: DANGER },
+  demoFloorText: { fontSize: 14, fontWeight: '700', color: DANGER },
+  demoOff: { marginTop: 14, fontSize: 14, fontWeight: '700', color: MUTED },
   footnote: { textAlign: 'center', paddingHorizontal: 16, fontSize: 13, color: MUTED },
 });

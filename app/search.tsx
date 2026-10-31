@@ -55,6 +55,7 @@ const ICONS: Record<StoreCategory, keyof typeof MaterialIcons.glyphMap> = {
   beauty: 'spa',
   supermarket: 'shopping-cart',
   pharmacy: 'local-pharmacy',
+  exit: 'exit-to-app',
   rest: 'event-seat',
 };
 

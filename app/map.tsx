@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Animated, Easing, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, ToastAndroid, Platform, Alert, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Reanimated, {
   useAnimatedStyle,
@@ -10,7 +10,7 @@ import Reanimated, {
   withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Defs, G, Line, Path, Pattern, Polyline, Rect, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Defs, G, Line, Pattern, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 
 import {
   CURRENT_LOCATION_NODE,
@@ -19,17 +19,19 @@ import {
   getGraph,
   FLOOR_VIEWBOX,
   METERS_PER_UNIT,
+  isVenueCode,
   MOCK_BUILDING,
-  STAIRS,
   DEFAULT_FLOOR,
   FLOORS,
   getStores,
   type Floor,
+  type StoreCategory,
   WALK_SPEED_MPS,
 } from '@/data/mock-floor';
 import { StoreIcon, wrapLabel } from '@/components/floor-plan-parts';
-import { findPath } from '@/data/pathfinding';
+import { findNearest, findPath } from '@/data/pathfinding';
 import { useAccessibilityMode } from '@/hooks/use-accessibility-mode';
+import { useIncident } from '@/hooks/use-incident';
 
 const BLUE = '#1C4E9C';
 const ORANGE = '#F2641E';
@@ -37,20 +39,38 @@ const INK = '#14213D';
 const MUTED = '#5B6B88';
 const BORDER = '#E4E8F0';
 const WALL = '#8A8F98';
+const DANGER = '#D64545';
+
+// Bottom navigation bar: floating controls sit above it by this height plus the safe-area inset.
+const TAB_BAR_HEIGHT = 56;
+const FLOAT_GAP = 16;
 
 
-// Extra headroom so the first row of stores is not hidden under the floating controls.
+// Extra headroom above (search, floors, chips) and below (zoom buttons) so no store is covered.
+const PLAN_TOP = 270;
+const PLAN_BOTTOM = 80;
 const PLAN = {
   x: FLOOR_VIEWBOX.x,
-  y: FLOOR_VIEWBOX.y - 135,
+  y: FLOOR_VIEWBOX.y - PLAN_TOP,
   w: FLOOR_VIEWBOX.width,
-  h: FLOOR_VIEWBOX.height + 135,
+  h: FLOOR_VIEWBOX.height + PLAN_TOP + PLAN_BOTTOM,
 };
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.5;
 const VIEW_BOX = `${PLAN.x} ${PLAN.y} ${PLAN.w} ${PLAN.h}`;
 const SELECTED_FILL = '#D3D7DE';
+
+const NEAREST_CHIPS: {
+  key: string;
+  icon: keyof typeof MaterialIcons.glyphMap;
+  categories: StoreCategory[];
+}[] = [
+  { key: 'wc', icon: 'wc', categories: ['wc_male', 'wc_female'] },
+  { key: 'atm', icon: 'atm', categories: ['atm'] },
+  { key: 'elevator', icon: 'elevator', categories: ['elevator'] },
+  { key: 'pharmacy', icon: 'local-pharmacy', categories: ['pharmacy'] },
+];
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedPolyline = Animated.createAnimatedComponent(Polyline);
@@ -77,7 +97,9 @@ export default function FloorMapScreen() {
   const [marked, setMarked] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [accessible] = useAccessibilityMode();
+  const [incident] = useIncident();
   const insets = useSafeAreaInsets();
+  const floatBottom = TAB_BAR_HEIGHT + insets.bottom + FLOAT_GAP;
 
   // A destination picked on the search screen replaces the current one.
   useEffect(() => {
@@ -229,6 +251,26 @@ export default function FloorMapScreen() {
     setDetailOpen(false);
     startGuidance();
   };
+  const goNearest = (categories: StoreCategory[]) => {
+    const hit = findNearest(categories, CURRENT_LOCATION_NODE, { fromFloor: floor, accessible });
+    if (!hit) {
+      const msg = t('map.nearest.notFound');
+      if (Platform.OS === 'android') ToastAndroid.show(msg, ToastAndroid.SHORT);
+      else Alert.alert(msg);
+      return;
+    }
+    router.push({ pathname: '/directions', params: { to: hit.storeId, floor: hit.floor, from } });
+  };
+  const startEvacuation = () => {
+    Alert.alert(t('evac.confirmTitle'), t('evac.confirmMsg'), [
+      { text: t('evac.cancel'), style: 'cancel' },
+      {
+        text: t('evac.confirmGo'),
+        style: 'destructive',
+        onPress: () => router.push({ pathname: '/directions', params: { mode: 'evac', floor, from } }),
+      },
+    ]);
+  };
   const clearDestination = () => {
     setDestId(null);
     setNavigating(false);
@@ -299,14 +341,6 @@ export default function FloorMapScreen() {
             );
           })}
 
-          {/* stairs / escalator */}
-          <Circle cx={STAIRS.x} cy={STAIRS.y} r={STAIRS.r} fill="#FFFFFF" stroke={WALL} strokeWidth={3} />
-          <Path
-            d={`M${STAIRS.x - 14} ${STAIRS.y - 14} L${STAIRS.x + 14} ${STAIRS.y + 14} M${STAIRS.x + 14} ${STAIRS.y - 14} L${STAIRS.x - 14} ${STAIRS.y + 14}`}
-            stroke={WALL}
-            strokeWidth={2.5}
-          />
-
           {navigating && routePoints && (
             <AnimatedPolyline
               points={routePoints}
@@ -326,8 +360,17 @@ export default function FloorMapScreen() {
       </GestureDetector>
 
       <SafeAreaView edges={['top']} style={styles.overlay} pointerEvents="box-none">
+        {incident && (
+          <Pressable
+            accessibilityRole="alert"
+            onPress={startEvacuation}
+            style={styles.incidentBanner}>
+            <MaterialIcons name="warning" size={22} color="#FFFFFF" />
+            <Text style={styles.incidentText}>{t('evac.banner', { floor: incident })}</Text>
+          </Pressable>
+        )}
         <Text style={styles.building} numberOfLines={1}>
-          {from ? `${MOCK_BUILDING.name} · ${from}` : MOCK_BUILDING.name}
+          {from && isVenueCode(from) ? `${MOCK_BUILDING.name} · ${from}` : MOCK_BUILDING.name}
         </Text>
         <View style={styles.searchRow}>
           <Pressable
@@ -375,6 +418,34 @@ export default function FloorMapScreen() {
             })}
           </View>
         </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('evac.button')}
+            onPress={startEvacuation}
+            style={[styles.chip, styles.chipEvac]}>
+            <MaterialIcons name="exit-to-app" size={16} color="#FFFFFF" />
+            <Text style={[styles.chipText, { color: '#FFFFFF' }]} numberOfLines={1}>
+              {t('evac.button')}
+            </Text>
+          </Pressable>
+          {NEAREST_CHIPS.map((c) => (
+            <Pressable
+              key={c.key}
+              accessibilityRole="button"
+              onPress={() => goNearest(c.categories)}
+              style={styles.chip}>
+              <MaterialIcons name={c.icon} size={16} color={BLUE} />
+              <Text style={styles.chipText} numberOfLines={1}>
+                {t(`map.nearest.${c.key}`)}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
 
         {store && path && (
           <View style={styles.destCard}>
@@ -446,17 +517,15 @@ export default function FloorMapScreen() {
         </Pressable>
       </Modal>
 
-      <View style={[styles.tabBarWrap, { paddingBottom: Math.max(insets.bottom, 12) }]} pointerEvents="box-none">
+      <View style={[styles.tabBarWrap, { paddingBottom: insets.bottom }]}>
         <View style={styles.tabBar}>
-          <View style={[styles.tab, styles.tabActive]}>
-            <MaterialIcons name="map" size={18} color="#FFFFFF" />
+          <View style={styles.tab}>
+            <View style={styles.tabIndicator} />
+            <MaterialIcons name="map" size={22} color={BLUE} />
             <Text style={[styles.tabText, styles.tabTextActive]}>{t('map.tab.map')}</Text>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={openSearch}
-            style={styles.tab}>
-            <MaterialIcons name="search" size={18} color={MUTED} />
+          <Pressable accessibilityRole="button" onPress={openSearch} style={styles.tab}>
+            <MaterialIcons name="search" size={22} color={MUTED} />
             <Text style={styles.tabText}>{t('map.tab.search')}</Text>
           </Pressable>
           <Pressable
@@ -464,7 +533,7 @@ export default function FloorMapScreen() {
             accessibilityState={{ selected: accessible }}
             onPress={() => router.push('/accessibility')}
             style={[styles.tab, accessible && styles.tabAccessible]}>
-            <MaterialIcons name="accessible" size={18} color={accessible ? BLUE : MUTED} />
+            <MaterialIcons name="accessible" size={22} color={accessible ? BLUE : MUTED} />
             <Text style={[styles.tabText, accessible && { color: BLUE }]}>
               {t('map.tab.accessibility')}
             </Text>
@@ -472,7 +541,7 @@ export default function FloorMapScreen() {
         </View>
       </View>
 
-      <View style={styles.zoom}>
+      <View style={[styles.zoom, { bottom: floatBottom }]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('map.zoomIn')}
@@ -546,6 +615,32 @@ const styles = StyleSheet.create({
   floorItemActive: { backgroundColor: BLUE },
   floorText: { fontSize: 13, fontWeight: '700', color: MUTED },
   floorTextActive: { color: '#FFFFFF' },
+  chipRow: { gap: 8, paddingVertical: 2 },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+    paddingHorizontal: 12,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: BORDER,
+    ...shadow,
+  },
+  chipEvac: { backgroundColor: DANGER, borderColor: DANGER },
+  chipText: { fontSize: 13, fontWeight: '700', color: BLUE },
+  incidentBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: DANGER,
+    ...shadow,
+  },
+  incidentText: { flex: 1, fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
   building: { marginTop: 8, fontSize: 13, fontWeight: '700', color: INK },
   destCard: {
     flexDirection: 'row',
@@ -585,31 +680,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: BLUE,
   },
-  zoom: { position: 'absolute', right: 16, bottom: 110, gap: 8 },
-  tabBarWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 16 },
-  tabBar: {
-    flexDirection: 'row',
-    gap: 4,
-    padding: 4,
-    borderRadius: 999,
+  zoom: { position: 'absolute', right: 16, flexDirection: 'row', gap: 8 },
+  tabBarWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: BORDER,
-    ...shadow,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
   },
+  tabBar: { flexDirection: 'row', height: TAB_BAR_HEIGHT },
   tab: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 999,
+    gap: 2,
   },
-  tabActive: { backgroundColor: BLUE },
-  tabAccessible: { backgroundColor: '#E6EDF8' },
-  tabText: { fontSize: 13, fontWeight: '700', color: MUTED },
-  tabTextActive: { color: '#FFFFFF' },
+  tabIndicator: {
+    position: 'absolute',
+    top: 0,
+    width: 36,
+    height: 3,
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
+    backgroundColor: BLUE,
+  },
+  tabAccessible: {},
+  tabText: { fontSize: 12, fontWeight: '700', color: MUTED },
+  tabTextActive: { color: BLUE },
   zoomBtn: {
     width: 40,
     height: 40,

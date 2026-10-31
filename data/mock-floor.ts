@@ -2,6 +2,9 @@ import type { Graph, GraphEdge, GraphNode } from './pathfinding';
 
 export const MOCK_BUILDING = { code: 'SPW', name: 'SpotWay Plaza' };
 
+/** Venue codes look like SPW-402; anything else is not shown in the map title. */
+export const isVenueCode = (value: string) => /^SPW-[A-Z0-9]{2,6}$/.test(value);
+
 /** SVG coordinate space of the floor plan. */
 export const FLOOR_VIEWBOX = { x: 0, y: 0, width: 400, height: 600 };
 /** Graph units -> metres (used for distance / walking time). */
@@ -22,9 +25,10 @@ export type StoreCategory =
   | 'beauty'
   | 'supermarket'
   | 'pharmacy'
+  | 'exit'
   | 'rest';
 
-export type CorridorId = 'top' | 'left' | 'right' | 'bottom' | 'mid1' | 'mid2';
+export type CorridorId = 'top' | 'left' | 'right' | 'bottom' | 'mid1' | 'mid2' | 'entry';
 
 export type Store = {
   id: string;
@@ -53,6 +57,7 @@ const DESCRIPTIONS: Record<StoreCategory, string> = {
   beauty: 'Mỹ phẩm, làm đẹp và chăm sóc cá nhân.',
   supermarket: 'Siêu thị tạp hoá và hàng tiêu dùng hằng ngày.',
   pharmacy: 'Nhà thuốc và sản phẩm chăm sóc sức khoẻ.',
+  exit: 'Lối thoát hiểm dùng khi có sự cố, không đi thang máy hay thang cuốn.',
   rest: 'Khu vực nghỉ chân với ghế ngồi.',
 };
 
@@ -198,7 +203,12 @@ const CORE_SLOTS: Slot[] = [
   { id: 'wc_f', x: 296, y: 20, width: 84, height: 50, corridor: 'top' },
   { id: 'lift1', x: 124, y: 197, width: 48, height: 50, corridor: 'mid1' },
   { id: 'lift2', x: 176, y: 197, width: 48, height: 50, corridor: 'mid1' },
+  // Fire-escape stairwell: bottom-right corner, opening onto the entrance corridor.
+  { id: 'exit', x: 324, y: 516, width: 56, height: 52, corridor: 'entry' },
 ];
+
+/** Ground floor only: door out of the building, across the entrance corridor from the stairwell. */
+const GROUND_EXIT_SLOT: Slot = { id: 'exit_out', x: 260, y: 520, width: 36, height: 48, corridor: 'entry' };
 
 const REST_AREAS: Record<FloorLayout['lower'], { x: number; y: number; width: number; height: number }> = {
   rest: { x: 124, y: 370, width: 152, height: 100 },
@@ -214,6 +224,8 @@ const CORE: Record<string, Tenant> = {
   wc_f: ['WC Nữ', 'wc_female'],
   lift1: ['Thang máy', 'elevator'],
   lift2: ['Thang cuốn', 'escalator'],
+  exit: ['Lối thoát hiểm', 'exit'],
+  exit_out: ['Cửa thoát ngoài', 'exit', 'Cửa thoát ra ngoài toà nhà ở tầng trệt.'],
 };
 
 const TENANTS: Record<Floor, Tenant[]> = {
@@ -376,7 +388,7 @@ const TENANTS: Record<Floor, Tenant[]> = {
 const buildStores = (floor: Floor): Store[] => {
   const tenants = TENANTS[floor];
   const free = freeSlots(LAYOUTS[floor]);
-  const stores: Store[] = [...free, ...CORE_SLOTS].map((slot) => {
+  const stores: Store[] = [...free, ...CORE_SLOTS, ...(floor === '1' ? [GROUND_EXIT_SLOT] : [])].map((slot) => {
     const idx = free.indexOf(slot);
     const [name, category, description] = idx >= 0 ? tenants[idx % tenants.length] : CORE[slot.id];
     return {
@@ -408,9 +420,6 @@ const STORES_BY_FLOOR = Object.fromEntries(FLOORS.map((fl) => [fl, buildStores(f
 
 export const getStores = (floor: Floor): Store[] => STORES_BY_FLOOR[floor];
 
-/** Exit / stairwell marker, drawn as a circle with an X. */
-export const STAIRS = { x: 352, y: 548, r: 20 };
-
 // --- corridor graph ---------------------------------------------------------
 
 const JUNCTIONS: GraphNode[] = [
@@ -436,7 +445,7 @@ const CORRIDORS: Corridor[] = [
   { axis: 'h', junctions: ['n_l1', 'n_r1'], stores: 'mid1' },
   { axis: 'h', junctions: ['n_l2', 'n_r2'], stores: 'mid2' },
   { axis: 'h', junctions: ['n_b0', 'n_bl', 'n_br'], stores: 'bottom' },
-  { axis: 'v', junctions: ['n_br', 'entrance'] },
+  { axis: 'v', junctions: ['n_br', 'entrance'], stores: 'entry' },
 ];
 
 const CORRIDOR_LINE: Record<CorridorId, { axis: 'x' | 'y'; at: number }> = {
@@ -446,6 +455,7 @@ const CORRIDOR_LINE: Record<CorridorId, { axis: 'x' | 'y'; at: number }> = {
   bottom: { axis: 'y', at: 495 },
   left: { axis: 'x', at: 100 },
   right: { axis: 'x', at: 300 },
+  entry: { axis: 'x', at: 300 },
 };
 
 /** Where a store's door sits on its corridor. */
@@ -491,7 +501,16 @@ const GRAPH_BY_FLOOR = Object.fromEntries(
 export const getGraph = (floor: Floor): Graph => GRAPH_BY_FLOOR[floor];
 
 export const CURRENT_LOCATION_NODE = 'entrance';
+/**
+ * Where the user is assumed to stand during an evacuation (the entrance is right beside the exits,
+ * which would make the route trivial). n_r1 is mid-floor on the right corridor: about 29m from the
+ * exits, so the walk is long enough to follow.
+ */
+export const EVAC_START_NODE = 'n_r1';
 export const DEMO_DESTINATION_ID = 'tl1';
+/** Fire-escape stairwell present on every floor, and the door out of the building on floor 1. */
+export const STAIRWELL_EXIT_ID = 'exit';
+export const OUTSIDE_EXIT_ID = 'exit_out';
 export const DEFAULT_FLOOR: Floor = '1';
 
 export const doorNodeId = (storeId: string) => `door:${storeId}`;
@@ -504,6 +523,7 @@ export function openingHours(category: StoreCategory): string {
     case 'wc_female':
     case 'elevator':
     case 'escalator':
+    case 'exit':
     case 'rest':
       return '24/7';
     case 'coffee':
@@ -525,6 +545,7 @@ export function zoneOf(corridor?: CorridorId): 'west' | 'east' | 'north' | 'entr
     case 'top':
       return 'north';
     case 'bottom':
+    case 'entry':
       return 'entrance';
     default:
       return 'center';

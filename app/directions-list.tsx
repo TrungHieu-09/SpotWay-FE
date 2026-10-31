@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FLOORS, WALK_SPEED_MPS, type Floor } from '@/data/mock-floor';
-import { planRoute, stepSummary, type StepKind } from '@/data/route-steps';
+import { EVAC_START_NODE, FLOORS, WALK_SPEED_MPS, type Floor } from '@/data/mock-floor';
+import { planEvacuation, planRoute, stepSummary, type StepKind } from '@/data/route-steps';
 import { useActiveStep } from '@/hooks/use-active-step';
 
 const BLUE = '#1C4E9C';
@@ -21,21 +21,33 @@ const STEP_ICON: Record<StepKind, keyof typeof MaterialIcons.glyphMap> = {
   left: 'turn-left',
   right: 'turn-right',
   arrive: 'flag',
+  stairs: 'stairs',
 };
 
 export default function DirectionsListScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { to, floor: floorParam, from } = useLocalSearchParams<{
+  const { to, floor: floorParam, from, mode, leg } = useLocalSearchParams<{
     to?: string;
     floor?: string;
     from?: string;
+    mode?: string;
+    leg?: string;
   }>();
+  const evacLeg = mode === 'evac' ? Number(leg ?? 0) : null;
   const destId = to ?? '';
   const floor: Floor = FLOORS.includes(floorParam as Floor) ? (floorParam as Floor) : '1';
 
-  const plan = useMemo(() => planRoute(floor, destId), [floor, destId]);
-  const [active, setActive] = useActiveStep(`${floor}:${destId}`);
+  const plan = useMemo(
+    () =>
+      evacLeg === null
+        ? planRoute(floor, destId)
+        : (planEvacuation(floor, EVAC_START_NODE)?.[evacLeg] ?? null),
+    [floor, destId, evacLeg],
+  );
+  const [active, setActive] = useActiveStep(
+    evacLeg === null ? `${floor}:${destId}` : `evac:${evacLeg}`,
+  );
 
   const goToMap = () => {
     if (router.canGoBack()) router.back();
