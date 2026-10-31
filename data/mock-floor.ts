@@ -515,6 +515,54 @@ export const DEFAULT_FLOOR: Floor = '1';
 
 export const doorNodeId = (storeId: string) => `door:${storeId}`;
 
+// --- hazard zones (simulated incidents) ------------------------------------
+
+export type HazardZoneName = 'west' | 'east' | 'north' | 'center';
+export type HazardType = 'fire' | 'maintenance';
+export type HazardZone = { floor: Floor; zone: HazardZoneName; type: HazardType };
+
+export const HAZARD_ZONE_NAMES: HazardZoneName[] = ['west', 'east', 'north', 'center'];
+export const HAZARD_TYPES: HazardType[] = ['fire', 'maintenance'];
+
+type Rect = { x: number; y: number; width: number; height: number };
+
+/** Area of the floor plan each zone covers. West/east are the side columns, north the top row. */
+const ZONE_RECT: Record<HazardZoneName, Rect> = {
+  west: { x: 8, y: 105, width: 104, height: 380 },
+  east: { x: 288, y: 105, width: 104, height: 380 },
+  north: { x: 8, y: 8, width: 384, height: 97 },
+  center: { x: 112, y: 105, width: 176, height: 380 },
+};
+
+export const hazardRect = (zone: HazardZoneName): Rect => ZONE_RECT[zone];
+
+const inRect = (p: { x: number; y: number }, r: Rect) =>
+  p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height;
+
+/** Corridor nodes (junctions and store doors) inside the hazard zone. */
+export function hazardNodeIds(hazard: HazardZone): string[] {
+  const rect = ZONE_RECT[hazard.zone];
+  return Object.values(getGraph(hazard.floor).nodes)
+    .filter((n) => inRect(n, rect))
+    .map((n) => n.id);
+}
+
+/** Stores whose centre lies inside the hazard zone. */
+export function hazardStoreIds(hazard: HazardZone): string[] {
+  const rect = ZONE_RECT[hazard.zone];
+  return getStores(hazard.floor)
+    .filter((s) => inRect({ x: s.x + s.width / 2, y: s.y + s.height / 2 }, rect))
+    .map((s) => s.id);
+}
+
+/** Nodes routes must avoid on `floor`, or undefined when the hazard is elsewhere. */
+export function blockedNodes(
+  hazard: HazardZone | null | undefined,
+  floor: Floor,
+): ReadonlySet<string> | undefined {
+  return hazard && hazard.floor === floor ? new Set(hazardNodeIds(hazard)) : undefined;
+}
+
 /** Every tenant in the mock building is open; services run around the clock. */
 export function openingHours(category: StoreCategory): string {
   switch (category) {

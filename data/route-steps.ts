@@ -1,4 +1,5 @@
 import {
+  blockedNodes,
   CURRENT_LOCATION_NODE,
   doorNodeId,
   FLOORS,
@@ -8,12 +9,16 @@ import {
   OUTSIDE_EXIT_ID,
   STAIRWELL_EXIT_ID,
   type Floor,
+  type HazardZone,
   type Store,
 } from './mock-floor';
 import { findPath } from './pathfinding';
 
 export type Point = { x: number; y: number };
-export type StepKind = 'straight' | 'left' | 'right' | 'arrive' | 'stairs';
+export type StepKind = 'straight' | 'left' | 'right' | 'arrive' | 'transfer';
+
+/** How a 'transfer' step changes floor. */
+export type TransferVia = 'stairs' | 'lift' | 'escalator';
 
 export type RouteStep = {
   kind: StepKind;
@@ -23,7 +28,8 @@ export type RouteStep = {
   landmark: string | null;
   /** Arrival step only: which side the destination is on. */
   side: 'left' | 'right' | null;
-  /** Stairs step only: the floor the stairwell leads to, and whether that is downwards. */
+  /** Transfer step only: how the floor changes, the floor it leads to, and whether that is downwards. */
+  via?: TransferVia;
   toFloor?: Floor;
   down?: boolean;
 };
@@ -113,11 +119,16 @@ export type PlannedRoute = {
 };
 
 /** Shortest walking route from `fromNode` to `destId` on `floor`, as turn-by-turn steps. */
-function planLeg(floor: Floor, fromNode: string, destId: string): PlannedRoute | null {
+function planLeg(
+  floor: Floor,
+  fromNode: string,
+  destId: string,
+  blocked?: ReadonlySet<string>,
+): PlannedRoute | null {
   const stores = getStores(floor);
   const store = stores.find((s) => s.id === destId);
   if (!store) return null;
-  const path = findPath(getGraph(floor), fromNode, doorNodeId(store.id));
+  const path = findPath(getGraph(floor), fromNode, doorNodeId(store.id), blocked);
   if (!path) return null;
   const last = path.points[path.points.length - 1];
   const doorway = {
@@ -132,35 +143,107 @@ export function planRoute(floor: Floor, destId: string): PlannedRoute | null {
   return planLeg(floor, CURRENT_LOCATION_NODE, destId);
 }
 
-export type EvacLeg = PlannedRoute & { floor: Floor };
+/** One floor's worth of a route; a multi-floor route is several legs joined by 'transfer' steps. */
+export type RouteLeg = PlannedRoute & { floor: Floor };
 
 const GROUND_FLOOR: Floor = '1';
 
 /**
  * Evacuation route to the door out of the building on floor 1. Lifts and escalators are never
  * used: from any other floor the route walks to the fire-escape stairwell, takes it to floor 1
- * (a 'stairs' step closes the first leg), then walks from the stairwell to the outside door.
+ * (a 'transfer' step closes the first leg), then walks from the stairwell to the outside door.
  */
-export function planEvacuation(fromFloor: Floor, fromNode: string): EvacLeg[] | null {
+export function planEvacuation(
+  fromFloor: Floor,
+  fromNode: string,
+  hazard?: HazardZone | null,
+): RouteLeg[] | null {
+  const exitIds = (floor: Floor) =>
+    getStores(floor)
+      .filter((st) => st.category === 'exit' && (floor === GROUND_FLOOR) === (st.id === OUTSIDE_EXIT_ID))
+      .map((st) => st.id);
+  const length = (p: PlannedRoute) => p.route.steps.reduce((sum, st) => sum + st.meters, 0);
+  /** Nearest reachable exit on `floor`, skipping any the hazard cuts off. */
+  const nearestExit = (floor: Floor, from: string) => {
+    let best: PlannedRoute | null = null;
+    for (const id of exitIds(floor)) {
+      const leg = planLeg(floor, from, id, blockedNodes(hazard, floor));
+      if (leg && (!best || length(leg) < length(best))) best = leg;
+    }
+    return best;
+  };
+
   if (fromFloor === GROUND_FLOOR) {
-    const leg = planLeg(GROUND_FLOOR, fromNode, OUTSIDE_EXIT_ID);
+    const leg = nearestExit(GROUND_FLOOR, fromNode);
     return leg ? [{ ...leg, floor: GROUND_FLOOR }] : null;
   }
-  const toStairwell = planLeg(fromFloor, fromNode, STAIRWELL_EXIT_ID);
-  const outside = planLeg(GROUND_FLOOR, doorNodeId(STAIRWELL_EXIT_ID), OUTSIDE_EXIT_ID);
-  if (!toStairwell || !outside) return null;
+  const toStairwell = nearestExit(fromFloor, fromNode);
+  if (!toStairwell) return null;
+  const outside = nearestExit(GROUND_FLOOR, doorNodeId(toStairwell.store.id));
+  if (!outside) return null;
   const steps = toStairwell.route.steps.slice(0, -1);
   steps.push({
-    kind: 'stairs',
+    kind: 'transfer',
     meters: 0,
     landmark: null,
     side: null,
+    via: 'stairs',
     toFloor: GROUND_FLOOR,
     down: FLOORS.indexOf(GROUND_FLOOR) < FLOORS.indexOf(fromFloor),
   });
   return [
     { ...toStairwell, floor: fromFloor, route: { ...toStairwell.route, steps } },
     { ...outside, floor: GROUND_FLOOR },
+  ];
+}
+
+/** Stable key shared by the directions screen and the step list for a route's active step. */
+export const routeKey = (evac: boolean, originFloor: Floor, floor: Floor, destId: string, leg: number) =>
+  evac ? `evac:${leg}` : `${originFloor}>${floor}:${destId}:${leg}`;
+
+/**
+ * Route to `destId` on `destFloor` from `fromNode` on `originFloor`. Another floor is reached
+ * through the lift (or, unless `accessible`, an escalator), whichever gives the shorter walk;
+ * stairs are never offered. The first leg ends with a 'transfer' step.
+ */
+export function planTrip(
+  originFloor: Floor,
+  fromNode: string,
+  destFloor: Floor,
+  destId: string,
+  accessible: boolean,
+  hazard?: HazardZone | null,
+): RouteLeg[] | null {
+  if (originFloor === destFloor) {
+    const leg = planLeg(destFloor, fromNode, destId, blockedNodes(hazard, destFloor));
+    return leg ? [{ ...leg, floor: destFloor }] : null;
+  }
+  const kinds = accessible ? ['elevator'] : ['elevator', 'escalator'];
+  let best: { first: PlannedRoute; second: PlannedRoute; length: number; via: TransferVia } | null = null;
+  for (const connector of getStores(originFloor).filter((s) => kinds.includes(s.category))) {
+    const first = planLeg(originFloor, fromNode, connector.id, blockedNodes(hazard, originFloor));
+    const second = planLeg(destFloor, doorNodeId(connector.id), destId, blockedNodes(hazard, destFloor));
+    if (!first || !second) continue;
+    const walk = (p: PlannedRoute) => p.route.steps.reduce((sum, st) => sum + st.meters, 0);
+    const total = walk(first) + walk(second);
+    if (!best || total < best.length) {
+      best = { first, second, length: total, via: connector.category === 'elevator' ? 'lift' : 'escalator' };
+    }
+  }
+  if (!best) return null;
+  const steps = best.first.route.steps.slice(0, -1);
+  steps.push({
+    kind: 'transfer',
+    meters: 0,
+    landmark: null,
+    side: null,
+    via: best.via,
+    toFloor: destFloor,
+    down: FLOORS.indexOf(destFloor) < FLOORS.indexOf(originFloor),
+  });
+  return [
+    { ...best.first, floor: originFloor, route: { ...best.first.route, steps } },
+    { ...best.second, floor: destFloor },
   ];
 }
 
@@ -176,8 +259,8 @@ export function stepSummary(t: Translate, step: RouteStep, destName: string): st
       return place ? t('nav.turnLeftAt', { place }) : t('nav.turnLeft');
     case 'right':
       return place ? t('nav.turnRightAt', { place }) : t('nav.turnRight');
-    case 'stairs':
-      return t(step.down ? 'nav.stairsDown' : 'nav.stairsUp', { floor: step.toFloor });
+    case 'transfer':
+      return t(`nav.${step.via ?? 'stairs'}${step.down ? 'Down' : 'Up'}`, { floor: step.toFloor });
     default:
       return step.side === 'left'
         ? t('nav.arriveLeft', { dest: destName })
@@ -196,8 +279,8 @@ export function stepHeadline(t: Translate, step: RouteStep): string {
       return t('dir.mainLeft', { meters: step.meters });
     case 'right':
       return t('dir.mainRight', { meters: step.meters });
-    case 'stairs':
-      return t(step.down ? 'dir.stairsDown' : 'dir.stairsUp', { floor: step.toFloor });
+    case 'transfer':
+      return t(`dir.${step.via ?? 'stairs'}${step.down ? 'Down' : 'Up'}`, { floor: step.toFloor });
     default:
       return t('dir.arrived');
   }

@@ -1,8 +1,8 @@
 import { G, Path } from 'react-native-svg';
 
 import type { StoreCategory } from '@/data/mock-floor';
+import { useColors } from '@/hooks/use-colors';
 
-const INK = '#14213D';
 const EXIT_GREEN = '#2E9E5B';
 
 /** Icon paths drawn in a 16x16 box centred on (0,0). */
@@ -47,6 +47,7 @@ const ICONS: Partial<Record<StoreCategory, { d: string; fill?: boolean; color?: 
 };
 
 export function StoreIcon({ category, x, y }: { category: StoreCategory; x: number; y: number }) {
+  const { INK } = useColors();
   const paths = ICONS[category];
   if (!paths) return null;
   return (

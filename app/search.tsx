@@ -2,15 +2,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Text } from '@/components/scaled-text';
 import { FLOORS, getStores, type StoreCategory } from '@/data/mock-floor';
+import { useColors, type Colors } from '@/hooks/use-colors';
 
-const BLUE = '#1C4E9C';
-const INK = '#14213D';
-const MUTED = '#5B6B88';
-const BORDER = '#E4E8F0';
 
 type Group =
   | 'all'
@@ -60,6 +58,9 @@ const ICONS: Record<StoreCategory, keyof typeof MaterialIcons.glyphMap> = {
 };
 
 export default function SearchScreen() {
+  const colors = useColors();
+  const { BLUE, INK, MUTED } = colors;
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
   const { from } = useLocalSearchParams<{ from?: string }>();
@@ -160,8 +161,9 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = ({ BLUE, INK, MUTED, BORDER, ACTIVE_BG, CANVAS, CARD }: Colors) =>
+  StyleSheet.create({
+  root: { flex: 1, backgroundColor: CANVAS },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -177,7 +179,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 17,
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: CARD,
     borderWidth: 1,
     borderColor: BORDER,
   },
@@ -199,7 +201,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E6EDF8',
+    backgroundColor: ACTIVE_BG,
   },
   rowBody: { flex: 1 },
   rowText: { fontSize: 15, fontWeight: '600', color: INK },

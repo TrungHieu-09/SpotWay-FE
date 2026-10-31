@@ -2,56 +2,71 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { EVAC_START_NODE, FLOORS, WALK_SPEED_MPS, type Floor } from '@/data/mock-floor';
-import { planEvacuation, planRoute, stepSummary, type StepKind } from '@/data/route-steps';
+import { Text } from '@/components/scaled-text';
+
+import { CURRENT_LOCATION_NODE, EVAC_START_NODE, FLOORS, WALK_SPEED_MPS, type Floor } from '@/data/mock-floor';
+import {
+  planEvacuation,
+  planTrip,
+  routeKey,
+  stepSummary,
+  type StepKind,
+} from '@/data/route-steps';
+import { useAccessibilityMode } from '@/hooks/use-accessibility-mode';
 import { useActiveStep } from '@/hooks/use-active-step';
 
-const BLUE = '#1C4E9C';
-const INK = '#14213D';
-const MUTED = '#5B6B88';
-const BORDER = '#E4E8F0';
-const BG = '#F5F7FB';
-const ACTIVE_BG = '#E6EDF8';
 
-const STEP_ICON: Record<StepKind, keyof typeof MaterialIcons.glyphMap> = {
+import { useColors, type Colors } from '@/hooks/use-colors';
+const TRANSFER_ICON = {
+  stairs: 'stairs',
+  lift: 'elevator',
+  escalator: 'escalator',
+} as const;
+
+const STEP_ICON: Record<Exclude<StepKind, 'transfer'>, keyof typeof MaterialIcons.glyphMap> = {
   straight: 'arrow-upward',
   left: 'turn-left',
   right: 'turn-right',
   arrive: 'flag',
-  stairs: 'stairs',
 };
 
 export default function DirectionsListScreen() {
+  const colors = useColors();
+  const { BLUE, INK } = colors;
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
-  const { to, floor: floorParam, from, mode, leg } = useLocalSearchParams<{
+  const { to, floor: floorParam, from, mode, leg, originFloor: originParam } = useLocalSearchParams<{
     to?: string;
     floor?: string;
     from?: string;
     mode?: string;
     leg?: string;
+    originFloor?: string;
   }>();
-  const evacLeg = mode === 'evac' ? Number(leg ?? 0) : null;
+  const evac = mode === 'evac';
+  const legIndex = Number(leg ?? 0);
+  const [accessible] = useAccessibilityMode();
   const destId = to ?? '';
   const floor: Floor = FLOORS.includes(floorParam as Floor) ? (floorParam as Floor) : '1';
 
+  const originFloor: Floor = FLOORS.includes(originParam as Floor) ? (originParam as Floor) : floor;
+
   const plan = useMemo(
     () =>
-      evacLeg === null
-        ? planRoute(floor, destId)
-        : (planEvacuation(floor, EVAC_START_NODE)?.[evacLeg] ?? null),
-    [floor, destId, evacLeg],
+      (evac
+        ? planEvacuation(floor, EVAC_START_NODE)
+        : planTrip(originFloor, CURRENT_LOCATION_NODE, floor, destId, accessible))?.[legIndex] ?? null,
+    [evac, floor, originFloor, destId, accessible, legIndex],
   );
-  const [active, setActive] = useActiveStep(
-    evacLeg === null ? `${floor}:${destId}` : `evac:${evacLeg}`,
-  );
+  const [active, setActive] = useActiveStep(routeKey(evac, originFloor, floor, destId, legIndex));
 
   const goToMap = () => {
     if (router.canGoBack()) router.back();
-    else router.replace({ pathname: '/directions', params: { to: destId, floor, from } });
+    else router.replace({ pathname: '/directions', params: { to: destId, floor, from, originFloor } });
   };
 
   if (!plan) {
@@ -123,7 +138,7 @@ export default function DirectionsListScreen() {
                   state === 'past' && styles.stepIconPast,
                 ]}>
                 <MaterialIcons
-                  name={STEP_ICON[s.kind]}
+                  name={s.kind === 'transfer' ? TRANSFER_ICON[s.via ?? 'stairs'] : STEP_ICON[s.kind]}
                   size={state === 'past' ? 18 : 22}
                   color={state === 'active' ? '#FFFFFF' : state === 'past' ? '#A8B3C7' : BLUE}
                 />
@@ -150,7 +165,8 @@ export default function DirectionsListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ BLUE, INK, MUTED, BORDER, ACTIVE_BG, BG, CARD }: Colors) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: BG },
   topBar: {
     flexDirection: 'row',
@@ -158,7 +174,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: CARD,
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
   },
@@ -173,7 +189,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: CARD,
     borderWidth: 1,
     borderColor: BORDER,
   },
@@ -181,7 +197,7 @@ const styles = StyleSheet.create({
   rowPast: { paddingVertical: 6, backgroundColor: 'transparent', borderColor: 'transparent' },
   stepIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   stepIconActive: { backgroundColor: BLUE },
-  stepIconNext: { borderWidth: 1.5, borderColor: BLUE, backgroundColor: '#FFFFFF' },
+  stepIconNext: { borderWidth: 1.5, borderColor: BLUE, backgroundColor: CARD },
   stepIconPast: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: '#D5DBE6' },
   stepText: { flex: 1, fontSize: 15, fontWeight: '500', color: INK },
   stepTextActive: { fontWeight: '800' },

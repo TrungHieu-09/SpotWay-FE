@@ -3,9 +3,10 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Text } from '@/components/scaled-text';
 import {
   CURRENT_LOCATION_NODE,
   doorNodeId,
@@ -21,14 +22,8 @@ import {
 import { findPath } from '@/data/pathfinding';
 import { getStoreImage } from '@/data/store-images';
 
-const BLUE = '#1C4E9C';
-const INK = '#14213D';
-const MUTED = '#5B6B88';
-const BORDER = '#E4E8F0';
-const SURFACE = '#F0F3FF';
-const OPEN_BG = '#E7EEFF';
-const OPEN_FG = '#244886';
 
+import { useColors, type Colors } from '@/hooks/use-colors';
 const ICONS: Record<StoreCategory, keyof typeof MaterialIcons.glyphMap> = {
   fashion: 'checkroom',
   coffee: 'local-cafe',
@@ -48,6 +43,9 @@ const ICONS: Record<StoreCategory, keyof typeof MaterialIcons.glyphMap> = {
 };
 
 export default function StoreDetailScreen() {
+  const colors = useColors();
+  const { BLUE, INK, MUTED } = colors;
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -170,8 +168,9 @@ export default function StoreDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F9F9FF' },
+const makeStyles = ({ BLUE, INK, MUTED, BORDER, BG, CARD, SURFACE, OPEN_BG, OPEN_FG }: Colors) =>
+  StyleSheet.create({
+  root: { flex: 1, backgroundColor: BG },
   hero: {
     height: 275,
     backgroundColor: BLUE,
@@ -202,7 +201,7 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     padding: 2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: CARD,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -245,7 +244,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: 20,
     paddingTop: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: CARD,
     borderTopWidth: 1,
     borderTopColor: BORDER,
   },

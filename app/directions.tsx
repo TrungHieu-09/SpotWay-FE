@@ -7,7 +7,6 @@ import {
   Easing,
   Pressable,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -15,7 +14,10 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Svg, { Circle, Defs, G, Line, Path, Pattern, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 
 import { StoreIcon, wrapLabel } from '@/components/floor-plan-parts';
+import { HazardOverlay } from '@/components/hazard-overlay';
+import { Text } from '@/components/scaled-text';
 import {
+  CURRENT_LOCATION_NODE,
   EVAC_START_NODE,
   FLOOR_VIEWBOX,
   FLOORS,
@@ -25,27 +27,35 @@ import {
   zoneOf,
   type Floor,
 } from '@/data/mock-floor';
-import { planEvacuation, planRoute, stepHeadline, type Point, type StepKind } from '@/data/route-steps';
+import {
+  planEvacuation,
+  planTrip,
+  routeKey,
+  stepHeadline,
+  type Point,
+  type StepKind,
+} from '@/data/route-steps';
+import { useAccessibilityMode, useHighContrast, useTextScale } from '@/hooks/use-accessibility-mode';
 import { useActiveStep } from '@/hooks/use-active-step';
-import { setIncident } from '@/hooks/use-incident';
+import { setIncident, useIncident } from '@/hooks/use-incident';
 import { useWalkSimulation } from '@/hooks/use-walk-simulation';
 
-const BLUE = '#1C4E9C';
-const INK = '#14213D';
-const MUTED = '#5B6B88';
-const BORDER = '#E4E8F0';
-const WALL = '#8A8F98';
-const ACTIVE_BG = '#E6EDF8';
+import { useColors, type Colors } from '@/hooks/use-colors';
 const DANGER = '#D64545';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-const STEP_ICON: Record<StepKind, keyof typeof MaterialIcons.glyphMap> = {
+const TRANSFER_ICON = {
+  stairs: 'stairs',
+  lift: 'elevator',
+  escalator: 'escalator',
+} as const;
+
+const STEP_ICON: Record<Exclude<StepKind, 'transfer'>, keyof typeof MaterialIcons.glyphMap> = {
   straight: 'arrow-upward',
   left: 'turn-left',
   right: 'turn-right',
   arrive: 'flag',
-  stairs: 'stairs',
 };
 
 type Focus = 'follow' | 'stairs' | 'elevator';
@@ -55,6 +65,9 @@ const NO_CORNERS: Point[] = [];
 const lowerFirst = (s: string) => (s ? s.charAt(0).toLowerCase() + s.slice(1) : s);
 
 export default function DirectionsScreen() {
+  const colors = useColors();
+  const { BLUE, INK, WALL, STORE_FILL, EVAC_BG, STRONG } = colors;
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -65,26 +78,39 @@ export default function DirectionsScreen() {
     floor: floorParam,
     from,
     mode,
+    originFloor: originParam,
   } = useLocalSearchParams<{
     to?: string;
     dest?: string;
     floor?: string;
     from?: string;
     mode?: string;
+    originFloor?: string;
   }>();
   const evac = mode === 'evac';
   const destId = to ?? dest ?? '';
   const floor: Floor = FLOORS.includes(floorParam as Floor) ? (floorParam as Floor) : '1';
 
   // Evacuation routes span floors: one leg per floor, joined by a 'stairs' step.
-  const legs = useMemo(() => (evac ? planEvacuation(floor, EVAC_START_NODE) : null), [evac, floor]);
-  const [legIndex, setLegIndex] = useState(0);
-  const plan = useMemo(
-    () => (evac ? (legs?.[legIndex] ?? null) : planRoute(floor, destId)),
-    [evac, legs, legIndex, floor, destId],
+  const [accessible] = useAccessibilityMode();
+  const [highContrast] = useHighContrast();
+  const [incident] = useIncident();
+  const textScale = useTextScale();
+  const mapTextScale = 1 + (textScale - 1) * 0.5;
+  // Without an origin the route stays on the destination floor.
+  const originFloor: Floor = FLOORS.includes(originParam as Floor) ? (originParam as Floor) : floor;
+  const legs = useMemo(
+    () =>
+      evac
+        ? planEvacuation(floor, EVAC_START_NODE, incident)
+        : planTrip(originFloor, CURRENT_LOCATION_NODE, floor, destId, accessible, incident),
+    [evac, floor, originFloor, destId, accessible, incident],
   );
+  const [legIndex, setLegIndex] = useState(0);
+  useEffect(() => setLegIndex(0), [legs]);
+  const plan = useMemo(() => legs?.[legIndex] ?? null, [legs, legIndex]);
   const routeFloor: Floor = evac ? (legs?.[legIndex]?.floor ?? floor) : floor;
-  const [active, setActive] = useActiveStep(evac ? `evac:${legIndex}` : `${floor}:${destId}`);
+  const [active, setActive] = useActiveStep(routeKey(evac, originFloor, floor, destId, legIndex));
   const [viewFloor, setViewFloor] = useState<Floor>(routeFloor);
   useEffect(() => setViewFloor(routeFloor), [routeFloor]);
   const [focus, setFocus] = useState<Focus>('follow');
@@ -129,14 +155,14 @@ export default function DirectionsScreen() {
     }, [seekToSegment]),
   );
 
-  // Reaching the stairwell hands over to the next floor's leg after a short pause.
+  // Reaching the lift / escalator / stairwell hands over to the next floor's leg after a short pause.
   const lastStep = plan?.route.steps[plan.route.steps.length - 1];
-  const atStairs = evac && lastStep?.kind === 'stairs' && sim.finished;
+  const atTransfer = lastStep?.kind === 'transfer' && sim.finished;
   useEffect(() => {
-    if (!atStairs || !legs || legIndex >= legs.length - 1) return;
+    if (!atTransfer || !legs || legIndex >= legs.length - 1) return;
     const id = setTimeout(() => setLegIndex((i) => i + 1), 2000);
     return () => clearTimeout(id);
-  }, [atStairs, legs, legIndex]);
+  }, [atTransfer, legs, legIndex]);
 
   const stores = useMemo(() => getStores(viewFloor), [viewFloor]);
   const elevator = stores.find((s) => s.category === 'elevator') ?? null;
@@ -148,7 +174,7 @@ export default function DirectionsScreen() {
         <Pressable accessibilityRole="button" hitSlop={8} onPress={() => router.back()} style={styles.emptyBack}>
           <MaterialIcons name="arrow-back" size={24} color={INK} />
         </Pressable>
-        <Text style={styles.empty}>{t('nav.noRoute')}</Text>
+        <Text style={styles.empty}>{t(evac ? 'evac.noRoute' : 'nav.noRoute')}</Text>
       </SafeAreaView>
     );
   }
@@ -215,7 +241,7 @@ export default function DirectionsScreen() {
   const now = current < legCount ? [position, corners[current + 1]] : [];
   const upcoming = current + 1 < legCount ? corners.slice(current + 1) : [];
 
-  const sub = step.kind === 'arrive' || step.kind === 'stairs' ? store.name : step.landmark
+  const sub = step.kind === 'arrive' || step.kind === 'transfer' ? store.name : step.landmark
     ? t('dir.toward', { place: step.landmark })
     : t(`store.zone.${zoneOf(store.corridor)}`);
   const afterText = next
@@ -255,7 +281,7 @@ export default function DirectionsScreen() {
                   y={s.y}
                   width={s.width}
                   height={s.height}
-                  fill={rest ? 'url(#hatchDir)' : isDest ? '#D3D7DE' : '#F9F9F9'}
+                  fill={rest ? 'url(#hatchDir)' : isDest ? '#D3D7DE' : STORE_FILL}
                   stroke={isLift ? BLUE : WALL}
                   strokeWidth={isLift ? 3 : 2.5}
                 />
@@ -265,8 +291,8 @@ export default function DirectionsScreen() {
                     key={i}
                     x={mx}
                     y={rest ? my + i * 8 : my + 8 + i * 7.5}
-                    fontSize={6.5}
-                    fill={INK}
+                    fontSize={6.5 * mapTextScale}
+                    fill={highContrast ? STRONG : INK}
                     textAnchor="middle">
                     {line}
                   </SvgText>
@@ -274,6 +300,8 @@ export default function DirectionsScreen() {
               </G>
             );
           })}
+
+          <HazardOverlay hazard={incident} floor={viewFloor} />
 
           {onRouteFloor && done.length > 1 && (
             <Polyline
@@ -346,7 +374,11 @@ export default function DirectionsScreen() {
           }}
           style={[styles.card, evac && styles.cardEvac]}>
           <View style={[styles.cardIcon, evac && { backgroundColor: DANGER }]}>
-            <MaterialIcons name={STEP_ICON[step.kind]} size={44} color="#FFFFFF" />
+            <MaterialIcons
+              name={step.kind === 'transfer' ? TRANSFER_ICON[step.via ?? 'stairs'] : STEP_ICON[step.kind]}
+              size={44}
+              color="#FFFFFF"
+            />
           </View>
           <View style={styles.cardBody}>
             <Text style={[styles.cardMain, evac && styles.cardMainEvac]} numberOfLines={evac ? 2 : 1}>
@@ -366,7 +398,7 @@ export default function DirectionsScreen() {
             accessibilityLabel={t('dir.list')}
             hitSlop={10}
             onPress={() =>
-              router.push({ pathname: '/directions-list', params: { to: destId, floor, from, mode, leg: String(legIndex) },
+              router.push({ pathname: '/directions-list', params: { to: destId, floor, from, mode, leg: String(legIndex), originFloor },
               })
             }
             style={styles.menu}>
@@ -414,6 +446,7 @@ export default function DirectionsScreen() {
                 }}
                 style={[styles.floorItem, on && styles.floorItemOn]}>
                 <Text style={[styles.floorText, on && styles.floorTextOn]}>{f}</Text>
+                {incident?.floor === f && <View style={styles.floorDot} />}
               </Pressable>
             );
           })}
@@ -422,7 +455,7 @@ export default function DirectionsScreen() {
 
       <View style={[
           styles.bottom,
-          evac && { backgroundColor: '#FDECEC' },
+          evac && { backgroundColor: EVAC_BG },
           { paddingBottom: Math.max(insets.bottom, 12) },
         ]}>
         <View style={styles.bottomInfo}>
@@ -435,6 +468,23 @@ export default function DirectionsScreen() {
               : t('dir.time', { minutes: remainingMinutes, meters: remainingMeters })}
           </Text>
         </View>
+        {arrived && !evac ? (
+          <View style={styles.arrivedBtns}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push({ pathname: '/store', params: { id: store.id, floor: routeFloor, from } })}
+              style={[styles.arrivedBtn, styles.arrivedBtnPrimary]}>
+              <Text style={styles.arrivedBtnPrimaryText}>{t('dir.viewStore')}</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.dismissTo('/')}
+              style={styles.arrivedBtn}>
+              <Text style={styles.arrivedBtnText}>{t('dir.goHome')}</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <>
         {!sim.finished && (
           <Pressable
             accessibilityRole="button"
@@ -461,6 +511,8 @@ export default function DirectionsScreen() {
           hitSlop={8}>
           <Text style={styles.exit}>{t('dir.exit')}</Text>
         </Pressable>
+          </>
+        )}
       </View>
       {safe && (
         <View style={styles.safe}>
@@ -490,8 +542,9 @@ const shadow = {
   elevation: 4,
 } as const;
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = ({ BLUE, INK, MUTED, BORDER, ACTIVE_BG, CANVAS, CARD }: Colors) =>
+  StyleSheet.create({
+  root: { flex: 1, backgroundColor: CANVAS },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 16 },
   card: {
     marginTop: 8,
@@ -500,7 +553,7 @@ const styles = StyleSheet.create({
     gap: 14,
     padding: 14,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: CARD,
     ...shadow,
   },
   cardEvac: { borderWidth: 3, borderColor: DANGER },
@@ -530,7 +583,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 999,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: CARD,
   },
   safeBtnText: { fontSize: 16, fontWeight: '800', color: '#2E9E5B' },
   cardIcon: {
@@ -562,7 +615,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: CARD,
     borderWidth: 1,
     borderColor: BORDER,
     ...shadow,
@@ -574,7 +627,7 @@ const styles = StyleSheet.create({
     padding: 4,
     gap: 4,
     borderRadius: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: CARD,
     borderWidth: 1,
     borderColor: BORDER,
     ...shadow,
@@ -587,6 +640,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   floorItemOn: { backgroundColor: BLUE },
+  floorDot: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: DANGER,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
   floorText: { fontSize: 13, fontWeight: '700', color: MUTED },
   floorTextOn: { color: '#FFFFFF' },
   bottom: {
@@ -600,13 +664,26 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 20,
     paddingTop: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: CARD,
     borderTopWidth: 1,
     borderTopColor: BORDER,
   },
   bottomInfo: { flex: 1 },
   bottomName: { fontSize: 16, fontWeight: '800', color: INK },
   bottomMeta: { fontSize: 13, color: MUTED, marginTop: 2 },
+  arrivedBtns: { flexDirection: 'row', gap: 10 },
+  arrivedBtn: {
+    height: 44,
+    paddingHorizontal: 14,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: BLUE,
+  },
+  arrivedBtnPrimary: { backgroundColor: BLUE },
+  arrivedBtnText: { fontSize: 14, fontWeight: '700', color: BLUE },
+  arrivedBtnPrimaryText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
   simBtn: {
     width: 36,
     height: 36,

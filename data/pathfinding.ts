@@ -1,4 +1,14 @@
-import { doorNodeId, FLOORS, getGraph, getStores, type Floor, type Store, type StoreCategory } from './mock-floor';
+import {
+  blockedNodes,
+  doorNodeId,
+  FLOORS,
+  getGraph,
+  getStores,
+  type Floor,
+  type HazardZone,
+  type Store,
+  type StoreCategory,
+} from './mock-floor';
 
 export type GraphNode = { id: string; x: number; y: number };
 export type GraphEdge = { from: string; to: string; weight: number };
@@ -11,8 +21,16 @@ export type PathResult = {
   length: number;
 };
 
-/** Dijkstra shortest path over an undirected graph. Returns null when unreachable. */
-export function findPath(graph: Graph, startId: string, endId: string): PathResult | null {
+/**
+ * Dijkstra shortest path over an undirected graph. Returns null when unreachable. Nodes in
+ * `blocked` are never entered (the start node is always allowed, so you can walk out of a hazard).
+ */
+export function findPath(
+  graph: Graph,
+  startId: string,
+  endId: string,
+  blocked?: ReadonlySet<string>,
+): PathResult | null {
   if (!graph.nodes[startId] || !graph.nodes[endId]) return null;
 
   const adjacency: Record<string, { to: string; weight: number }[]> = {};
@@ -41,7 +59,7 @@ export function findPath(graph: Graph, startId: string, endId: string): PathResu
     visited.add(current);
     for (const { to, weight } of adjacency[current] ?? []) {
       const next = dist[current] + weight;
-      if (next < dist[to]) {
+      if (next < dist[to] && !blocked?.has(to)) {
         dist[to] = next;
         prev[to] = current;
       }
@@ -72,6 +90,8 @@ export type NearestOptions = {
   fromFloor: Floor;
   /** Step-free routing: only lifts connect floors, escalators are neither used nor returned. */
   accessible?: boolean;
+  /** Simulated incident whose zone routes must avoid. */
+  hazard?: HazardZone | null;
 };
 
 /**
@@ -84,7 +104,7 @@ export function findNearest(
   fromNode: string,
   options: NearestOptions,
 ): NearestResult | null {
-  const { fromFloor, accessible = false } = options;
+  const { fromFloor, accessible = false, hazard } = options;
   const wanted = new Set(Array.isArray(category) ? category : [category]);
   const connectorKinds: StoreCategory[] = accessible ? ['elevator'] : ['elevator', 'escalator'];
   const isConnector = (s: Store) => connectorKinds.includes(s.category);
@@ -92,7 +112,7 @@ export function findNearest(
   const fromGraph = getGraph(fromFloor);
   const toConnector: Record<string, number> = {};
   for (const s of getStores(fromFloor).filter(isConnector)) {
-    const p = findPath(fromGraph, fromNode, doorNodeId(s.id));
+    const p = findPath(fromGraph, fromNode, doorNodeId(s.id), blockedNodes(hazard, fromFloor));
     if (p) toConnector[s.id] = p.length;
   }
 
@@ -107,12 +127,12 @@ export function findNearest(
 
       let cost = Infinity;
       if (floor === fromFloor) {
-        cost = findPath(graph, fromNode, target)?.length ?? Infinity;
+        cost = findPath(graph, fromNode, target, blockedNodes(hazard, floor))?.length ?? Infinity;
       } else {
         const crossing = FLOOR_CHANGE_COST * Math.abs(FLOORS.indexOf(floor) - FLOORS.indexOf(fromFloor));
         for (const c of stores.filter(isConnector)) {
           if (toConnector[c.id] === undefined) continue;
-          const rest = findPath(graph, doorNodeId(c.id), target)?.length;
+          const rest = findPath(graph, doorNodeId(c.id), target, blockedNodes(hazard, floor))?.length;
           if (rest !== undefined) cost = Math.min(cost, toConnector[c.id] + crossing + rest);
         }
       }
