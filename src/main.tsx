@@ -23,9 +23,23 @@ async function enableMocking() {
     return
   }
 
+  // Unregister any stale service workers before starting fresh
+  if ('serviceWorker' in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations()
+    for (const reg of registrations) {
+      if (reg.active?.scriptURL.includes('mockServiceWorker')) {
+        await reg.update()
+      }
+    }
+  }
+
   const { worker } = await import('./mocks/browser')
   return worker.start({
     onUnhandledRequest: 'bypass',
+    serviceWorker: {
+      url: '/mockServiceWorker.js',
+      options: { scope: '/' },
+    },
   })
 }
 
