@@ -3,6 +3,7 @@ import { Suspense, lazy, type ReactNode } from 'react'
 import { Spin } from 'antd'
 import { createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from '../components/layout/AppLayout'
+import { AdminLayout } from '../components/layout/AdminLayout'
 import { OwnerLayout } from '../components/layout/OwnerLayout'
 import { ProtectedRoute } from '../components/layout/ProtectedRoute'
 import { LandingPage } from '../pages/Landing/LandingPage'
@@ -173,8 +174,15 @@ export const router = createBrowserRouter([
           { path: 'store/promotions', element: lazyElement(<StorePromotionsPage />) },
         ],
       },
+    ],
+  },
+
+  // ── Admin section with sidebar ──
+  {
+    element: <ProtectedRoute allowedRoles={['admin']} />,
+    children: [
       {
-        element: <ProtectedRoute allowedRoles={['admin']} />,
+        element: <AdminLayout />,
         children: [
           { path: 'admin', element: lazyElement(<AdminOverviewPage />) },
           { path: 'admin/tenants', element: lazyElement(<AdminTenantsPage />) },

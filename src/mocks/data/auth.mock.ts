@@ -79,7 +79,24 @@ const storedUsers = loadFromStorage(MOCK_STORAGE_KEYS.users, initialUsersSeed)
 const validStoredUsers = Array.isArray(storedUsers)
   ? storedUsers.filter((u) => u && typeof u === 'object' && u.email && u.id)
   : []
-export const users = validStoredUsers.length > 0 ? validStoredUsers : initialUsersSeed
+
+// Always ensure seed accounts are active and have correct passwords (prevents localStorage corruption)
+const seedIds = new Set(initialUsersSeed.map((u) => u.id))
+const mergedUsers =
+  validStoredUsers.length > 0
+    ? validStoredUsers.map((u) => {
+        const seed = initialUsersSeed.find((s) => s.id === u.id)
+        if (seed) {
+          // Reset seed accounts to always be active with correct password
+          return { ...u, status: 'active' as const, password: seed.password }
+        }
+        return u
+      })
+    : initialUsersSeed
+
+// Append any stored non-seed users (created via Admin panel) that aren't in seed
+const extraUsers = validStoredUsers.filter((u) => !seedIds.has(u.id))
+export const users = [...mergedUsers, ...extraUsers.filter((u) => !mergedUsers.find((m) => m.id === u.id))]
 
 const storedInvoices = loadFromStorage(MOCK_STORAGE_KEYS.invoices, initialInvoicesSeed)
 export const invoices = Array.isArray(storedInvoices) && storedInvoices.length > 0 ? storedInvoices : initialInvoicesSeed
