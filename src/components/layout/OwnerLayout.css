@@ -1,10 +1,10 @@
 /* ============================================================
-   OwnerLayout — Top Navbar Navigation (Modern Glassmorphic)
+   OwnerLayout — Sidebar Navigation Layout (Modern Glassmorphic)
    ============================================================ */
 
+/* ── Root ── */
 .ol-root {
   display: flex;
-  flex-direction: column;
   min-height: 100svh;
   background: transparent;
   position: relative;
@@ -13,11 +13,8 @@
 
 /* ── Ambient Glow Background ── */
 .ol-ambient {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 380px;
+  position: fixed;
+  inset: 0;
   pointer-events: none;
   z-index: 0;
   overflow: hidden;
@@ -26,538 +23,536 @@
 .ol-ambient__glow {
   position: absolute;
   border-radius: 50%;
-  filter: blur(100px);
-  opacity: 0.22;
+  filter: blur(120px);
+  opacity: 0.14;
 }
 
 .ol-ambient__glow--violet {
-  width: 600px;
-  height: 240px;
-  background: var(--sw-violet);
+  width: 540px;
+  height: 540px;
+  background: #8b5cf6;
   top: -120px;
-  left: 20%;
-  animation: auroraFloat 12s ease-in-out infinite alternate;
+  left: 60px;
+  animation: olAuroraFloat 12s ease-in-out infinite alternate;
 }
 
 .ol-ambient__glow--cyan {
-  width: 480px;
-  height: 200px;
-  background: var(--sw-cyan);
-  top: -100px;
-  right: 25%;
-  animation: auroraFloat 14s ease-in-out infinite alternate-reverse;
+  width: 460px;
+  height: 460px;
+  background: #22d3ee;
+  bottom: -90px;
+  left: 240px;
+  animation: olAuroraFloat 14s ease-in-out infinite alternate-reverse;
 }
 
-@keyframes auroraFloat {
+@keyframes olAuroraFloat {
   0% {
     transform: translate(0, 0) scale(1);
   }
   100% {
-    transform: translate(30px, 20px) scale(1.08);
+    transform: translate(24px, 16px) scale(1.06);
   }
 }
 
-/* ── Top Navbar ── */
-.ol-navbar {
-  position: sticky;
+/* ── Sidebar ── */
+.ol-sidebar {
+  position: fixed;
   top: 0;
-  z-index: 100;
-  height: 70px;
-  background: rgba(11, 11, 26, 0.78);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), 0 0 1px 1px rgba(255, 255, 255, 0.03);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  left: 0;
+  bottom: 0;
+  width: 250px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  background: rgba(11, 11, 26, 0.88);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
 }
 
-/* Radiant multi-color glowing animated bottom line */
-.ol-navbar::after {
+.ol-sidebar--collapsed {
+  width: 72px;
+}
+
+/* Gradient right border accent */
+.ol-sidebar::after {
   content: '';
   position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 1px;
+  top: 0;
+  right: -1px;
+  bottom: 0;
+  width: 1px;
   background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(139, 92, 246, 0.2) 15%,
-    rgba(139, 92, 246, 0.7) 35%,
-    rgba(34, 211, 238, 0.7) 65%,
-    rgba(232, 121, 249, 0.3) 85%,
-    transparent 100%
+    180deg,
+    transparent,
+    rgba(139, 92, 246, 0.5) 30%,
+    rgba(34, 211, 238, 0.3) 70%,
+    transparent
   );
-  background-size: 200% 100%;
-  animation: borderShimmer 8s linear infinite;
   pointer-events: none;
 }
 
-@keyframes borderShimmer {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-.ol-navbar__inner {
-  max-width: 1440px;
-  margin: 0 auto;
-  height: 100%;
-  padding: 0 28px;
+/* ── Sidebar Header ── */
+.ol-sidebar__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  padding: 16px 14px 16px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  min-height: 64px;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
-/* ── Brand Lockup ── */
+/* ── Brand ── */
 .ol-brand {
   display: flex;
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  user-select: none;
-  flex-shrink: 0;
-  text-decoration: none;
-  outline: none;
+  flex: 1;
+  min-width: 0;
 }
 
 .ol-brand__logo {
   width: 36px;
   height: 36px;
-  border-radius: 11px;
-  background: linear-gradient(135deg, var(--sw-violet), var(--sw-cyan));
+  border-radius: 10px;
+  background: linear-gradient(135deg, #8b5cf6, #22d3ee);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.45);
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+  box-shadow: 0 0 18px rgba(139, 92, 246, 0.4);
   flex-shrink: 0;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
 }
 
-.ol-brand__logo::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.25));
+.ol-brand:hover .ol-brand__logo {
+  box-shadow: 0 0 28px rgba(139, 92, 246, 0.6);
+  transform: scale(1.06);
 }
 
-.ol-brand:hover .ol-brand__logo,
-.ol-brand:focus-visible .ol-brand__logo {
-  transform: scale(1.08) rotate(-4deg);
-  box-shadow: 0 0 28px rgba(139, 92, 246, 0.7);
+.ol-brand__logo .anticon {
+  color: #fff !important;
+  font-size: 18px;
 }
 
 .ol-brand__meta {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .ol-brand__name {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 18px;
   font-weight: 700;
+  font-size: 16px;
+  color: #e3e0f6;
   letter-spacing: -0.02em;
-  color: #ffffff;
   line-height: 1.1;
+  white-space: nowrap;
 }
 
 .ol-brand__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(139, 92, 246, 0.12);
-  border: 1px solid rgba(139, 92, 246, 0.28);
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--sw-violet-light);
-  line-height: 1.2;
-}
-
-.ol-brand__dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--sw-cyan);
-  box-shadow: 0 0 6px var(--sw-cyan);
-  animation: dotPulse 2s ease-in-out infinite;
-}
-
-/* ── Desktop Navigation Track ── */
-.ol-nav {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 6px;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 999px;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.ol-nav-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--sw-text-secondary);
-  text-decoration: none;
+  letter-spacing: 0.08em;
+  color: #22d3ee;
   white-space: nowrap;
-  position: relative;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  border: 1px solid transparent;
 }
 
-.ol-nav-item__icon {
-  font-size: 15px;
+/* ── Collapse Button ── */
+.ol-collapse-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.25s ease, color 0.25s ease, filter 0.25s ease;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  font-size: 13px;
+}
+
+.ol-collapse-btn:hover {
+  background: rgba(139, 92, 246, 0.18);
+  border-color: rgba(139, 92, 246, 0.45);
+  color: #8b5cf6;
+}
+
+/* ── Navigation ── */
+.ol-nav {
+  flex: 1;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.ol-nav__section-label {
+  padding: 4px 8px 8px 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.28);
+  white-space: nowrap;
+  min-height: 20px;
+}
+
+.ol-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .ol-nav-item:hover {
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.06);
 }
 
-.ol-nav-item:hover .ol-nav-item__icon {
-  transform: translateY(-1.5px) scale(1.1);
-  color: var(--sw-cyan);
-}
-
-/* Active Nav Item */
 .ol-nav-item--active {
   color: #ffffff !important;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.28) 0%, rgba(34, 211, 238, 0.16) 100%);
-  border: 1px solid rgba(139, 92, 246, 0.45);
-  box-shadow: 0 0 18px rgba(139, 92, 246, 0.32), inset 0 1px 1px rgba(255, 255, 255, 0.15);
-  font-weight: 600;
+  background: rgba(139, 92, 246, 0.2) !important;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+}
+
+.ol-nav-item__icon {
+  font-size: 17px;
+  flex-shrink: 0;
+  width: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ol-nav-item--active .ol-nav-item__icon {
-  color: var(--sw-cyan);
-  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.7));
+  color: #22d3ee;
+}
+
+.ol-nav-item__label {
+  flex: 1;
 }
 
 .ol-nav-item__indicator {
   position: absolute;
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px;
-  height: 2px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--sw-violet), var(--sw-cyan));
-  box-shadow: 0 0 8px var(--sw-cyan);
-  animation: pulseIndicator 2s ease-in-out infinite;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3.5px;
+  height: 60%;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, #8b5cf6, #22d3ee);
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
 }
 
-@keyframes pulseIndicator {
-  0%, 100% {
-    opacity: 0.8;
-    transform: translateX(-50%) scaleX(1);
-  }
-  50% {
-    opacity: 1;
-    transform: translateX(-50%) scaleX(1.3);
-  }
+/* Collapsed centering */
+.ol-sidebar--collapsed .ol-nav-item {
+  justify-content: center;
+  padding: 11px 0;
 }
 
-/* ── Right Section ── */
-.ol-actions {
+.ol-sidebar--collapsed .ol-nav-item__icon {
+  margin: 0;
+}
+
+/* ── Sidebar Footer ── */
+.ol-sidebar__footer {
+  padding: 12px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
   flex-shrink: 0;
 }
 
-/* User Profile Chip */
-.ol-user-profile {
-  display: inline-flex;
+.ol-footer-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.ol-footer-btn:hover {
+  color: #22d3ee;
+  background: rgba(34, 211, 238, 0.08);
+  border-color: rgba(34, 211, 238, 0.2);
+}
+
+.ol-footer-btn .anticon {
+  font-size: 16px;
+  flex-shrink: 0;
+  width: 22px;
+}
+
+.ol-sidebar--collapsed .ol-footer-btn {
+  justify-content: center;
+  padding: 9px 0;
+}
+
+/* ── User Profile ── */
+.ol-user {
+  display: flex;
   align-items: center;
   gap: 10px;
-  height: 40px;
-  box-sizing: border-box;
-  padding: 0 16px 0 4px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  user-select: none;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
 }
 
-.ol-user-profile:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(139, 92, 246, 0.35);
-  box-shadow: 0 0 16px rgba(139, 92, 246, 0.2);
+.ol-user--collapsed {
+  justify-content: center;
+  padding: 8px 0;
+  background: transparent;
+  border-color: transparent;
 }
 
-.ol-user-avatar {
+.ol-user__avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--sw-violet), var(--sw-cyan));
+  background: linear-gradient(135deg, #8b5cf6, #22d3ee);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 13px;
   font-weight: 700;
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
+  color: #fff;
   flex-shrink: 0;
 }
 
-.ol-user-details {
+.ol-user__info {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  line-height: 1.25;
+  gap: 1px;
+  min-width: 0;
+  overflow: hidden;
 }
 
-.ol-user-name {
+.ol-user__name {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 13px;
   font-weight: 600;
-  color: var(--sw-text-primary);
-  max-width: 150px;
+  color: #e3e0f6;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.ol-user-role {
-  font-size: 11px;
-  color: var(--sw-text-muted);
-  letter-spacing: 0.02em;
+.ol-user__role {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #22d3ee;
 }
 
-/* Logout Button */
+/* ── Logout Button ── */
 .ol-logout-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 40px;
-  box-sizing: border-box;
-  padding: 0 16px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  color: var(--sw-text-secondary);
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.5);
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  outline: none;
+  text-align: left;
+  width: 100%;
+  transition: all 0.2s ease;
   white-space: nowrap;
+  overflow: hidden;
 }
 
 .ol-logout-btn:hover {
   background: rgba(248, 113, 113, 0.12);
-  border-color: rgba(248, 113, 113, 0.45);
+  border-color: rgba(248, 113, 113, 0.35);
   color: #fca5a5;
-  box-shadow: 0 0 16px rgba(248, 113, 113, 0.2);
+  box-shadow: 0 0 12px rgba(248, 113, 113, 0.2);
 }
 
-.ol-logout-btn__icon {
-  font-size: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s ease;
-}
-
-.ol-logout-btn:hover .ol-logout-btn__icon {
-  transform: translateX(2px);
-}
-
-/* Mobile Toggle */
-.ol-mobile-toggle {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--sw-text-primary);
-  cursor: pointer;
+.ol-logout-btn .anticon {
   font-size: 16px;
-  transition: all 0.2s ease;
+  flex-shrink: 0;
+  width: 22px;
 }
 
-.ol-mobile-toggle:hover {
-  background: rgba(139, 92, 246, 0.15);
-  border-color: var(--sw-violet);
-  color: var(--sw-cyan);
+.ol-sidebar--collapsed .ol-logout-btn {
+  justify-content: center;
+  padding: 9px 0;
 }
 
-/* ── Mobile Menu Dropdown ── */
-.ol-mobile-menu {
-  position: absolute;
-  top: 70px;
-  left: 0;
-  right: 0;
-  background: rgba(10, 10, 24, 0.95);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
-  animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 99;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.ol-mobile-menu__inner {
-  padding: 16px 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.ol-mobile-menu__header {
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.ol-mobile-menu__label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: var(--sw-text-muted);
-  font-family: 'Space Grotesk', sans-serif;
-}
-
-.ol-mobile-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ol-mobile-nav-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border-radius: 12px;
-  color: var(--sw-text-secondary);
-  text-decoration: none;
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.2s ease;
-}
-
-.ol-mobile-nav-item__icon {
-  font-size: 17px;
-  margin-right: 12px;
-  display: inline-flex;
-}
-
-.ol-mobile-nav-item__label {
-  flex: 1;
-}
-
-.ol-mobile-nav-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-}
-
-.ol-mobile-nav-item--active {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(34, 211, 238, 0.12));
-  border-color: rgba(139, 92, 246, 0.4);
-  color: #fff;
-  font-weight: 600;
-}
-
-.ol-mobile-nav-item--active .ol-mobile-nav-item__icon {
-  color: var(--sw-cyan);
-}
-
-.ol-mobile-nav-item__badge {
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(34, 211, 238, 0.15);
-  border: 1px solid rgba(34, 211, 238, 0.3);
-  color: var(--sw-cyan);
-  font-weight: 600;
-}
-
-.ol-mobile-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.ol-mobile-user {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.ol-logout-btn--mobile {
-  padding: 8px 16px;
-}
-
-/* ── Main Content Area ── */
+/* ── Main Area ── */
 .ol-main {
   flex: 1;
+  margin-left: 250px;
   display: flex;
   flex-direction: column;
-  min-height: calc(100svh - 70px);
+  min-height: 100svh;
+  transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   z-index: 1;
-  width: 100%;
+  width: calc(100% - 250px);
 }
 
+.ol-sidebar--collapsed ~ .ol-main,
+.ol-root:has(.ol-sidebar--collapsed) .ol-main {
+  margin-left: 72px;
+  width: calc(100% - 72px);
+}
+
+/* ── Top Bar ── */
+.ol-topbar {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  background: rgba(11, 11, 26, 0.65);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.ol-topbar__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ol-topbar__title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #e3e0f6;
+  letter-spacing: -0.01em;
+}
+
+.ol-topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ol-topbar__badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.07);
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #22d3ee;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ol-topbar__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22d3ee;
+  box-shadow: 0 0 6px #22d3ee;
+  animation: olDotPulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes olDotPulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px #22d3ee; }
+  50% { opacity: 0.6; box-shadow: 0 0 12px #22d3ee; }
+}
+
+.ol-topbar__user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.ol-topbar__user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6, #22d3ee);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.ol-topbar__user-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ── Content ── */
 .ol-content {
   flex: 1;
   width: 100%;
-  animation: fadeIn 0.4s ease-out;
+  animation: olFadeIn 0.35s ease-out;
 }
 
-@keyframes fadeIn {
+@keyframes olFadeIn {
   from {
     opacity: 0;
     transform: translateY(6px);
@@ -568,50 +563,35 @@
   }
 }
 
+/* ── Scrollbar styling ── */
+.ol-nav::-webkit-scrollbar {
+  width: 3px;
+}
+.ol-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ol-nav::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 238, 0.3);
+  border-radius: 99px;
+}
+
 /* ── Responsive Queries ── */
-@media (max-width: 1180px) {
-  .ol-user-name {
-    max-width: 100px;
+@media (max-width: 768px) {
+  .ol-sidebar {
+    width: 72px;
   }
-  .ol-nav-item {
-    padding: 7px 12px;
-    font-size: 13px;
-  }
-}
 
-@media (max-width: 1024px) {
-  .ol-nav {
-    display: none;
+  .ol-main {
+    margin-left: 72px;
+    width: calc(100% - 72px);
   }
-  .ol-mobile-toggle {
-    display: flex;
-  }
-  .ol-logout-btn__label {
-    display: none;
-  }
-  .ol-logout-btn {
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    border-radius: 50%;
-  }
-  .ol-user-details {
-    display: none;
-  }
-  .ol-user-profile {
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    justify-content: center;
-    border-radius: 50%;
-  }
-}
 
-@media (max-width: 640px) {
-  .ol-navbar__inner {
+  .ol-topbar__badge,
+  .ol-topbar__user-name {
+    display: none;
+  }
+
+  .ol-topbar {
     padding: 0 16px;
-  }
-  .ol-brand__meta {
-    display: none;
   }
 }
