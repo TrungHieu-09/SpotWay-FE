@@ -46,7 +46,7 @@ export async function getFloors(buildingId: string) {
       ? data.items
       : []
   const floors = items.map(toFloor)
-  return Promise.all(floors.map(async (floor) => ({ ...floor, pois: await getFloorPois(floor) })))
+  return Promise.all(floors.map(async (floor: Floor) => ({ ...floor, pois: await getFloorPois(floor) })))
 }
 
 export async function createFloor(payload: CreateFloorPayload) {

@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   ApartmentOutlined,
   CloudOutlined,
-  CompassOutlined,
   DashboardOutlined,
   HomeOutlined,
   LogoutOutlined,
@@ -13,6 +12,7 @@ import {
   TeamOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../../auth/store'
+import './SpotWayNavbar.css'
 import './OwnerLayout.css'
 
 interface NavItem {
@@ -104,26 +104,21 @@ export function OwnerLayout() {
       <aside className={`ol-sidebar ${collapsed ? 'ol-sidebar--collapsed' : ''}`}>
         {/* Sidebar Header */}
         <div className="ol-sidebar__header">
-          <div
-            className="ol-brand"
-            onClick={() => navigate('/')}
-            role="button"
-            tabIndex={0}
-            title="Về trang chủ SpotWay"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') navigate('/')
-            }}
-          >
-            <div className="ol-brand__logo">
-              <CompassOutlined />
+          <Link to="/" className="spw-brand group" title="Về trang chủ SpotWay" style={{ textDecoration: 'none' }}>
+            <div className="spw-brand-icon">
+              <div className="spw-brand-icon-inner">
+                <span className="material-symbols-outlined">near_me</span>
+              </div>
+              <span className="spw-brand-ping ping-anim" />
+              <span className="spw-brand-ping" />
             </div>
             {!collapsed && (
-              <div className="ol-brand__meta">
-                <span className="ol-brand__name">SpotWay</span>
-                <span className="ol-brand__badge">Chủ tòa nhà</span>
+              <div className="flex items-baseline">
+                <span className="spw-brand-text">SpotWay</span>
+                <span className="spw-brand-sub">Owner</span>
               </div>
             )}
-          </div>
+          </Link>
 
           <button
             className="ol-collapse-btn"

@@ -1,7 +1,8 @@
 import { useRef, useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useScrollReveal } from '../../hooks/useScrollReveal'
-import { roleLabel, useAuthStore } from '../../auth/store'
+import { useAuthStore } from '../../auth/store'
+import { SpotWayNavbar, getPortalRoute } from '../../components/layout/SpotWayNavbar'
 import './LandingPage.css'
 
 type LevelId = 'L1' | 'L2' | 'L3'
@@ -39,28 +40,11 @@ const LEVEL_INFO: Record<
   },
 }
 
-function getPortalRoute(role?: string) {
-  switch (role) {
-    case 'admin':
-      return '/admin'
-    case 'building_owner':
-      return '/owner/dashboard'
-    case 'building_manager':
-      return '/manager'
-    case 'store_owner':
-      return '/store/profile'
-    default:
-      return '/owner/dashboard'
-  }
-}
-
 export function LandingPage() {
   const pageRef = useScrollReveal()
   const isoRef = useRef<HTMLDivElement>(null)
   const [activeLevel, setActiveLevel] = useState<LevelId>('L3')
   const user = useAuthStore((state) => state.user)
-  const logout = useAuthStore((state) => state.logout)
-  const userInitial = (user?.name || user?.email || 'U').slice(0, 1).toUpperCase()
 
   const handleIsoMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!isoRef.current) return
@@ -94,64 +78,8 @@ export function LandingPage() {
         <div className="lp-aurora__grid" />
       </div>
 
-      {/* ── 1. NAVBAR ── */}
-      <header className="lp-nav" data-reveal="fade-down" data-reveal-delay="0">
-        <div className="lp-nav__inner">
-          <Link to="/" className="lp-nav__brand">
-            <div className="lp-nav__logo">
-              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#5de6ff' }}>
-                near_me
-              </span>
-            </div>
-            <span className="lp-nav__name">SpotWay</span>
-          </Link>
-
-          <nav className="lp-nav__links">
-            <a href="#features">Tính năng</a>
-            <a href="#solutions">Giải pháp</a>
-            <a href="#analytics">Phân tích</a>
-            <Link to="/pricing">Bảng giá</Link>
-          </nav>
-
-          <div className="lp-nav__cta">
-            {user ? (
-              <div className="lp-user-menu">
-                <Link
-                  to={getPortalRoute(user.role)}
-                  className="lp-user-chip"
-                  title={`Đang đăng nhập: ${user.name || user.email}`}
-                >
-                  <div className="lp-user-avatar">{userInitial}</div>
-                  <div className="lp-user-details">
-                    <span className="lp-user-name">{user.name || 'Người dùng'}</span>
-                    <span className="lp-user-role">{roleLabel(user.role)}</span>
-                  </div>
-                </Link>
-                <Link to={getPortalRoute(user.role)} className="lp-btn lp-btn--primary">
-                  Vào hệ thống
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => void logout()}
-                  className="lp-btn lp-btn--ghost"
-                  title="Đăng xuất"
-                >
-                  Đăng xuất
-                </button>
-              </div>
-            ) : (
-              <>
-                <Link to="/register" className="lp-btn lp-btn--ghost">
-                  Đăng ký
-                </Link>
-                <Link to="/login" className="lp-btn lp-btn--primary">
-                  Đăng nhập
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+      {/* ── 1. UNIFIED STICKY GLASS NAVBAR ── */}
+      <SpotWayNavbar activeTab="home" />
 
       {/* ── 2. HERO ── */}
       <section className="lp-hero">
@@ -175,11 +103,11 @@ export function LandingPage() {
           <div className="lp-hero__actions" data-reveal="fade-up" data-reveal-delay="280">
             {user ? (
               <>
-                <Link to={getPortalRoute(user.role)} className="lp-btn lp-btn--primary lp-btn--lg">
+                <Link to={getPortalRoute(user)} className="lp-btn lp-btn--primary lp-btn--lg">
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
                     dashboard
                   </span>
-                  Vào bảng điều khiển
+                  {user.tenantId || user.tenant ? 'Vào bảng điều khiển' : 'Trung tâm tài khoản'}
                 </Link>
                 <Link to="/guest" className="lp-btn lp-btn--ghost lp-btn--lg">
                   <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#5de6ff' }}>
@@ -760,9 +688,9 @@ export function LandingPage() {
           Hơn 500+ dự án đã ứng dụng thành công. Chọn tòa nhà của bạn, tải lên sơ đồ và kích hoạt hệ thống trong vài giờ.
         </p>
         <div className="lp-cta__actions" data-reveal="scale-up" data-reveal-delay="200">
-          <Link to={user ? getPortalRoute(user.role) : '/login'} className="lp-btn lp-btn--primary lp-btn--lg">
+          <Link to={user ? getPortalRoute(user) : '/login'} className="lp-btn lp-btn--primary lp-btn--lg">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-            {user ? 'Vào hệ thống quản lý' : 'Đăng ký dùng thử'}
+            {user ? (user.tenantId || user.tenant ? 'Vào hệ thống quản lý' : 'Mở trang tài khoản') : 'Đăng ký dùng thử'}
           </Link>
           <Link to="/guest" className="lp-btn lp-btn--ghost lp-btn--lg">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>

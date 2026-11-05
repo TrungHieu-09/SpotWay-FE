@@ -37,11 +37,11 @@ function calculatePasswordStrength(pass: string): PasswordStrength {
 }
 
 export function RegisterPage() {
-  const [fullName, setFullName] = useState('Elena Rostova')
-  const [email, setEmail] = useState('elena@metro.com')
-  const [password, setPassword] = useState('SpatialGrid!2025#')
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [agreedToTerms, setAgreedToTerms] = useState(true)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [registerError, setRegisterError] = useState<string | null>(null)
 
@@ -52,7 +52,7 @@ export function RegisterPage() {
 
   // Redirect if already authenticated
   if (user) {
-    return <Navigate to="/owner/dashboard" replace />
+    return <Navigate to={user.tenantId ? '/owner/dashboard' : '/account'} replace />
   }
 
   const strength = calculatePasswordStrength(password)
@@ -88,12 +88,11 @@ export function RegisterPage() {
 
     setSubmitting(true)
     try {
-      const res = await registerUser(fullName.trim(), email.trim(), password)
+      await registerUser(fullName.trim(), email.trim(), password)
       message.success('Mã xác thực đã được gửi tới email của bạn!')
       navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`, {
         state: {
           email: email.trim(),
-          demoCode: res?.demoCode,
           fullName: fullName.trim(),
         },
         replace: true,
@@ -181,7 +180,7 @@ export function RegisterPage() {
                   id="reg-fullname"
                   type="text"
                   className="reg-input"
-                  placeholder="Elena Rostova"
+                  placeholder="Ví dụ: Nguyễn Văn A"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   autoComplete="name"
@@ -205,7 +204,7 @@ export function RegisterPage() {
                   id="reg-email"
                   type="email"
                   className="reg-input"
-                  placeholder="elena@metro.com"
+                  placeholder="Ví dụ: name@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
@@ -229,7 +228,7 @@ export function RegisterPage() {
                   id="reg-password"
                   type={showPassword ? 'text' : 'password'}
                   className="reg-input reg-input--password"
-                  placeholder="Nhập mật khẩu an toàn (tối thiểu 8 ký tự)"
+                  placeholder="Tối thiểu 8 ký tự (chữ hoa, số, ký tự đặc biệt)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="new-password"

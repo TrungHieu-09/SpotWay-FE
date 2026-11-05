@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { App as AntApp } from 'antd'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { roleLabel, useAuthStore } from '../../auth/store'
+import { useAuthStore } from '../../auth/store'
 import type { Role } from '../../types/auth'
 import './LoginPage.css'
 
@@ -20,19 +20,15 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   { role: 'store_owner', label: 'Gian hàng', roleTag: 'Kinh doanh', email: 'lumi@demo.vn', desc: 'Quản lý quầy & chương trình ưu đãi' },
 ]
 
-function homeForRole(role: Role): string {
-  switch (role) {
-    case 'admin':
-      return '/admin'
-    case 'building_owner':
-      return '/owner/dashboard'
-    case 'building_manager':
-      return '/manager'
-    case 'store_owner':
-      return '/store/profile'
-    default:
-      return '/owner/dashboard'
+function homeForRole(user?: { role?: string; tenantId?: string | null; tenant?: unknown } | null): string {
+  if (!user) return '/login'
+  if (user.role === 'admin') return '/admin'
+  if (user.tenantId || user.tenant) {
+    if (user.role === 'building_owner') return '/owner/dashboard'
+    if (user.role === 'building_manager') return '/manager'
+    if (user.role === 'store_owner') return '/store/profile'
   }
+  return '/account'
 }
 
 export function LoginPage() {
@@ -56,10 +52,13 @@ export function LoginPage() {
   const login = useAuthStore((state) => state.login)
 
   // Auto redirect if already authenticated
+  if (isInitializing) {
+    return null
+  }
   if (user) {
     const redirect = new URLSearchParams(location.search).get('redirect')
     const nextPath = redirect?.startsWith('/') ? redirect : undefined
-    return <Navigate to={nextPath ?? homeForRole(user.role)} replace />
+    return <Navigate to={nextPath ?? homeForRole(user)} replace />
   }
 
   const handleSelectDemo = (account: DemoAccount) => {
@@ -79,7 +78,7 @@ export function LoginPage() {
       const redirect = new URLSearchParams(location.search).get('redirect')
       const nextPath = redirect?.startsWith('/') ? redirect : undefined
       const nextUser = useAuthStore.getState().user
-      const targetRoute = nextPath ?? homeForRole(nextUser?.role ?? 'building_owner')
+      const targetRoute = nextPath ?? homeForRole(nextUser)
 
       message.success(lang === 'EN' ? 'Signed in successfully' : 'Đăng nhập thành công')
       navigate(targetRoute, { replace: true })

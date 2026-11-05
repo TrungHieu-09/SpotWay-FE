@@ -137,7 +137,7 @@ function useElementSize<T extends HTMLElement>(isEnabled: boolean) {
   return [ref, size] as const
 }
 
-export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
+export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolean } = {}) {
   const selectedFloor = useFloorStore((state) => state.selectedFloor)
   const [stageHostRef, stageHostSize] = useElementSize<HTMLDivElement>(
     Boolean(selectedFloor),

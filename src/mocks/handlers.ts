@@ -783,7 +783,6 @@ export const handlers = [
     return HttpResponse.json({
       message: 'Mã xác thực đã được gửi tới email của bạn.',
       email: emailToMatch,
-      demoCode: code,
     })
   }),
 
@@ -862,7 +861,6 @@ export const handlers = [
     return HttpResponse.json({
       message: 'Mã xác thực mới đã được gửi tới email của bạn.',
       email: emailToMatch,
-      demoCode: code,
     })
   }),
 

@@ -568,32 +568,39 @@
 
 /* Skip Button */
 .wob-btn-skip {
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: #cbc3d7;
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 13.5px;
-  font-weight: 500;
+  font-size: 14.5px;
+  font-weight: 600;
   cursor: pointer;
-  padding: 8px 4px;
-  transition: all 0.15s ease;
+  padding: 11px 24px;
+  border-radius: 12px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
 }
 
 .wob-btn-skip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.24);
   color: #ffffff;
-  text-decoration: underline;
-  text-underline-offset: 4px;
+  transform: translateY(-1px);
+}
+
+.wob-btn-skip:active {
+  transform: scale(0.98);
 }
 
 /* Continue Button */
 .wob-btn-continue {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 11px 22px;
+  padding: 11px 26px;
   border-radius: 12px;
   border: none;
   background: linear-gradient(90deg, #8B5CF6, #6366F1, #22D3EE);

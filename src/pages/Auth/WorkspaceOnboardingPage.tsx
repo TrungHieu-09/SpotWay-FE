@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { App as AntApp } from 'antd'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../auth/store'
+import '../../components/layout/SpotWayNavbar.css'
 import './WorkspaceOnboardingPage.css'
 
 interface OrgTypeOption {
@@ -20,8 +21,8 @@ const ORG_TYPES: OrgTypeOption[] = [
 ]
 
 export function WorkspaceOnboardingPage() {
-  const [orgName, setOrgName] = useState('Metro Transit Authority')
-  const [subdomain, setSubdomain] = useState('metro-transit')
+  const [orgName, setOrgName] = useState('')
+  const [subdomain, setSubdomain] = useState('')
   const [selectedType, setSelectedType] = useState('airport')
   const [buildingCount, setBuildingCount] = useState('4 - 10 tòa nhà')
   const [region, setRegion] = useState('vn')
@@ -35,10 +36,21 @@ export function WorkspaceOnboardingPage() {
   const userEmail = user?.email || 'elena@metro.com'
   const userInitial = (user?.name || userEmail.slice(0, 1)).slice(0, 1).toUpperCase()
 
+  const handleOrgNameChange = (val: string) => {
+    setOrgName(val)
+    const slug = val
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+    setSubdomain(slug)
+  }
+
   // Skip handler - strictly optional as requested by user
   const handleSkip = () => {
-    message.info('Đã bỏ qua bước thiết lập. Bạn có thể cấu hình lại trong phần Cài đặt bất kỳ lúc nào.')
-    navigate('/owner/dashboard', { replace: true })
+    message.info('Đã bỏ qua bước thiết lập. Bạn có thể tạo workspace hoặc tham gia bất kỳ lúc nào.')
+    navigate('/account', { replace: true })
   }
 
   // Continue to Plan / Dashboard handler
@@ -81,13 +93,18 @@ export function WorkspaceOnboardingPage() {
       <header className="wob-topbar">
         <div className="wob-topbar__inner">
           {/* Logo */}
-          <Link to="/" className="wob-brand" title="Về trang chủ SpotWay">
-            <div className="wob-brand__logo">
-              <div className="wob-brand__logo-inner">
-                <span className="material-symbols-outlined">deployed_code</span>
+          <Link to="/" className="spw-brand group" title="Về trang chủ SpotWay">
+            <div className="spw-brand-icon">
+              <div className="spw-brand-icon-inner">
+                <span className="material-symbols-outlined">near_me</span>
               </div>
+              <span className="spw-brand-ping ping-anim" />
+              <span className="spw-brand-ping" />
             </div>
-            <span className="wob-brand__name">SpotWay</span>
+            <div className="flex items-baseline">
+              <span className="spw-brand-text">SpotWay</span>
+              <span className="spw-brand-sub">Spatial OS</span>
+            </div>
           </Link>
 
           {/* User Identification Pill */}
@@ -149,9 +166,9 @@ export function WorkspaceOnboardingPage() {
                   id="wob-org-name"
                   type="text"
                   className="wob-input"
-                  placeholder="Ví dụ: Tập đoàn Quản lý Bất động sản Saigon"
+                  placeholder="Ví dụ: Tập đoàn Bất động sản Saigon"
                   value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
+                  onChange={(e) => handleOrgNameChange(e.target.value)}
                   required
                 />
               </div>
@@ -163,17 +180,19 @@ export function WorkspaceOnboardingPage() {
                 <label className="wob-label" htmlFor="wob-subdomain">
                   Tên miền định danh Workspace
                 </label>
-                <span className="wob-badge-avail">
-                  <span className="material-symbols-outlined">check_circle</span>
-                  Khả dụng ✓
-                </span>
+                {subdomain && (
+                  <span className="wob-badge-avail">
+                    <span className="material-symbols-outlined">check_circle</span>
+                    Khả dụng ✓
+                  </span>
+                )}
               </div>
               <div className="wob-subdomain-group">
                 <input
                   id="wob-subdomain"
                   type="text"
                   className="wob-subdomain-input"
-                  placeholder="metro-transit"
+                  placeholder="vi-du-ten-mien"
                   value={subdomain}
                   onChange={(e) =>
                     setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
@@ -257,26 +276,21 @@ export function WorkspaceOnboardingPage() {
 
             {/* Action Buttons Row: Skip & Continue */}
             <div className="wob-actions-row">
-              {/* Skip Button (Explicitly skippable as requested) */}
               <button
                 type="button"
                 className="wob-btn-skip"
                 onClick={handleSkip}
-                title="Bỏ qua bước này và vào bảng điều khiển ngay"
+                title="Bỏ qua bước thiết lập này"
               >
-                <span>Bỏ qua, tôi đã có không gian hoặc được mời</span>
-                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
-                  arrow_forward
-                </span>
+                <span>Bỏ qua</span>
               </button>
 
-              {/* Continue to Plan Button */}
               <button
                 type="submit"
                 className="wob-btn-continue"
                 disabled={submitting}
               >
-                <span>{submitting ? 'Đang khởi tạo...' : 'Tiếp tục chọn Gói'}</span>
+                <span>{submitting ? 'Đang xử lý...' : 'Tiếp tục'}</span>
                 <span className="material-symbols-outlined">arrow_forward</span>
               </button>
             </div>

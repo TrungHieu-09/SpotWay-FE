@@ -1,8 +1,9 @@
 import { Button, Layout } from 'antd'
-import { CompassOutlined, HomeOutlined, LogoutOutlined } from '@ant-design/icons'
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { HomeOutlined, LogoutOutlined } from '@ant-design/icons'
+import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../auth/store'
 import { clearSession } from '../../api/auth'
+import './SpotWayNavbar.css'
 import './AppLayout.css'
 
 const { Content, Header } = Layout
@@ -37,26 +38,19 @@ export function AppLayout() {
     <Layout className="app-layout">
       <Header className="app-header">
         {/* Brand */}
-        <div
-          className="brand"
-          onClick={() => navigate('/')}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') navigate('/')
-          }}
-          title="Về trang chủ SpotWay"
-        >
-          <div className="brand-logo">
-            <CompassOutlined />
+        <Link to="/" className="spw-brand group" title="Về trang chủ SpotWay">
+          <div className="spw-brand-icon">
+            <div className="spw-brand-icon-inner">
+              <span className="material-symbols-outlined">near_me</span>
+            </div>
+            <span className="spw-brand-ping ping-anim" />
+            <span className="spw-brand-ping" />
           </div>
-          <div className="brand-text">
-            <span className="brand-name">SpotWay</span>
-            <span className="brand-tagline">
-              {isAdmin ? 'Quản trị hệ thống' : 'Không gian số'}
-            </span>
+          <div className="flex items-baseline">
+            <span className="spw-brand-text">SpotWay</span>
+            <span className="spw-brand-sub">{isAdmin ? 'Admin' : 'Spatial OS'}</span>
           </div>
-        </div>
+        </Link>
 
         {/* Admin Navigation Bar if logged in as Admin */}
         {isAdmin && (

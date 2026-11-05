@@ -13,6 +13,7 @@ function toBuilding(building: any): Building {
   if (building && 'floorCount' in building) {
     return {
       id: building.id,
+      tenantId: building.tenantId ?? '',
       name: building.name,
       address: building.address ?? '',
       status: building.status === 'ACTIVE' || building.status === 'active' ? 'active' : 'draft',
@@ -23,6 +24,7 @@ function toBuilding(building: any): Building {
   }
   return {
     id: building?.id ?? '',
+    tenantId: building?.tenantId ?? '',
     name: building?.name ?? '',
     address: building?.address ?? '',
     status: building?.status === 'ACTIVE' ? 'active' : 'draft',

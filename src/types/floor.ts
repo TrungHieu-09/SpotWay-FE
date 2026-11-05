@@ -5,7 +5,7 @@ export type FloorPublishStatus = 'draft' | 'published'
 export type Floor = {
   id: string
   buildingId: string
-  areaId: string | null
+  areaId?: string | null
   name: string
   level: number
   publishStatus: FloorPublishStatus
@@ -13,7 +13,7 @@ export type Floor = {
   mapWidth: number
   mapHeight: number
   pois: Poi[]
-  nextPoiNumber: number
+  nextPoiNumber?: number
 }
 
 export type CreateFloorPayload = {

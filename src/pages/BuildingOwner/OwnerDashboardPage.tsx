@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { App as AntApp, Button, Spin } from 'antd'
+import { Button, Spin } from 'antd'
 import {
   ApartmentOutlined,
   AppstoreOutlined,
@@ -24,7 +24,6 @@ export function OwnerDashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const buildings = useBuildingStore((state) => state.buildings)
   const loadBuildings = useBuildingStore((state) => state.loadBuildings)
-  const { message } = AntApp.useApp()
 
   useEffect(() => {
     Promise.all([getTenantOverview(), loadBuildings()])

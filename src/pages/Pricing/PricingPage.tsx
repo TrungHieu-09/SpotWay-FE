@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuthStore, roleLabel } from '../../auth/store'
+import { useAuthStore } from '../../auth/store'
+import { SpotWayNavbar } from '../../components/layout/SpotWayNavbar'
 import './PricingPage.css'
 
 export function PricingPage() {
   const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
+  const { user } = useAuthStore()
 
   // State: Billing cycle (true = yearly - 20% discount, false = monthly)
   const [isYearly, setIsYearly] = useState(true)
@@ -26,32 +27,23 @@ export function PricingPage() {
     setOpenFaq((prev) => (prev === index ? null : index))
   }
 
-  function getDashboardPath(role?: string) {
-    switch (role) {
-      case 'admin':
-        return '/admin'
-      case 'building_owner':
-        return '/owner/dashboard'
-      case 'building_manager':
-        return '/manager'
-      case 'store_owner':
-        return '/store/profile'
-      default:
-        return '/home'
+  function getDashboardPath(u?: { role?: string; tenantId?: string | null; tenant?: unknown } | null) {
+    if (!u) return '/login'
+    if (u.role === 'admin') return '/admin'
+    if (u.tenantId || u.tenant) {
+      if (u.role === 'building_owner') return '/owner/dashboard'
+      if (u.role === 'building_manager') return '/manager'
+      if (u.role === 'store_owner') return '/store/profile'
     }
-  }
-
-  async function handleLogout() {
-    await logout()
-    navigate('/')
+    return '/account'
   }
 
   const handlePlanAction = () => {
     if (user) {
-      if (user.role === 'building_owner') {
+      if (user.role === 'building_owner' && user.tenantId) {
         navigate('/owner/subscription')
       } else {
-        navigate(getDashboardPath(user.role))
+        navigate(getDashboardPath(user))
       }
     } else {
       navigate('/login')
@@ -60,75 +52,8 @@ export function PricingPage() {
 
   return (
     <div className="pricing-page-root selection:bg-purple-500 selection:text-white">
-      {/* ── 1. STICKY GLASS NAVBAR ── */}
-      <header className="pricing-header">
-        <div className="pricing-nav-inner">
-          {/* Brand Logo */}
-          <Link to="/" className="pricing-brand group">
-            <div className="pricing-brand-icon">
-              <div className="pricing-brand-icon-inner">
-                <span className="material-symbols-outlined text-[#22d3ee] text-[20px]">near_me</span>
-              </div>
-              <span className="pricing-brand-ping ping-anim" />
-              <span className="pricing-brand-ping" />
-            </div>
-            <div className="flex items-baseline">
-              <span className="pricing-brand-text pricing-font-headline">SpotWay</span>
-              <span className="pricing-brand-sub">Spatial v2.4</span>
-            </div>
-          </Link>
-
-          {/* Center Nav Links */}
-          <ul className="pricing-nav-links">
-            <li>
-              <Link to="/#features">Nền tảng</Link>
-            </li>
-            <li>
-              <Link to="/#solutions">Giải pháp</Link>
-            </li>
-            <li>
-              <Link to="/#analytics">Phân tích</Link>
-            </li>
-            <li>
-              <Link to="/pricing" className="active">
-                <span>Bảng giá</span>
-                <span className="pricing-dot-active" />
-              </Link>
-            </li>
-          </ul>
-
-          {/* Right CTAs / User Auth */}
-          <div className="pricing-nav-actions">
-            {user ? (
-              <>
-                <Link to={getDashboardPath(user.role)} className="pricing-user-chip">
-                  <div className="pricing-avatar-circle">
-                    {(user.fullName || user.email || 'U').charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex flex-col text-left">
-                    <span className="font-semibold text-[13px] leading-tight text-white">{user.fullName || user.email}</span>
-                    <span className="text-[11px] text-[#22d3ee] leading-none">{roleLabel(user.role)}</span>
-                  </div>
-                </Link>
-                <button type="button" onClick={handleLogout} className="pricing-btn-ghost">
-                  <span className="material-symbols-outlined text-[18px]">logout</span>
-                  <span>Đăng xuất</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <Link to="/login" className="pricing-btn-ghost">
-                  Đăng nhập
-                </Link>
-                <Link to="/login" className="pricing-btn-primary">
-                  <span>Bắt đầu ngay</span>
-                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+      {/* ── 1. UNIFIED STICKY GLASS NAVBAR ── */}
+      <SpotWayNavbar activeTab="pricing" />
 
       {/* ── MAIN CANVAS ── */}
       <main className="pricing-main-canvas">

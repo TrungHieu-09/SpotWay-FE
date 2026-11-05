@@ -5,7 +5,16 @@ import { useAuthStore } from '../../auth/store'
 export function ForbiddenPage() {
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
-  const fallback = user?.role === 'admin' ? '/admin' : user?.role === 'store_owner' ? '/store/profile' : user?.role === 'building_manager' ? '/manager' : '/owner/dashboard'
+  const fallback =
+    user?.role === 'admin'
+      ? '/admin'
+      : (user?.tenantId || user?.tenant)
+        ? user?.role === 'store_owner'
+          ? '/store/profile'
+          : user?.role === 'building_manager'
+            ? '/manager'
+            : '/owner/dashboard'
+        : '/account'
 
   return (
     <Result

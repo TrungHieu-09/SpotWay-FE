@@ -11,39 +11,20 @@ declare global {
   }
 }
 
-async function enableMocking() {
-  if (!import.meta.env.DEV) {
-    return
-  }
-
-  const { resetMockStorage } = await import('./mocks/persist')
-  window.__resetMock = resetMockStorage
-
-  if (import.meta.env.VITE_ENABLE_MSW === 'false') {
-    return
-  }
-
-  // Unregister any stale service workers before starting fresh
-  if ('serviceWorker' in navigator) {
-    const registrations = await navigator.serviceWorker.getRegistrations()
-    for (const reg of registrations) {
-      if (reg.active?.scriptURL.includes('mockServiceWorker')) {
-        await reg.update()
+async function cleanupServiceWorker() {
+  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations()
+      for (const reg of registrations) {
+        await reg.unregister()
       }
+    } catch {
+      // ignore
     }
   }
-
-  const { worker } = await import('./mocks/browser')
-  return worker.start({
-    onUnhandledRequest: 'bypass',
-    serviceWorker: {
-      url: '/mockServiceWorker.js',
-      options: { scope: '/' },
-    },
-  })
 }
 
-await enableMocking()
+await cleanupServiceWorker()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -1,6 +1,6 @@
 import type { Area } from './area'
 
-export type Role = 'admin' | 'building_owner' | 'building_manager' | 'store_owner'
+export type Role = 'admin' | 'building_owner' | 'building_manager' | 'store_owner' | 'guest'
 
 export type UserStatus = 'active' | 'locked'
 
@@ -63,7 +63,6 @@ export type LoginResponse = {
 export type RegisterResponse = {
   message: string
   email: string
-  demoCode?: string
 }
 
 export type AuthErrorResponse = {

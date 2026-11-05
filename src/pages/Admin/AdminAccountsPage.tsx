@@ -26,6 +26,7 @@ const roleLabels: Record<Role, string> = {
   building_owner: 'Chủ tòa nhà',
   building_manager: 'Quản lý tòa nhà',
   store_owner: 'Chủ gian hàng',
+  guest: 'Khách / Người dùng mới',
 }
 
 const statusLabels: Record<AdminUser['status'], string> = {

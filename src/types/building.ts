@@ -14,7 +14,8 @@ export type Building = {
 export type CreateBuildingPayload = {
   name: string
   address: string
-  floors: CreateBuildingFloorPayload[]
+  floors?: CreateBuildingFloorPayload[]
+  planImage?: File
 }
 
 export type CreateBuildingFloorPayload = {

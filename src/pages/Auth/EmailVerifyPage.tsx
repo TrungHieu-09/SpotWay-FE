@@ -3,6 +3,7 @@ import { App as AntApp } from 'antd'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../auth/store'
 import { resendOtp } from '../../auth/api'
+import '../../components/layout/SpotWayNavbar.css'
 import './EmailVerifyPage.css'
 
 export function EmailVerifyPage() {
@@ -12,13 +13,11 @@ export function EmailVerifyPage() {
   const { message } = AntApp.useApp()
 
   // Location state or URL param
-  const stateEmail = (location.state as { email?: string; demoCode?: string })?.email
-  const stateDemoCode = (location.state as { email?: string; demoCode?: string })?.demoCode
+  const stateEmail = (location.state as { email?: string })?.email
   const paramEmail = searchParams.get('email')
 
-  const initialEmail = stateEmail || paramEmail || 'user@spotway.io'
+  const initialEmail = stateEmail || paramEmail || ''
   const [email, setEmail] = useState(initialEmail)
-  const [demoCode, setDemoCode] = useState<string | null>(stateDemoCode || '123456')
 
   // 6-digit OTP boxes state
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', ''])
@@ -124,16 +123,6 @@ export function EmailVerifyPage() {
     inputRefs.current[focusIdx]?.focus()
   }
 
-  // Quick fill demo code helper
-  const handleQuickFill = () => {
-    if (!demoCode) return
-    const digits = demoCode.slice(0, 6).split('')
-    setOtp(digits)
-    setErrorMessage(null)
-    message.success(`Đã điền mã xác thực: ${demoCode}`)
-    inputRefs.current[5]?.focus()
-  }
-
   // Resend OTP handler
   const handleResend = async () => {
     if (cooldown > 0 || resending) return
@@ -141,11 +130,8 @@ export function EmailVerifyPage() {
     setErrorMessage(null)
 
     try {
-      const res = await resendOtp(email)
+      await resendOtp(email)
       setCooldown(60)
-      if (res?.demoCode) {
-        setDemoCode(res.demoCode)
-      }
       message.success('Mã xác thực mới đã được gửi đến email của bạn!')
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể gửi lại mã. Vui lòng thử lại.'
@@ -202,11 +188,18 @@ export function EmailVerifyPage() {
 
       {/* ── Top Header Navigation ── */}
       <header className="ev-topbar">
-        <Link to="/" className="ev-brand" title="Trang chủ SpotWay">
-          <div className="ev-brand__icon">
-            <span className="material-symbols-outlined">deployed_code</span>
+        <Link to="/" className="spw-brand group" title="Về trang chủ SpotWay">
+          <div className="spw-brand-icon">
+            <div className="spw-brand-icon-inner">
+              <span className="material-symbols-outlined">near_me</span>
+            </div>
+            <span className="spw-brand-ping ping-anim" />
+            <span className="spw-brand-ping" />
           </div>
-          <span className="ev-brand__name">SpotWay</span>
+          <div className="flex items-baseline">
+            <span className="spw-brand-text">SpotWay</span>
+            <span className="spw-brand-sub">Spatial OS</span>
+          </div>
         </Link>
 
         <div className="ev-topbar__action">
@@ -269,7 +262,7 @@ export function EmailVerifyPage() {
             ) : (
               <div className="ev-email-display">
                 <span className="material-symbols-outlined ev-email-icon">mail</span>
-                <span className="ev-email-text">{email}</span>
+                <span className="ev-email-text">{email || 'Chưa có email'}</span>
                 <button
                   type="button"
                   className="ev-email-change-btn"
@@ -282,30 +275,6 @@ export function EmailVerifyPage() {
               </div>
             )}
           </div>
-
-          {/* Demo Mode Notice Box */}
-          {demoCode && (
-            <div className="ev-demo-banner">
-              <div className="ev-demo-banner__left">
-                <div className="ev-demo-pill">
-                  <span className="material-symbols-outlined">science</span>
-                  <span>Chế độ Demo</span>
-                </div>
-                <div className="ev-demo-code-text">
-                  Mã OTP của bạn là: <strong className="ev-demo-code">{demoCode}</strong>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="ev-demo-fill-btn"
-                onClick={handleQuickFill}
-                title="Tự động điền mã xác thực"
-              >
-                <span className="material-symbols-outlined">bolt</span>
-                <span>Điền nhanh</span>
-              </button>
-            </div>
-          )}
 
           {/* Error Message */}
           {errorMessage && (

@@ -37,6 +37,10 @@ type FloorState = {
     floorId: string,
     publishStatus: FloorPublishStatus,
   ) => Promise<void>
+  updateFloorPlan: (
+    floorId: string,
+    patch: { mapImageUrl: string | null; mapWidth: number; mapHeight: number },
+  ) => Promise<void>
   addPoi: (poi: NewPoiInput) => Promise<void>
   movePoi: (
     poiId: string,
@@ -154,6 +158,34 @@ export const useFloorStore = create<FloorState>((set, get) => ({
     set({ isFloorLoading: true, error: null })
     try {
       const updatedFloor = await updateFloor(floorId, { publishStatus })
+      const floors = sortFloorsByLevel(
+        get().floors.map((floor) =>
+          floor.id === floorId ? updatedFloor : floor,
+        ),
+      )
+      const selectedFloor =
+        get().selectedFloorId === floorId ? updatedFloor : get().selectedFloor
+
+      set({
+        floors,
+        selectedFloor,
+        pois:
+          get().selectedFloorId === floorId
+            ? updatedFloor.pois
+            : get().pois,
+      })
+    } catch (error) {
+      set({ error: (error as Error).message })
+      throw error
+    } finally {
+      set({ isFloorLoading: false })
+    }
+  },
+
+  async updateFloorPlan(floorId, patch) {
+    set({ isFloorLoading: true, error: null })
+    try {
+      const updatedFloor = await updateFloor(floorId, patch)
       const floors = sortFloorsByLevel(
         get().floors.map((floor) =>
           floor.id === floorId ? updatedFloor : floor,

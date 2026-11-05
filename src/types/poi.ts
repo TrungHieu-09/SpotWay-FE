@@ -11,6 +11,7 @@ export type PoiType =
 export type Poi = {
   id: string
   floorId: string
+  nodeId?: string
   name: string
   type: PoiType
   /** 0-100, percentage on the floor plan width. Not a pixel value. */

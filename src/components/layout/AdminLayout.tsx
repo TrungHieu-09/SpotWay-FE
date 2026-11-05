@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   BarChartOutlined,
   BankOutlined,
@@ -8,10 +8,10 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  CompassOutlined,
   HomeOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../../auth/store'
+import './SpotWayNavbar.css'
 import './AdminLayout.css'
 
 interface NavItem {
@@ -79,26 +79,21 @@ export function AdminLayout() {
       <aside className={`adm-sidebar ${collapsed ? 'adm-sidebar--collapsed' : ''}`}>
         {/* Sidebar Header */}
         <div className="adm-sidebar__header">
-          <div
-            className="adm-brand"
-            onClick={() => navigate('/')}
-            role="button"
-            tabIndex={0}
-            title="Về trang chủ SpotWay"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') navigate('/')
-            }}
-          >
-            <div className="adm-brand__logo">
-              <CompassOutlined />
+          <Link to="/" className="spw-brand group" title="Về trang chủ SpotWay" style={{ textDecoration: 'none' }}>
+            <div className="spw-brand-icon">
+              <div className="spw-brand-icon-inner">
+                <span className="material-symbols-outlined">near_me</span>
+              </div>
+              <span className="spw-brand-ping ping-anim" />
+              <span className="spw-brand-ping" />
             </div>
             {!collapsed && (
-              <div className="adm-brand__meta">
-                <span className="adm-brand__name">SpotWay</span>
-                <span className="adm-brand__badge">Quản trị hệ thống</span>
+              <div className="flex items-baseline">
+                <span className="spw-brand-text">SpotWay</span>
+                <span className="spw-brand-sub">Admin</span>
               </div>
             )}
-          </div>
+          </Link>
 
           <button
             className="adm-collapse-btn"

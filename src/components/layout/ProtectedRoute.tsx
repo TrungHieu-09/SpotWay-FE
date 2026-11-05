@@ -58,6 +58,13 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   }
 
   if (!allowedRoles.includes(user.role)) {
+    if (user.role === 'admin') {
+      return <Navigate to="/admin" replace />
+    }
+    // If user has 0 workspace or is a guest, send them to /account empty state instead of 403
+    if (user.role === 'guest' || !user.tenantId) {
+      return <Navigate to="/account" replace />
+    }
     return <Navigate to="/403" replace />
   }
 

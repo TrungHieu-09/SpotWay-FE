@@ -32,6 +32,12 @@ const WorkspaceOnboardingPage = lazy(() =>
   })),
 )
 
+const AccountHomePage = lazy(() =>
+  import('../pages/Auth/AccountHomePage').then((module) => ({
+    default: module.AccountHomePage,
+  })),
+)
+
 const PricingPage = lazy(() =>
   import('../pages/Pricing/PricingPage').then((module) => ({
     default: module.PricingPage,
@@ -149,6 +155,8 @@ export const router = createBrowserRouter([
   { path: 'verify', element: lazyElement(<EmailVerifyPage />) },
   { path: 'onboarding', element: lazyElement(<WorkspaceOnboardingPage />) },
   { path: 'workspace-setup', element: lazyElement(<WorkspaceOnboardingPage />) },
+  { path: 'account', element: lazyElement(<AccountHomePage />) },
+  { path: 'workspace/choose', element: lazyElement(<AccountHomePage />) },
 
   // ── Building Owner section with sidebar ──
   {
