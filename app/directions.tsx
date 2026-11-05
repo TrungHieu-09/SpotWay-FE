@@ -15,6 +15,7 @@ import Svg, { Circle, Defs, G, Line, Path, Pattern, Polyline, Rect, Text as SvgT
 
 import { StoreIcon, wrapLabel } from '@/components/floor-plan-parts';
 import { HazardOverlay } from '@/components/hazard-overlay';
+import { EmptyState } from '@/components/empty-state';
 import { Text } from '@/components/scaled-text';
 import {
   CURRENT_LOCATION_NODE,
@@ -171,10 +172,16 @@ export default function DirectionsScreen() {
   if (!plan) {
     return (
       <SafeAreaView style={styles.root}>
-        <Pressable accessibilityRole="button" hitSlop={8} onPress={() => router.back()} style={styles.emptyBack}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('scan.back')} hitSlop={8} onPress={() => router.back()} style={styles.emptyBack}>
           <MaterialIcons name="arrow-back" size={24} color={INK} />
         </Pressable>
-        <Text style={styles.empty}>{t(evac ? 'evac.noRoute' : 'nav.noRoute')}</Text>
+        <EmptyState
+          icon={evac ? 'warning-amber' : 'alt-route'}
+          title={t(evac ? 'evac.noRoute' : 'nav.noRoute')}
+          message={evac ? undefined : t('nav.noRouteHint')}
+          actionLabel={t('error.backToMap')}
+          onAction={() => router.dismissTo({ pathname: '/map', params: { from } })}
+        />
       </SafeAreaView>
     );
   }

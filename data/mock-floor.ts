@@ -1,6 +1,6 @@
 import type { Graph, GraphEdge, GraphNode } from './pathfinding';
 
-export const MOCK_BUILDING = { code: 'SPW', name: 'SpotWay Plaza' };
+export const MOCK_BUILDING = { code: 'SPW', name: 'SpotWay Plaza', hours: '9:00 – 22:00' };
 
 /** Venue codes look like SPW-402; anything else is not shown in the map title. */
 export const isVenueCode = (value: string) => /^SPW-[A-Z0-9]{2,6}$/.test(value);

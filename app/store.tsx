@@ -1,11 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { EmptyState } from '@/components/empty-state';
 import { Text } from '@/components/scaled-text';
 import {
   CURRENT_LOCATION_NODE,
@@ -24,6 +25,8 @@ import { getStoreImage } from '@/data/store-images';
 
 
 import { useColors, type Colors } from '@/hooks/use-colors';
+import { useFavorites } from '@/hooks/use-favorites';
+import { addRecent } from '@/hooks/use-recent';
 const ICONS: Record<StoreCategory, keyof typeof MaterialIcons.glyphMap> = {
   fashion: 'checkroom',
   coffee: 'local-cafe',
@@ -63,20 +66,32 @@ export default function StoreDetailScreen() {
     return p ? Math.round(p.length * METERS_PER_UNIT) : null;
   }, [floor, store]);
 
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const storeId = store?.id;
+  useEffect(() => {
+    if (storeId) addRecent({ id: storeId, floor });
+  }, [storeId, floor]);
+
   const goBack = () => router.back();
 
   if (!store) {
     return (
       <SafeAreaView style={styles.root}>
-        <Pressable accessibilityRole="button" onPress={goBack} style={styles.backFlat} hitSlop={8}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('scan.back')} onPress={goBack} style={styles.backFlat} hitSlop={8}>
           <MaterialIcons name="arrow-back" size={24} color={INK} />
         </Pressable>
-        <Text style={styles.empty}>{t('map.noResults')}</Text>
+        <EmptyState
+          icon="storefront"
+          title={t('store.notFound')}
+          actionLabel={t('error.backToMap')}
+          onAction={() => router.dismissTo({ pathname: '/map', params: { from } })}
+        />
       </SafeAreaView>
     );
   }
 
   const icon = ICONS[store.category];
+  const fav = isFavorite({ id: store.id, floor });
   const photo = getStoreImage(store);
   const category = t(`map.category.${store.category}`);
   const meta = [
@@ -104,6 +119,14 @@ export default function StoreDetailScreen() {
             onPress={goBack}
             style={[styles.back, { top: insets.top + 12 }]}>
             <MaterialIcons name="arrow-back" size={22} color={INK} />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t(fav ? 'store.favoriteRemove' : 'store.favoriteAdd')}
+            accessibilityState={{ selected: fav }}
+            onPress={() => toggleFavorite({ id: store.id, floor })}
+            style={[styles.back, styles.heart, { top: insets.top + 12 }]}>
+            <MaterialIcons name={fav ? 'favorite' : 'favorite-border'} size={22} color={fav ? '#D64545' : INK} />
           </Pressable>
         </View>
 
@@ -193,6 +216,7 @@ const makeStyles = ({ BLUE, INK, MUTED, BORDER, BG, CARD, SURFACE, OPEN_BG, OPEN
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.88)',
   },
+  heart: { left: undefined, right: 16 },
   backFlat: { padding: 16 },
   logoWrap: { paddingHorizontal: 24 },
   logoOuter: {

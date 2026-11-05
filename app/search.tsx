@@ -5,9 +5,13 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EmptyState } from '@/components/empty-state';
 import { Text } from '@/components/scaled-text';
-import { FLOORS, getStores, type StoreCategory } from '@/data/mock-floor';
+import { FLOORS, getStores, type Floor, type StoreCategory } from '@/data/mock-floor';
 import { useColors, type Colors } from '@/hooks/use-colors';
+import type { StoreRef } from '@/hooks/persisted-list';
+import { useFavorites } from '@/hooks/use-favorites';
+import { useRecent } from '@/hooks/use-recent';
 
 
 type Group =
@@ -66,6 +70,18 @@ export default function SearchScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState<Group>('all');
+  const { recent, clearRecent } = useRecent();
+  const { favorites } = useFavorites();
+
+  // Saved refs that no longer exist in the data are dropped.
+  const resolve = (refs: StoreRef[]) =>
+    refs.flatMap((r) => {
+      const s = getStores(r.floor).find((x) => x.id === r.id);
+      return s ? [{ ...s, floor: r.floor }] : [];
+    });
+  const recentItems = resolve(recent);
+  const favoriteItems = resolve(favorites);
+  const showSaved = query.trim() === '' && group === 'all';
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -83,6 +99,32 @@ export default function SearchScreen() {
         .map((s) => ({ ...s, floor })),
     );
   }, [query, group, t]);
+
+  const renderRow = (item: { id: string; name: string; category: StoreCategory; floor: Floor }, key?: string) => (
+    <Pressable
+      key={key}
+      accessibilityRole="button"
+      style={styles.row}
+      onPress={() =>
+        router.push({
+          pathname: '/store',
+          params: { id: item.id, floor: item.floor, from },
+        })
+      }>
+      <View style={styles.rowIcon}>
+        <MaterialIcons name={ICONS[item.category]} size={20} color={BLUE} />
+      </View>
+      <View style={styles.rowBody}>
+        <Text style={styles.rowText} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <Text style={styles.rowMeta} numberOfLines={1}>
+          {t(`map.category.${item.category}`)}
+        </Text>
+      </View>
+      <Text style={styles.rowFloor}>{t('map.floor', { floor: item.floor })}</Text>
+    </Pressable>
+  );
 
   return (
     <SafeAreaView style={styles.root}>
@@ -131,31 +173,47 @@ export default function SearchScreen() {
         data={results}
         keyExtractor={(s) => `${s.floor}:${s.id}`}
         keyboardShouldPersistTaps="handled"
-        ListEmptyComponent={<Text style={styles.empty}>{t('map.noResults')}</Text>}
-        renderItem={({ item }) => (
-          <Pressable
-            accessibilityRole="button"
-            style={styles.row}
-            onPress={() =>
-              router.push({
-                pathname: '/store',
-                params: { id: item.id, floor: item.floor, from },
-              })
-            }>
-            <View style={styles.rowIcon}>
-              <MaterialIcons name={ICONS[item.category]} size={20} color={BLUE} />
+        contentContainerStyle={results.length === 0 ? { flexGrow: 1 } : undefined}
+        ListEmptyComponent={
+          <EmptyState
+            icon="search-off"
+            title={query.trim() ? t('search.emptyQuery', { query: query.trim() }) : t('search.emptyGroup')}
+            actionLabel={t('search.clearFilters')}
+            onAction={() => {
+              setQuery('');
+              setGroup('all');
+            }}
+          />
+        }
+        ListHeaderComponent={
+          showSaved && (recentItems.length > 0 || favoriteItems.length > 0) ? (
+            <View>
+              {recentItems.length > 0 && (
+                <View>
+                  <View style={styles.sectionHead}>
+                    <Text style={styles.sectionTitle}>{t('search.recent')}</Text>
+                    <Pressable accessibilityRole="button" hitSlop={8} onPress={clearRecent}>
+                      <Text style={styles.sectionAction}>{t('search.clearRecent')}</Text>
+                    </Pressable>
+                  </View>
+                  {recentItems.map((s) => renderRow(s, `r:${s.floor}:${s.id}`))}
+                </View>
+              )}
+              {favoriteItems.length > 0 && (
+                <View>
+                  <View style={styles.sectionHead}>
+                    <Text style={styles.sectionTitle}>{t('search.favorites')}</Text>
+                  </View>
+                  {favoriteItems.map((s) => renderRow(s, `f:${s.floor}:${s.id}`))}
+                </View>
+              )}
+              <View style={styles.sectionHead}>
+                <Text style={styles.sectionTitle}>{t('search.allStores')}</Text>
+              </View>
             </View>
-            <View style={styles.rowBody}>
-              <Text style={styles.rowText} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <Text style={styles.rowMeta} numberOfLines={1}>
-                {t(`map.category.${item.category}`)}
-              </Text>
-            </View>
-            <Text style={styles.rowFloor}>{t('map.floor', { floor: item.floor })}</Text>
-          </Pressable>
-        )}
+          ) : null
+        }
+        renderItem={({ item }) => renderRow(item)}
       />
     </SafeAreaView>
   );
@@ -207,5 +265,15 @@ const makeStyles = ({ BLUE, INK, MUTED, BORDER, ACTIVE_BG, CANVAS, CARD }: Color
   rowText: { fontSize: 15, fontWeight: '600', color: INK },
   rowMeta: { fontSize: 13, color: MUTED, marginTop: 2 },
   rowFloor: { fontSize: 13, color: MUTED },
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  sectionTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase', color: MUTED },
+  sectionAction: { fontSize: 13, fontWeight: '600', color: BLUE },
   empty: { padding: 24, textAlign: 'center', color: MUTED },
 });

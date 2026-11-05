@@ -1,32 +1,39 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   TextInput,
+  useColorScheme,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Text } from '@/components/scaled-text';
 import { isVenueCode } from '@/data/mock-floor';
+import { useColors, type Colors } from '@/hooks/use-colors';
 
-const BLUE = '#1C4E9C';
+// Fixed brand colours; everything else follows the light / dark palette.
+const BRAND = '#1C4E9C';
 const ORANGE = '#F2641E';
-const INK = '#14213D';
-const MUTED = '#5B6B88';
 const SCRIM = 'rgba(11,15,25,0.62)';
 const FRAME = 220;
 const CORNER = 28;
 const STROKE = 3.5;
 
 export default function ScanScreen() {
+  const colors = useColors();
+  const { BLUE, INK, MUTED } = colors;
+  const dark = useColorScheme() === 'dark';
+  const styles = useMemo(() => makeStyles(colors, dark), [colors, dark]);
+  const errorColor = dark ? '#FF8A8A' : '#D64545';
   const { t } = useTranslation();
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
@@ -35,6 +42,31 @@ export default function ScanScreen() {
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState(false);
   const handled = useRef(false);
+  const [scanError, setScanError] = useState(false);
+  const lastBad = useRef('');
+
+  // A scanned QR that is not a SpotWay code shows an inline error for a moment.
+  useEffect(() => {
+    if (!scanError) return;
+    const id = setTimeout(() => {
+      setScanError(false);
+      lastBad.current = '';
+    }, 3500);
+    return () => clearTimeout(id);
+  }, [scanError]);
+
+  const onScanned = (value: string) => {
+    const trimmed = value.trim().toUpperCase();
+    if (handled.current || !trimmed) return;
+    if (!isVenueCode(trimmed)) {
+      if (lastBad.current !== trimmed) {
+        lastBad.current = trimmed;
+        setScanError(true);
+      }
+      return;
+    }
+    openVenue(trimmed);
+  };
 
   const openVenue = (value: string) => {
     const trimmed = value.trim().toUpperCase();
@@ -45,7 +77,7 @@ export default function ScanScreen() {
     }
     handled.current = true;
     setManualOpen(false);
-    router.replace({ pathname: '/map', params: { from: trimmed } });
+    router.replace({ pathname: '/building', params: { from: trimmed } });
   };
 
   const granted = permission?.granted === true;
@@ -85,17 +117,25 @@ export default function ScanScreen() {
             facing="back"
             enableTorch={torch}
             barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-            onBarcodeScanned={({ data }) => openVenue(data)}
+            onBarcodeScanned={({ data }) => onScanned(data)}
           />
         ) : (
           <View style={styles.permission}>
             <MaterialIcons name="photo-camera" size={40} color="#FFFFFF" />
             <Text style={styles.permissionText}>{t('scan.permissionText')}</Text>
             {permission && !permission.granted && (
-              <Pressable onPress={requestPermission} style={styles.permissionButton}>
-                <Text style={styles.permissionButtonText}>{t('scan.permissionCta')}</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => (permission.canAskAgain ? requestPermission() : Linking.openSettings())}
+                style={styles.permissionButton}>
+                <Text style={styles.permissionButtonText}>
+                  {t(permission.canAskAgain ? 'scan.permissionCta' : 'scan.permissionSettings')}
+                </Text>
               </Pressable>
             )}
+            <Pressable accessibilityRole="button" onPress={() => setManualOpen(true)}>
+              <Text style={styles.permissionManual}>{t('scan.manual')}</Text>
+            </Pressable>
           </View>
         )}
 
@@ -119,10 +159,17 @@ export default function ScanScreen() {
         </View>
 
         <View style={styles.bannerWrap} pointerEvents="none">
-          <View style={styles.banner}>
-            <MaterialIcons name="info" size={17} color={BLUE} />
-            <Text style={styles.bannerText}>{t('scan.banner')}</Text>
-          </View>
+          {scanError ? (
+            <View style={[styles.banner, styles.bannerError]} accessibilityRole="alert">
+              <MaterialIcons name="error-outline" size={17} color={errorColor} />
+              <Text style={[styles.bannerText, styles.bannerErrorText]}>{t('scan.invalidCode')}</Text>
+            </View>
+          ) : (
+            <View style={styles.banner}>
+              <MaterialIcons name="info" size={17} color={BLUE} />
+              <Text style={styles.bannerText}>{t('scan.banner')}</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -160,7 +207,7 @@ export default function ScanScreen() {
                   accessibilityLabel={t('scan.close')}
                   onPress={() => setManualOpen(false)}
                   style={styles.closeButton}>
-                  <MaterialIcons name="close" size={20} color="#434751" />
+                  <MaterialIcons name="close" size={20} color={MUTED} />
                 </Pressable>
               </View>
               <Text style={styles.sheetDesc}>{t('scan.modalDesc')}</Text>
@@ -171,9 +218,10 @@ export default function ScanScreen() {
                   setCodeError(false);
                 }}
                 placeholder={t('scan.modalPlaceholder')}
-                placeholderTextColor="#737782"
+                placeholderTextColor={MUTED}
                 autoCapitalize="characters"
                 autoCorrect={false}
+                spellCheck={false}
                 maxLength={16}
                 returnKeyType="done"
                 onSubmitEditing={() => openVenue(code)}
@@ -197,9 +245,13 @@ export default function ScanScreen() {
 
 const corner = { position: 'absolute', width: CORNER, height: CORNER, borderColor: ORANGE } as const;
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FFFFFF' },
-  topBar: { backgroundColor: '#FFFFFF' },
+const makeStyles = (
+  { BLUE, INK, MUTED, BORDER, CANVAS, CARD, TINT, SURFACE, ACTIVE_BG, EVAC_BG }: Colors,
+  dark: boolean,
+) =>
+  StyleSheet.create({
+  root: { flex: 1, backgroundColor: CANVAS },
+  topBar: { backgroundColor: CARD },
   topBarRow: {
     height: 56,
     paddingHorizontal: 16,
@@ -208,14 +260,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  torchButton: { borderRadius: 20, borderWidth: 1, borderColor: '#D0D7E3' },
-  torchActive: { backgroundColor: BLUE, borderColor: BLUE },
+  torchButton: { borderRadius: 20, borderWidth: 1, borderColor: BORDER },
+  torchActive: { backgroundColor: BRAND, borderColor: BRAND },
   title: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: INK },
 
   camera: { flex: 1, backgroundColor: '#0B0F19' },
   permission: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32 },
   permissionText: { color: '#FFFFFF', fontSize: 15, lineHeight: 22, textAlign: 'center' },
-  permissionButton: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, backgroundColor: BLUE },
+  permissionButton: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, backgroundColor: BRAND },
   permissionButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
 
   scrim: { flex: 1, backgroundColor: SCRIM },
@@ -239,12 +291,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: '#EAF0FA',
+    backgroundColor: TINT,
   },
+  bannerError: { backgroundColor: EVAC_BG },
+  bannerErrorText: { color: dark ? '#FF8A8A' : '#D64545' },
+  permissionManual: { fontSize: 14, fontWeight: '600', color: '#FFFFFF', textDecorationLine: 'underline' },
   bannerText: { flexShrink: 1, fontSize: 13, fontWeight: '500', color: BLUE, textAlign: 'center' },
 
   bottom: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: CARD,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     marginTop: -24,
@@ -255,7 +310,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   bottomInner: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, gap: 12, alignItems: 'center' },
-  inputError: { marginTop: 8, fontSize: 13, color: '#D64545' },
+  inputError: { marginTop: 8, fontSize: 13, color: dark ? '#FF8A8A' : '#D64545' },
   manualButton: {
     width: '100%',
     height: 50,
@@ -266,14 +321,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: BLUE,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: CARD,
   },
-  manualPressed: { backgroundColor: '#EDF3FC' },
+  manualPressed: { backgroundColor: ACTIVE_BG },
   manualText: { fontSize: 15, fontWeight: '600', color: BLUE },
   help: { fontSize: 12.5, color: MUTED, textAlign: 'center' },
 
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
-  sheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  sheet: { backgroundColor: CARD, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   sheetBody: { padding: 24, gap: 16 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sheetTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -284,15 +339,15 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E7EEFF',
+    backgroundColor: TINT,
   },
-  sheetDesc: { fontSize: 12, lineHeight: 18, color: '#434751' },
+  sheetDesc: { fontSize: 12, lineHeight: 18, color: MUTED },
   input: {
     height: 48,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#F0F3FF',
-    color: '#0A1C35',
+    backgroundColor: SURFACE,
+    color: INK,
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: 1,
@@ -306,6 +361,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#00377C',
   },
-  confirmPressed: { backgroundColor: BLUE },
+  confirmPressed: { backgroundColor: BRAND },
   confirmText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
 });
