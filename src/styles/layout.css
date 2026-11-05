@@ -3,99 +3,12 @@
    Header, Workspace, Manager Sidebar, Page Heading
    ============================================================ */
 
-/* ---- App Layout ---- */
-.app-layout {
-  min-height: 100svh;
-  background: transparent !important;
-  position: relative;
-  z-index: 1;
-}
-
-/* ---- Header / Navigation Bar ---- */
-.app-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  display: flex;
-  height: 64px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 0 28px;
-  background: var(--sw-surface-1);
-  border-bottom: 1px solid var(--sw-border);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  transition: background var(--sw-transition-normal), border-color var(--sw-transition-normal);
-}
-
-/* ---- Brand Mark ---- */
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--sw-text-primary);
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700;
-  font-size: 18px;
-  white-space: nowrap;
-  letter-spacing: -0.02em;
-  text-decoration: none;
-  transition: color var(--sw-transition-fast);
-}
-
-.brand .anticon {
-  color: var(--sw-violet);
-  font-size: 24px;
-  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.5));
-  transition: filter var(--sw-transition-normal);
-}
-
-.brand:hover .anticon {
-  filter: drop-shadow(0 0 14px rgba(139, 92, 246, 0.7));
-}
-
-.brand-logo {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--sw-violet), var(--sw-cyan));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 16px rgba(139, 92, 246, 0.35);
-  transition: box-shadow var(--sw-transition-normal), transform var(--sw-transition-normal);
-  position: relative;
-  overflow: hidden;
-}
-
-.brand-logo::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.15));
-  border-radius: inherit;
-}
-
-.brand:hover .brand-logo {
-  box-shadow: 0 0 28px rgba(139, 92, 246, 0.6);
-  transform: scale(1.08);
-}
-
-.brand-logo .anticon {
-  color: #ffffff !important;
-  font-size: 16px;
-  filter: none;
-  position: relative;
-  z-index: 1;
-}
-
 /* ---- Workspace Container ---- */
 .workspace {
   width: min(1360px, 100%);
   margin: 0 auto;
-  padding: 28px;
-  animation: fadeInUp 0.5s ease-out;
+  padding: 28px 28px 40px;
+  animation: fadeInUp 0.35s ease-out;
 }
 
 /* ---- Page Heading ---- */
@@ -109,21 +22,17 @@
 
 .page-heading h1.ant-typography {
   margin: 4px 0 0;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--sw-font);
   font-size: 32px;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.03em;
   color: var(--sw-text-primary) !important;
-  background: linear-gradient(135deg, #ffffff 0%, var(--sw-violet) 60%, var(--sw-cyan) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .page-heading .ant-typography-secondary {
   color: var(--sw-text-secondary) !important;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--sw-font);
   font-weight: 500;
   font-size: 13px;
   text-transform: uppercase;
@@ -133,7 +42,7 @@
 /* ---- Stat Counters in Page Heading ---- */
 .page-heading .ant-statistic .ant-statistic-title {
   color: var(--sw-text-secondary) !important;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--sw-font);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -141,7 +50,7 @@
 
 .page-heading .ant-statistic .ant-statistic-content {
   color: var(--sw-text-primary) !important;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--sw-font);
   font-variant-numeric: tabular-nums;
 }
 
@@ -157,14 +66,12 @@
 /* ---- Manager Sidebar ---- */
 .manager-sider {
   position: sticky;
-  top: 84px;
+  top: calc(var(--sw-nav-h) + 20px);
   overflow: hidden;
   padding: 20px;
   border: 1px solid var(--sw-border) !important;
   border-radius: var(--sw-radius-xl) !important;
   background: var(--sw-surface-1) !important;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
   box-shadow: var(--sw-shadow-1);
   transition: border-color var(--sw-transition-normal), box-shadow var(--sw-transition-normal);
   animation: slideInLeft 0.4s ease-out;
@@ -176,21 +83,17 @@
 
 .manager-sider h1.ant-typography {
   margin: 0;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--sw-font);
   font-size: 22px;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.02em;
   color: var(--sw-text-primary) !important;
-  background: linear-gradient(135deg, #ffffff, var(--sw-violet));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .manager-sider .ant-typography-secondary {
   color: var(--sw-text-secondary) !important;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--sw-font);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -236,13 +139,6 @@
    Responsive
    ============================================================ */
 @media (max-width: 760px) {
-  .app-header {
-    height: auto;
-    flex-direction: column;
-    align-items: stretch;
-    padding: 14px 16px;
-  }
-
   .workspace {
     padding: 18px 14px;
   }

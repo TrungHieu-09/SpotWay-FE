@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { App as AntApp, Button } from 'antd'
 import {
   ApartmentOutlined,
-  EditOutlined,
-  EyeOutlined,
   PlusOutlined,
   AppstoreOutlined,
   BuildOutlined,
@@ -11,8 +9,8 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { CreateBuildingModal } from './CreateBuildingModal'
 import { useBuildingStore } from '../../store/useBuildingStore'
-import type { Building } from '../../types/building'
-import { StatCard, StatusPill } from '../../components/ui'
+import { BuildingCard } from '../../components/building/BuildingCard'
+import { EmptyState, StatCard } from '../../components/ui'
 import './BuildingListPage.css'
 
 export function BuildingListPage() {
@@ -48,9 +46,7 @@ export function BuildingListPage() {
         <div className="blp-header__actions">
           <Button
             type="primary"
-            size="large"
             icon={<PlusOutlined />}
-            className="blp-create-btn"
             onClick={() => setIsCreateOpen(true)}
           >
             Tạo building mới
@@ -90,6 +86,17 @@ export function BuildingListPage() {
             <div key={i} className="blp-skeleton" />
           ))}
         </div>
+      ) : buildings.length === 0 ? (
+        <EmptyState
+          icon={<ApartmentOutlined />}
+          title="Chưa có building nào"
+          description="Tạo building đầu tiên để bắt đầu thêm tầng, sơ đồ và điểm đến."
+          action={
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsCreateOpen(true)}>
+              Tạo building mới
+            </Button>
+          }
+        />
       ) : (
         <div className="blp-grid">
           {buildings.map((building, idx) => (
@@ -118,77 +125,5 @@ export function BuildingListPage() {
         onClose={() => setIsCreateOpen(false)}
       />
     </main>
-  )
-}
-
-/* ── Building card sub-component ── */
-type BuildingCardProps = {
-  building: Building
-  delay: number
-  onView: () => void
-}
-
-function BuildingCard({ building, delay, onView }: BuildingCardProps) {
-  const initial = building.name.slice(0, 2).toUpperCase()
-
-  return (
-    <article
-      className="blp-card"
-      style={{ animationDelay: `${delay}s` }}
-    >
-      {/* Card hero */}
-      <div className="blp-card__hero">
-        {building.planImageUrl ? (
-          <img
-            className="blp-card__hero-img"
-            src={building.planImageUrl}
-            alt={`Floor plan of ${building.name}`}
-          />
-        ) : (
-          <div className="blp-card__hero-placeholder">
-            <span>{initial}</span>
-          </div>
-        )}
-        <div className="blp-card__hero-overlay" />
-        <div className="blp-card__status-badge">
-          <StatusPill status={building.status} />
-        </div>
-      </div>
-
-      {/* Card body */}
-      <div className="blp-card__body">
-        <h3 className="blp-card__name">{building.name}</h3>
-        <p className="blp-card__address">{building.address}</p>
-
-        <div className="blp-card__meta">
-          <span className="blp-card__meta-item">
-            <AppstoreOutlined />
-            {building.floorCount} floors
-          </span>
-          <span className="blp-card__meta-item">
-            {new Intl.DateTimeFormat('vi-VN').format(new Date(building.createdAt))}
-          </span>
-        </div>
-      </div>
-
-      {/* Card actions */}
-      <div className="blp-card__actions">
-        <Button
-          block
-          type="primary"
-          icon={<EyeOutlined />}
-          onClick={onView}
-          className="blp-card__action-btn blp-card__action-btn--primary"
-        >
-          Xem chi tiết
-        </Button>
-        <Button
-          icon={<EditOutlined />}
-          className="blp-card__action-btn"
-        >
-          Sửa
-        </Button>
-      </div>
-    </article>
   )
 }

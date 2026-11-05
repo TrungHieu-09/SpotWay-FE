@@ -3,13 +3,11 @@
    Cards, Tables, Canvas, Floor Selector, Upload, POI
    ============================================================ */
 
-/* ---- Glass Panel Card ---- */
+/* ---- Panel Card ---- */
 .tool-card {
   border: 1px solid var(--sw-border) !important;
-  border-radius: var(--sw-radius-xl) !important;
+  border-radius: var(--sw-radius-lg) !important;
   background: var(--sw-surface-1) !important;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
   box-shadow: var(--sw-shadow-1);
   transition:
     border-color var(--sw-transition-normal),
@@ -26,16 +24,16 @@
 .tool-card .ant-card-head {
   background: transparent !important;
   border-bottom: 1px solid var(--sw-border);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--sw-font);
   font-weight: 600;
   color: var(--sw-text-primary);
-  padding: 16px 24px;
+  padding: 14px 20px;
   min-height: auto;
 }
 
 .tool-card .ant-card-head-title {
   color: var(--sw-text-primary) !important;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--sw-font);
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -58,7 +56,7 @@
   gap: 8px;
   place-items: center;
   color: var(--sw-violet);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--sw-font);
   font-weight: 500;
 }
 
@@ -135,18 +133,13 @@
 }
 
 .floor-list-item:hover {
-  border-color: rgba(139, 92, 246, 0.4) !important;
-  background: rgba(139, 92, 246, 0.08);
-  box-shadow: var(--sw-glow-inner);
-  transform: translateX(4px);
+  border-color: var(--sw-border-hover) !important;
+  background: var(--sw-hover);
 }
 
 .floor-list-item-active {
-  border-color: var(--sw-violet) !important;
-  background: rgba(139, 92, 246, 0.12) !important;
-  box-shadow:
-    inset 0 0 20px 0 rgba(139, 92, 246, 0.1),
-    0 0 16px rgba(139, 92, 246, 0.15);
+  border-color: var(--sw-accent) !important;
+  background: var(--sw-accent-subtle) !important;
 }
 
 .floor-list-item-active::before {
@@ -157,7 +150,7 @@
   height: 50%;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: linear-gradient(180deg, var(--sw-violet), var(--sw-cyan));
+  background: var(--sw-accent);
 }
 
 /* ---- Canvas Area ---- */
@@ -191,7 +184,7 @@
   gap: 12px;
   margin-bottom: 12px;
   color: var(--sw-text-primary);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--sw-font);
 }
 
 .canvas-toolbar div {
@@ -228,17 +221,13 @@
   overflow: hidden;
   border: 1px solid var(--sw-border);
   border-radius: var(--sw-radius-md);
-  background:
-    linear-gradient(45deg, rgba(18, 18, 42, 0.5) 25%, transparent 25%),
-    linear-gradient(-45deg, rgba(18, 18, 42, 0.5) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, rgba(18, 18, 42, 0.5) 75%),
-    linear-gradient(-45deg, transparent 75%, rgba(18, 18, 42, 0.5) 75%);
-  background-color: var(--sw-canvas);
-  background-position:
-    0 0,
-    0 10px,
-    10px -10px,
-    -10px 0;
+  background-color: var(--sw-surface-2);
+  background-image:
+    linear-gradient(45deg, var(--sw-hover) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--sw-hover) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--sw-hover) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--sw-hover) 75%);
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
   background-size: 20px 20px;
   transition: border-color var(--sw-transition-normal);
 }

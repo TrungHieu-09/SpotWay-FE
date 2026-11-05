@@ -1,49 +1,45 @@
 /* ============================================================
-   AppLayout — Scoped Styles
+   AppLayout — navbar kiểu TREK: nền mờ, viền mảnh, đổ bóng khi cuộn
    ============================================================ */
 
-/* ── App Layout ── */
 .app-layout {
   min-height: 100svh;
-  background: transparent !important;
   position: relative;
-  z-index: 1;
 }
 
-/* ── Header ── */
 .app-header {
   position: sticky;
   top: 0;
   z-index: 100;
   display: flex;
-  height: 64px;
+  height: var(--sw-nav-h);
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 0 28px;
-  background: rgba(11, 11, 26, 0.7) !important;
-  border-bottom: 1px solid var(--sw-border);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
+  padding: 0 24px;
   line-height: 1;
+  background: var(--sw-surface-elevated) !important;
+  border-bottom: 1px solid var(--sw-border-subtle);
+  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition:
+    box-shadow var(--sw-transition-normal),
+    backdrop-filter var(--sw-transition-normal);
 }
 
-/* Gradient top-border accent */
-.app-header::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(139, 92, 246, 0.4) 30%,
-    rgba(34, 211, 238, 0.3) 70%,
-    transparent
-  );
-  pointer-events: none;
+.app-header--scrolled {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+}
+
+html.dark .app-header {
+  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.2);
+}
+
+html.dark .app-header--scrolled {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
 }
 
 /* ── Brand ── */
@@ -51,111 +47,127 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  text-decoration: none;
   flex-shrink: 0;
 }
 
 .brand-logo {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--sw-violet), var(--sw-cyan));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 18px rgba(139, 92, 246, 0.35);
-  transition: box-shadow 0.3s ease, transform 0.25s ease;
-  position: relative;
-  overflow: hidden;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--sw-radius-md);
+  background: var(--sw-accent);
   flex-shrink: 0;
-}
-
-.brand-logo::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.18));
-  border-radius: inherit;
-}
-
-.brand:hover .brand-logo {
-  box-shadow: 0 0 30px rgba(139, 92, 246, 0.55);
-  transform: scale(1.08) rotate(-4deg);
 }
 
 .brand-logo .anticon {
-  color: #ffffff !important;
-  font-size: 17px;
-  position: relative;
-  z-index: 1;
-  filter: none !important;
-}
-
-.brand-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  color: var(--sw-accent-text);
+  font-size: 16px;
 }
 
 .brand-name {
-  font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
   font-size: 17px;
-  color: var(--sw-text-primary);
   letter-spacing: -0.02em;
-  line-height: 1.1;
+  color: var(--sw-text-primary);
 }
 
-.brand-tagline {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 9px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--sw-text-muted);
-  line-height: 1;
-}
-
-/* ── Header live status indicator ── */
-.header-status {
+.header-actions {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: rgba(34, 211, 238, 0.08);
-  border: 1px solid rgba(34, 211, 238, 0.2);
-  flex-shrink: 0;
 }
 
-.header-status__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--sw-cyan);
-  box-shadow: 0 0 6px var(--sw-cyan);
-  animation: dotPulse 2s ease-in-out infinite;
+/* ── Tab dạng pill ở giữa thanh (desktop) ── */
+.nav-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--sw-border);
+  border-radius: var(--sw-radius-pill);
+  background: var(--sw-surface-2);
 }
 
-.header-status__text {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--sw-cyan);
+.nav-pill__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: var(--sw-radius-pill);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sw-text-muted);
+  text-decoration: none;
+  transition: background var(--sw-transition-fast), color var(--sw-transition-fast);
 }
 
-.header-actions { display: inline-flex; align-items: center; gap: 10px; }
+.nav-pill__link:hover {
+  color: var(--sw-text-primary);
+}
+
+.nav-pill__link.active {
+  background: var(--sw-accent);
+  color: var(--sw-accent-text);
+}
+
+/* ── Thanh điều hướng dưới (mobile) ── */
+.bottom-nav {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .nav-pill {
+    display: none;
+  }
+
+  .app-content--has-dock {
+    padding-bottom: 64px;
+  }
+
+  .bottom-nav {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-around;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--sw-border-subtle);
+    background: var(--sw-surface-elevated);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .bottom-nav__link {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 0;
+    border-radius: var(--sw-radius-md);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--sw-text-muted);
+    text-decoration: none;
+  }
+
+  .bottom-nav__link .anticon {
+    font-size: 18px;
+  }
+
+  .bottom-nav__link.active {
+    color: var(--sw-text-primary);
+    background: var(--sw-accent-subtle);
+  }
+}
 
 @media (max-width: 600px) {
   .app-header {
-    padding: 0 16px;
-    gap: 10px;
+    padding: 0 14px;
   }
 
-  .brand-tagline,
-  .header-status {
+  .header-actions__label {
     display: none;
   }
 }

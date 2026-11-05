@@ -1,0 +1,75 @@
+/* ============================================================
+   SpotWay — Ant Design overrides
+   Màu/viền/bo góc đã do ConfigProvider (src/utils/antdTheme.ts) lo.
+   Ở đây chỉ còn những chỗ token không với tới.
+   ============================================================ */
+
+.ant-layout,
+.ant-layout-header,
+.ant-layout-content,
+.ant-layout-sider {
+  background: transparent !important;
+}
+
+/* ---- Card ---- */
+.ant-card {
+  box-shadow: var(--sw-shadow-1);
+}
+
+/* ---- Table ---- */
+.ant-table-wrapper .ant-table {
+  background: transparent;
+}
+
+.ant-table-thead > tr > th {
+  font-family: var(--sw-font-sub);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ---- Modal ---- */
+.ant-modal .ant-modal-content {
+  padding: 0;
+  overflow: hidden;
+  box-shadow: var(--sw-shadow-3);
+}
+
+.ant-modal .ant-modal-header {
+  margin: 0;
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid var(--sw-border-subtle);
+  background: transparent;
+}
+
+.ant-modal .ant-modal-title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.ant-modal .ant-modal-body {
+  padding: 20px 24px;
+}
+
+.ant-modal .ant-modal-footer {
+  margin: 0;
+  padding: 12px 24px 18px;
+  border-top: 1px solid var(--sw-border-subtle);
+}
+
+.ant-modal-mask {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+/* ---- Tag: viền mảnh, nền soft ---- */
+.ant-tag {
+  border-radius: var(--sw-radius-pill);
+  font-family: var(--sw-font-sub);
+  font-weight: 500;
+}
+
+/* ---- Segmented ---- */
+.ant-segmented {
+  border: 1px solid var(--sw-border);
+}

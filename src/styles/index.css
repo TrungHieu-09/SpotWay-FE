@@ -8,4 +8,4 @@
 @import './animations.css';
 @import './layout.css';
 @import './components.css';
-@import './antd-dark.css';
+@import './antd-overrides.css';

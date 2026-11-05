@@ -64,7 +64,7 @@
 
 @keyframes borderShimmer {
   0% { border-color: var(--sw-border); }
-  50% { border-color: rgba(139, 92, 246, 0.35); }
+  50% { border-color: var(--sw-border-hover); }
   100% { border-color: var(--sw-border); }
 }
 
@@ -74,8 +74,8 @@
 }
 
 @keyframes glowPulse {
-  0%, 100% { box-shadow: 0 0 16px rgba(139, 92, 246, 0.2); }
-  50% { box-shadow: 0 0 28px rgba(139, 92, 246, 0.45); }
+  0%, 100% { box-shadow: 0 0 0 0 var(--sw-border); }
+  50% { box-shadow: 0 0 0 4px var(--sw-border); }
 }
 
 @keyframes shimmerGradient {

@@ -1,14 +1,12 @@
 .glass-card {
   position: relative;
   border: 1px solid var(--sw-border);
-  border-radius: var(--sw-radius-xl);
+  border-radius: var(--sw-radius-lg);
   background: var(--sw-surface-1);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
   box-shadow: var(--sw-shadow-1);
   transition:
-    border-color 0.25s ease,
-    box-shadow 0.25s ease;
+    border-color var(--sw-transition-normal),
+    box-shadow var(--sw-transition-normal);
   overflow: hidden;
 }
 
@@ -17,38 +15,21 @@
   box-shadow: var(--sw-shadow-2);
 }
 
-/* Animated border sweep on accent variant */
+/* Biến thể nhấn: viền accent */
 .glass-card--accent {
-  border-color: transparent;
+  border-color: var(--sw-border-active);
 }
 
-.glass-card--accent::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.6), rgba(34, 211, 238, 0.3));
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-/* Card Header */
 .glass-card__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--sw-border);
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--sw-border-subtle);
 }
 
 .glass-card__title {
-  font-family: 'Space Grotesk', sans-serif;
   font-size: 15px;
   font-weight: 600;
   color: var(--sw-text-primary);
@@ -59,9 +40,8 @@
   flex-shrink: 0;
 }
 
-/* Card Body */
 .glass-card__body {
-  padding: 24px;
+  padding: 20px;
 }
 
 .glass-card__body--no-padding {

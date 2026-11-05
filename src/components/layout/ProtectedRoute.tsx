@@ -11,8 +11,8 @@ const defaultRouteByRole: Record<AppRole, string> = {
   guest: '/login',
   store_owner: '/login',
   building_manager: '/manager',
-  building_owner: '/owner/buildings',
-  admin: '/owner/buildings',
+  building_owner: '/dashboard',
+  admin: '/dashboard',
 }
 
 export function getDemoRole(): AppRole {

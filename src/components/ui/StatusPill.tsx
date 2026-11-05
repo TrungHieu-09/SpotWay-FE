@@ -5,10 +5,10 @@ type StatusPillProps = {
 }
 
 const statusMap: Record<string, { label: string; variant: string }> = {
-  active:      { label: 'Active',      variant: 'cyan' },
-  published:   { label: 'Published',   variant: 'cyan' },
-  draft:       { label: 'Draft',       variant: 'fuchsia' },
-  operational: { label: 'Operational', variant: 'green' },
+  active:      { label: 'Active',      variant: 'success' },
+  published:   { label: 'Published',   variant: 'success' },
+  draft:       { label: 'Draft',       variant: 'warning' },
+  operational: { label: 'Operational', variant: 'success' },
 }
 
 export function StatusPill({ status }: StatusPillProps) {

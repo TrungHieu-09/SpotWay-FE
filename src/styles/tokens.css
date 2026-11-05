@@ -1,45 +1,73 @@
 /* ============================================================
    SpotWay — Design Tokens
-   Dark Glassmorphism with Aurora Violet / Cyan / Fuchsia
+   Neutral minimal (light + dark), hairline borders, near-black accent.
+   Tên biến --sw-* giữ nguyên để các CSS theo trang tự đổi theo theme;
+   --sw-violet/cyan/fuchsia là alias ngữ nghĩa (accent / info / warning).
    ============================================================ */
 
 :root {
-  /* ---- Canvas & Surface Hierarchy ---- */
-  --sw-canvas: #0B0B1A;
-  --sw-surface-1: rgba(18, 18, 42, 0.65);
-  --sw-surface-2: rgba(28, 27, 59, 0.75);
-  --sw-surface-3: rgba(45, 42, 86, 0.82);
+  color-scheme: light;
 
-  /* ---- Accent Palette ---- */
-  --sw-violet: #8B5CF6;
-  --sw-violet-light: #9D6FFF;
-  --sw-violet-dim: rgba(139, 92, 246, 0.15);
-  --sw-cyan: #22D3EE;
-  --sw-cyan-dim: rgba(34, 211, 238, 0.12);
-  --sw-fuchsia: #E879F9;
-  --sw-fuchsia-dim: rgba(232, 121, 249, 0.08);
-  --sw-green: #34D399;
-  --sw-red: #FF6464;
+  /* ---- Canvas & Surface Hierarchy ---- */
+  --sw-canvas: #f8fafc;
+  --sw-surface-1: #ffffff;
+  --sw-surface-2: #f8fafc;
+  --sw-surface-3: #f1f5f9;
+  --sw-surface-elevated: rgba(250, 250, 250, 0.82);
+  --sw-hover: rgba(0, 0, 0, 0.03);
+  --sw-selected: #e2e8f0;
+
+  /* ---- Accent (near-black) ---- */
+  --sw-accent: #111827;
+  --sw-accent-hover: #1f2937;
+  --sw-accent-subtle: #f1f5f9;
+  --sw-accent-text: #ffffff;
+
+  /* ---- Status ---- */
+  --sw-success: #16a34a;
+  --sw-success-soft: rgba(22, 163, 74, 0.12);
+  --sw-danger: #dc2626;
+  --sw-danger-soft: rgba(220, 38, 38, 0.1);
+  --sw-warning: #d97706;
+  --sw-warning-soft: rgba(217, 119, 6, 0.12);
+  --sw-info: #2563eb;
+  --sw-info-soft: rgba(37, 99, 235, 0.1);
+
+  /* ---- Legacy aliases (tên cũ → vai trò mới) ---- */
+  --sw-violet: var(--sw-accent);
+  --sw-violet-light: var(--sw-accent-hover);
+  --sw-violet-dim: var(--sw-accent-subtle);
+  --sw-cyan: var(--sw-info);
+  --sw-cyan-dim: var(--sw-info-soft);
+  --sw-fuchsia: var(--sw-warning);
+  --sw-fuchsia-dim: var(--sw-warning-soft);
+  --sw-green: var(--sw-success);
+  --sw-red: var(--sw-danger);
 
   /* ---- Text ---- */
-  --sw-text-primary: #E3E0F6;
-  --sw-text-secondary: #958EA0;
-  --sw-text-muted: #64748B;
+  --sw-text-primary: #111827;
+  --sw-text-secondary: #374151;
+  --sw-text-muted: #6b7280;
+  --sw-text-faint: #9ca3af;
 
   /* ---- Borders ---- */
-  --sw-border: rgba(255, 255, 255, 0.10);
-  --sw-border-hover: rgba(255, 255, 255, 0.20);
-  --sw-border-active: rgba(139, 92, 246, 0.5);
-  --sw-border-subtle: rgba(255, 255, 255, 0.06);
+  --sw-border: #e5e7eb;
+  --sw-border-hover: #d1d5db;
+  --sw-border-active: #111827;
+  --sw-border-subtle: rgba(0, 0, 0, 0.06);
 
-  /* ---- Shadows & Glows ---- */
-  --sw-shadow-1: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  --sw-shadow-2: 0 12px 40px -4px rgba(0, 0, 0, 0.5);
-  --sw-shadow-3: 0 0 30px -5px rgba(139, 92, 246, 0.25), 0 20px 48px -8px rgba(0, 0, 0, 0.7);
-  --sw-glow-violet: 0 0 20px rgba(139, 92, 246, 0.4);
-  --sw-glow-cyan: 0 0 20px rgba(34, 211, 238, 0.3);
-  --sw-glow-fuchsia: 0 0 20px rgba(232, 121, 249, 0.3);
-  --sw-glow-inner: inset 0 0 16px 0 rgba(34, 211, 238, 0.15);
+  /* ---- Shadows (glow bị vô hiệu hoá, giữ biến để CSS cũ không vỡ) ---- */
+  --sw-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --sw-shadow-2: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --sw-shadow-3: 0 4px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  --sw-glow-violet: 0 0 0 0 transparent;
+  --sw-glow-cyan: 0 0 0 0 transparent;
+  --sw-glow-fuchsia: 0 0 0 0 transparent;
+  --sw-glow-inner: 0 0 0 0 transparent;
+
+  /* ---- Typography ---- */
+  --sw-font: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --sw-font-sub: 'Geist', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 
   /* ---- Spacing ---- */
   --sw-space-xs: 0.25rem;
@@ -50,13 +78,56 @@
 
   /* ---- Radii ---- */
   --sw-radius-sm: 8px;
-  --sw-radius-md: 12px;
-  --sw-radius-lg: 16px;
-  --sw-radius-xl: 24px;
+  --sw-radius-md: 10px;
+  --sw-radius-lg: 14px;
+  --sw-radius-xl: 16px;
   --sw-radius-pill: 999px;
 
+  /* ---- Layout ---- */
+  --sw-nav-h: 60px;
+
   /* ---- Transitions ---- */
-  --sw-transition-fast: 0.15s ease;
-  --sw-transition-normal: 0.25s ease;
+  --sw-transition-fast: 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+  --sw-transition-normal: 0.24s cubic-bezier(0.23, 1, 0.32, 1);
   --sw-transition-slow: 0.4s ease;
+}
+
+html.dark {
+  color-scheme: dark;
+
+  --sw-canvas: #0e0e11;
+  --sw-surface-1: #131316;
+  --sw-surface-2: #1a1a1e;
+  --sw-surface-3: #1c1c21;
+  --sw-surface-elevated: rgba(19, 19, 22, 0.82);
+  --sw-hover: rgba(255, 255, 255, 0.06);
+  --sw-selected: rgba(255, 255, 255, 0.1);
+
+  --sw-accent: #e4e4e7;
+  --sw-accent-hover: #d4d4d8;
+  --sw-accent-subtle: rgba(255, 255, 255, 0.08);
+  --sw-accent-text: #09090b;
+
+  --sw-success: #22c55e;
+  --sw-success-soft: rgba(34, 197, 94, 0.15);
+  --sw-danger: #ef4444;
+  --sw-danger-soft: rgba(239, 68, 68, 0.15);
+  --sw-warning: #f59e0b;
+  --sw-warning-soft: rgba(245, 158, 11, 0.15);
+  --sw-info: #3b82f6;
+  --sw-info-soft: rgba(59, 130, 246, 0.15);
+
+  --sw-text-primary: #f4f4f5;
+  --sw-text-secondary: #d4d4d8;
+  --sw-text-muted: #a1a1aa;
+  --sw-text-faint: #71717a;
+
+  --sw-border: #27272a;
+  --sw-border-hover: #3f3f46;
+  --sw-border-active: #e4e4e7;
+  --sw-border-subtle: rgba(255, 255, 255, 0.07);
+
+  --sw-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --sw-shadow-2: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --sw-shadow-3: 0 4px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }

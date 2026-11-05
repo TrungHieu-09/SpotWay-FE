@@ -3,6 +3,7 @@ import { AppLayout } from '../components/layout/AppLayout'
 import { ProtectedRoute } from '../components/layout/ProtectedRoute'
 import { Building2DViewerPage } from '../pages/BuildingOwner/Building2DViewerPage'
 import { BuildingDetailPage } from '../pages/BuildingOwner/BuildingDetailPage'
+import { DashboardPage } from '../pages/BuildingOwner/DashboardPage'
 import { BuildingListPage } from '../pages/BuildingOwner/BuildingListPage'
 import { BuildingOverviewPage } from '../pages/BuildingOwner/BuildingOverviewPage'
 import { NavigationPage } from '../pages/Guest/NavigationPage'
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
           <ProtectedRoute allowedRoles={['building_owner', 'admin']} />
         ),
         children: [
+          { path: 'dashboard', element: <DashboardPage /> },
           { path: 'owner/buildings', element: <BuildingListPage /> },
           {
             path: 'owner/buildings/:buildingId',
