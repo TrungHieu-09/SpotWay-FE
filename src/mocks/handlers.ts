@@ -49,6 +49,15 @@ import { PERMISSIONS } from '../auth/permissions'
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api'
 const resetTokens = new Map<string, string>()
 
+interface VerificationEntry {
+  code: string
+  fullName: string
+  email: string
+  password?: string
+  expires: number
+}
+const verificationCodes = new Map<string, VerificationEntry>()
+
 function endpoint(path: string) {
   return `${API_BASE}${path}`
 }
@@ -711,7 +720,7 @@ function generateNavigationGraphFromGeometry(
   roomNodes.forEach((roomNode) => {
     const nearestSpineNode = spineNodes.reduce((nearestNode, spineNode) =>
       pointDistanceSquared(roomNode, spineNode) <
-      pointDistanceSquared(roomNode, nearestNode)
+        pointDistanceSquared(roomNode, nearestNode)
         ? spineNode
         : nearestNode,
     )
@@ -746,6 +755,114 @@ export const handlers = [
         user,
         tenant: user.tenantId ? tenants.find((item) => item.id === user.tenantId) ?? null : null,
       }),
+    })
+  }),
+
+  http.post(endpoint('/auth/register'), async ({ request }) => {
+    await delay(200)
+    const payload = (await request.json()) as { fullName?: string; email?: string; password?: string }
+    const emailToMatch = payload.email?.trim().toLowerCase()
+    if (!emailToMatch || !payload.password) {
+      return apiError('VALIDATION_ERROR', 'Vui lòng nhập đầy đủ email và mật khẩu.', 400)
+    }
+    const allUsers = [...users, ...initialUsersSeed]
+    const exists = allUsers.some((item) => item?.email && item.email.toLowerCase() === emailToMatch)
+    if (exists && !verificationCodes.has(emailToMatch)) {
+      return apiError('EMAIL_EXISTS', 'Email này đã được sử dụng. Vui lòng đăng nhập hoặc dùng email khác.', 400)
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    verificationCodes.set(emailToMatch, {
+      code,
+      fullName: payload.fullName?.trim() || 'Chủ tòa nhà mới',
+      email: emailToMatch,
+      password: payload.password,
+      expires: Date.now() + 15 * 60 * 1000,
+    })
+
+    return HttpResponse.json({
+      message: 'Mã xác thực đã được gửi tới email của bạn.',
+      email: emailToMatch,
+      demoCode: code,
+    })
+  }),
+
+  http.post(endpoint('/auth/verify-email'), async ({ request }) => {
+    await delay(200)
+    const payload = (await request.json()) as { email?: string; code?: string }
+    const emailToMatch = payload.email?.trim().toLowerCase()
+    const inputCode = payload.code?.trim()
+
+    if (!emailToMatch || !inputCode) {
+      return apiError('VALIDATION_ERROR', 'Vui lòng nhập đầy đủ email và mã xác thực.', 400)
+    }
+
+    const entry = verificationCodes.get(emailToMatch)
+    const isCodeValid = (entry && entry.code === inputCode) || inputCode === '123456'
+
+    if (!isCodeValid) {
+      return apiError('INVALID_CODE', 'Mã xác thực không chính xác. Vui lòng kiểm tra lại.', 400)
+    }
+
+    if (entry && Date.now() > entry.expires) {
+      verificationCodes.delete(emailToMatch)
+      return apiError('CODE_EXPIRED', 'Mã xác thực đã hết hạn. Vui lòng gửi lại mã mới.', 400)
+    }
+
+    if (entry) {
+      verificationCodes.delete(emailToMatch)
+    }
+
+    let user = users.find((u) => u.email.toLowerCase() === emailToMatch)
+    if (!user) {
+      user = {
+        id: `user-${crypto.randomUUID().slice(0, 8)}`,
+        name: entry?.fullName || 'Chủ tòa nhà mới',
+        email: emailToMatch,
+        password: entry?.password || 'SpatialGrid!2025#',
+        role: 'building_owner' as Role,
+        tenantId: null,
+        status: 'active' as const,
+        mustChangePassword: false,
+        createdAt: new Date().toISOString(),
+      }
+      users.push(user)
+      saveToStorage(MOCK_STORAGE_KEYS.users, users)
+    }
+
+    return HttpResponse.json({
+      token: makeToken(user.id, user.role, user.tenantId, user.areaIds ?? []),
+      user: authUser({
+        user,
+        tenant: null,
+      }),
+      message: 'Xác thực tài khoản thành công!',
+    })
+  }),
+
+  http.post(endpoint('/auth/resend-otp'), async ({ request }) => {
+    await delay(150)
+    const payload = (await request.json()) as { email?: string }
+    const emailToMatch = payload.email?.trim().toLowerCase()
+
+    if (!emailToMatch) {
+      return apiError('VALIDATION_ERROR', 'Vui lòng cung cấp email.', 400)
+    }
+
+    const existing = verificationCodes.get(emailToMatch)
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    verificationCodes.set(emailToMatch, {
+      code,
+      fullName: existing?.fullName || 'Chủ tòa nhà mới',
+      email: emailToMatch,
+      password: existing?.password,
+      expires: Date.now() + 15 * 60 * 1000,
+    })
+
+    return HttpResponse.json({
+      message: 'Mã xác thực mới đã được gửi tới email của bạn.',
+      email: emailToMatch,
+      demoCode: code,
     })
   }),
 
@@ -1162,8 +1279,8 @@ export const handlers = [
     const visibleBuildings = auth?.user.role === 'store_owner'
       ? buildings.filter((building) => stores.some((store) => store.ownerUserId === auth.user.id && store.buildingId === building.id))
       : auth
-      ? buildings.filter((building) => building.tenantId === tenantScope(auth))
-      : buildings.filter((building) => {
+        ? buildings.filter((building) => building.tenantId === tenantScope(auth))
+        : buildings.filter((building) => {
           const tenant = tenants.find((item) => item.id === building.tenantId)
           return building.status === 'active' && isTenantActive(tenant ?? null)
         })
@@ -1195,12 +1312,12 @@ export const handlers = [
       requestedFloors.length > 0
         ? requestedFloors
         : [
-            {
-              name: 'Tầng 1',
-              level: 1,
-              mapImageUrl: legacyPlanImageUrl,
-            },
-          ]
+          {
+            name: 'Tầng 1',
+            level: 1,
+            mapImageUrl: legacyPlanImageUrl,
+          },
+        ]
     const buildingPlanImageUrl =
       buildingFloors.find((floor) => floor.mapImageUrl)?.mapImageUrl ??
       legacyPlanImageUrl ??

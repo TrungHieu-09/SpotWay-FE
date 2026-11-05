@@ -827,15 +827,10 @@ export function LoginPage() {
             {/* Secondary Guidance Links */}
             <div className="auth-secondary-links">
               <p className="demo-request-text">
-                New to SpotWay?{' '}
-                <a
-                  className="demo-request-link"
-                  onClick={() =>
-                    message.info('Demo request terminal received. Our spatial architecture team will reach out!')
-                  }
-                >
-                  Request a demo
-                </a>
+                Chưa có tài khoản SpotWay?{' '}
+                <Link to="/register" className="demo-request-link">
+                  Đăng ký ngay
+                </Link>
               </p>
 
               <div>

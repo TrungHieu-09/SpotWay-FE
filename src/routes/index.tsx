@@ -14,6 +14,24 @@ import { ChangePasswordPage } from '../pages/Auth/ChangePasswordPage'
 import { ForgotPasswordPage } from '../pages/Auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '../pages/Auth/ResetPasswordPage'
 
+const RegisterPage = lazy(() =>
+  import('../pages/Auth/RegisterPage').then((module) => ({
+    default: module.RegisterPage,
+  })),
+)
+
+const EmailVerifyPage = lazy(() =>
+  import('../pages/Auth/EmailVerifyPage').then((module) => ({
+    default: module.EmailVerifyPage,
+  })),
+)
+
+const WorkspaceOnboardingPage = lazy(() =>
+  import('../pages/Auth/WorkspaceOnboardingPage').then((module) => ({
+    default: module.WorkspaceOnboardingPage,
+  })),
+)
+
 const PricingPage = lazy(() =>
   import('../pages/Pricing/PricingPage').then((module) => ({
     default: module.PricingPage,
@@ -125,6 +143,12 @@ export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
   { path: 'pricing', element: lazyElement(<PricingPage />) },
   { path: 'login', element: <LoginPage /> },
+  { path: 'register', element: lazyElement(<RegisterPage />) },
+  { path: 'signup', element: lazyElement(<RegisterPage />) },
+  { path: 'verify-email', element: lazyElement(<EmailVerifyPage />) },
+  { path: 'verify', element: lazyElement(<EmailVerifyPage />) },
+  { path: 'onboarding', element: lazyElement(<WorkspaceOnboardingPage />) },
+  { path: 'workspace-setup', element: lazyElement(<WorkspaceOnboardingPage />) },
 
   // ── Building Owner section with sidebar ──
   {

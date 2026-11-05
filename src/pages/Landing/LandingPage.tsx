@@ -141,7 +141,7 @@ export function LandingPage() {
               </div>
             ) : (
               <>
-                <Link to="/login" className="lp-btn lp-btn--ghost">
+                <Link to="/register" className="lp-btn lp-btn--ghost">
                   Đăng ký
                 </Link>
                 <Link to="/login" className="lp-btn lp-btn--primary">
