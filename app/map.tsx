@@ -2,14 +2,14 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, ToastAndroid, Platform, Alert, View } from 'react-native';
+import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, ToastAndroid, useWindowDimensions, Platform, Alert, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Reanimated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, G, Line, Pattern, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 
 import {
@@ -37,7 +37,6 @@ import { useIncident } from '@/hooks/use-incident';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 
 import { useColors, type Colors } from '@/hooks/use-colors';
-const ORANGE = '#F2641E';
 const DANGER = '#D64545';
 
 // Bottom navigation bar: floating controls sit above it by this height plus the safe-area inset.
@@ -89,7 +88,6 @@ export default function FloorMapScreen() {
     dest ?? (floor === DEFAULT_FLOOR ? DEMO_DESTINATION_ID : null),
   );
   const [navigating, setNavigating] = useState(true);
-  const [marked, setMarked] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [accessible] = useAccessibilityMode();
   const [highContrast] = useHighContrast();
@@ -98,9 +96,19 @@ export default function FloorMapScreen() {
   const wall = highContrast ? INK : WALL;
   const [incident] = useIncident();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const floatBottom = TAB_BAR_HEIGHT + insets.bottom + FLOAT_GAP;
   // The map sits between the measured top controls and the zoom buttons / tab bar.
   const [topControlsH, setTopControlsH] = useState(0);
+  const [floorMenuOpen, setFloorMenuOpen] = useState(false);
+  const [floorMenuPos, setFloorMenuPos] = useState({ top: 0, right: 16 });
+  const floorBtnRef = useRef<View>(null);
+  const openFloorMenu = () => {
+    floorBtnRef.current?.measureInWindow((x, y, w, h) => {
+      setFloorMenuPos({ top: y + h + 4, right: Math.max(8, windowWidth - (x + w)) });
+      setFloorMenuOpen(true);
+    });
+  };
   const mapBottom = floatBottom + ZOOM_BUTTON + FLOAT_GAP;
 
   // A destination picked on the search screen replaces the current one.
@@ -109,7 +117,6 @@ export default function FloorMapScreen() {
     if (FLOORS.includes(floorParam as Floor)) setFloor(floorParam as Floor);
     setDestId(dest);
     setNavigating(true);
-    setMarked(false);
   }, [dest, floorParam, ts]);
 
   const stores = useMemo(() => getStores(floor), [floor]);
@@ -119,7 +126,6 @@ export default function FloorMapScreen() {
     setFloor(f);
     setDestId(null);
     setNavigating(false);
-    setMarked(false);
     setDetailOpen(false);
   };
   const graph = useMemo(() => getGraph(floor), [floor]);
@@ -149,7 +155,7 @@ export default function FloorMapScreen() {
   // The map starts right under the controls; the destination card pushes it down smoothly.
   const cardVisible = !!store && (!!path || !onUserFloor);
   const topPad = useSharedValue(0);
-  const mapTopTarget = topControlsH + 10 + (cardVisible ? DEST_CARD_HEIGHT + 8 : 0);
+  const mapTopTarget = topControlsH + 4 + (cardVisible ? DEST_CARD_HEIGHT + 8 : 0);
   useEffect(() => {
     topPad.value = withTiming(mapTopTarget, { duration: 200 });
   }, [mapTopTarget, topPad]);
@@ -269,7 +275,6 @@ export default function FloorMapScreen() {
     }
     setDestId(id);
     setNavigating(true);
-    setMarked(false);
   };
   // Start turn-by-turn guidance for the selected (or demo) destination.
   const startGuidance = () => {
@@ -313,7 +318,6 @@ export default function FloorMapScreen() {
   const clearDestination = () => {
     setDestId(null);
     setNavigating(false);
-    setMarked(false);
     setDetailOpen(false);
   };
 
@@ -347,7 +351,6 @@ export default function FloorMapScreen() {
             const cx = s.x + s.width / 2;
             const cy = s.y + s.height / 2;
             const selected = s.id === destId;
-            const isDest = selected && marked;
             const liftHint = accessible && s.category === 'elevator';
             const dimmed = accessible && s.category === 'escalator';
             return (
@@ -361,8 +364,8 @@ export default function FloorMapScreen() {
                   width={s.width}
                   height={s.height}
                   fill={rest ? 'url(#hatch)' : selected ? SELECTED_FILL : STORE_FILL}
-                  stroke={isDest ? ORANGE : liftHint ? BLUE : wall}
-                  strokeWidth={isDest || liftHint ? 3 : 2.5}
+                  stroke={liftHint ? BLUE : wall}
+                  strokeWidth={liftHint ? 3 : 2.5}
                 />
                 {!rest && <StoreIcon category={s.category} x={cx} y={cy - 10} />}
                 {wrapLabel(s.name).map((line, i) => (
@@ -404,9 +407,8 @@ export default function FloorMapScreen() {
         </Reanimated.View>
       </GestureDetector>
 
-      <SafeAreaView
-        edges={['top']}
-        style={styles.overlay}
+      <View
+        style={[styles.overlay, { paddingTop: insets.top + 12 }]}
         pointerEvents="box-none"
         onLayout={(e) => setTopControlsH(e.nativeEvent.layout.height)}>
         {incident && (
@@ -427,55 +429,34 @@ export default function FloorMapScreen() {
             </View>
           </Pressable>
         )}
-        <Text style={styles.building} numberOfLines={1}>
-          {from && isVenueCode(from) ? `${MOCK_BUILDING.name} · ${from}` : MOCK_BUILDING.name}
-        </Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.building} numberOfLines={1}>
+            {from && isVenueCode(from) ? `${MOCK_BUILDING.name} · ${from}` : MOCK_BUILDING.name}
+          </Text>
+        </View>
+
         <View style={styles.searchRow}>
           <Pressable
             accessibilityRole="search"
             accessibilityLabel={t('map.searchPlaceholder')}
             onPress={openSearch}
             style={styles.searchBox}>
-            <MaterialIcons name="search" size={20} color={MUTED} />
+            <MaterialIcons name="search" size={18} color={MUTED} />
             <Text style={styles.searchText} numberOfLines={1}>
               {t('map.searchPlaceholder')}
             </Text>
           </Pressable>
           <Pressable
+            ref={floorBtnRef}
             accessibilityRole="button"
-            accessibilityLabel={t('map.directions')}
-            onPress={startGuidance}
-            style={[styles.actionBtn, { backgroundColor: BLUE }]}>
-            <MaterialIcons name="directions" size={22} color="#FFFFFF" />
+            accessibilityLabel={t('map.floorPick', { floor })}
+            accessibilityState={{ expanded: floorMenuOpen }}
+            onPress={openFloorMenu}
+            style={styles.floorBtn}>
+            <Text style={styles.floorBtnText}>{t('map.floor', { floor })}</Text>
+            <MaterialIcons name="keyboard-arrow-down" size={18} color={MUTED} />
+            {incident && <View style={styles.floorDot} />}
           </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('map.markDest')}
-            accessibilityState={{ selected: marked }}
-            onPress={() => setMarked((m) => !m)}
-            style={[styles.actionBtn, { backgroundColor: ORANGE }]}>
-            <MaterialIcons name="place" size={22} color="#FFFFFF" />
-          </Pressable>
-        </View>
-
-        <View style={styles.floorRow}>
-          <View style={styles.floorPill}>
-            {FLOORS.map((f) => {
-              const active = f === floor;
-              return (
-                <Pressable
-                  key={f}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={t('map.floor', { floor: f })}
-                  onPress={() => changeFloor(f)}
-                  style={[styles.floorItem, active && styles.floorItemActive]}>
-                  <Text style={[styles.floorText, active && styles.floorTextActive]}>{f}</Text>
-                  {incident?.floor === f && <View style={styles.floorDot} />}
-                </Pressable>
-              );
-            })}
-          </View>
         </View>
 
         <ScrollView
@@ -488,7 +469,7 @@ export default function FloorMapScreen() {
             onPress={startEvacuation}
             style={[styles.chip, styles.chipEvac]}>
             <MaterialIcons name="exit-to-app" size={16} color="#FFFFFF" />
-            <Text style={[styles.chipText, { color: '#FFFFFF' }]} numberOfLines={1}>
+            <Text style={[styles.chipText, styles.chipEvacText]} numberOfLines={1}>
               {t('evac.button')}
             </Text>
           </Pressable>
@@ -506,9 +487,40 @@ export default function FloorMapScreen() {
           ))}
         </ScrollView>
 
-      </SafeAreaView>
+      </View>
 
-      <View style={[styles.cardSlot, { top: topControlsH + 10 }]} pointerEvents="box-none">
+      <Modal visible={floorMenuOpen} transparent animationType="fade" onRequestClose={() => setFloorMenuOpen(false)}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          accessibilityLabel={t('evac.cancel')}
+          onPress={() => setFloorMenuOpen(false)}>
+          <View style={[styles.floorMenu, { top: floorMenuPos.top, right: floorMenuPos.right }]}>
+            <ScrollView>
+            {FLOORS.map((f) => {
+              const active = f === floor;
+              return (
+                <Pressable
+                  key={f}
+                  accessibilityRole="menuitem"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={t('map.floor', { floor: f })}
+                  onPress={() => {
+                    setFloorMenuOpen(false);
+                    changeFloor(f);
+                  }}
+                  style={[styles.floorMenuItem, active && styles.floorMenuItemActive]}>
+                  <Text maxFontSizeMultiplier={1.15} style={[styles.floorMenuText, active && { color: BLUE }]}>{t('map.floor', { floor: f })}</Text>
+                  {incident?.floor === f && <View style={styles.floorMenuDot} />}
+                  {active && <MaterialIcons name="check" size={16} color={BLUE} />}
+                </Pressable>
+              );
+            })}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Modal>
+
+      <View style={[styles.cardSlot, { top: topControlsH + 4 }]} pointerEvents="box-none">
           {store && (path || !onUserFloor) && (
             <View style={styles.destCard}>
               <MaterialIcons name="alt-route" size={20} color={BLUE} />
@@ -525,14 +537,14 @@ export default function FloorMapScreen() {
                 accessibilityLabel={t('map.details')}
                 hitSlop={8}
                 onPress={() => setDetailOpen(true)}>
-                <MaterialIcons name="info-outline" size={20} color={MUTED} />
+                <MaterialIcons name="info-outline" size={18} color={MUTED} />
               </Pressable>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={t('map.cancelRoute')}
                 hitSlop={8}
                 onPress={clearDestination}>
-                <MaterialIcons name="close" size={20} color={MUTED} />
+                <MaterialIcons name="close" size={18} color={MUTED} />
               </Pressable>
             </View>
           )}
@@ -676,53 +688,52 @@ const shadow = {
   elevation: 4,
 } as const;
 
-const makeStyles = ({ BLUE, INK, MUTED, BORDER, CANVAS, CARD }: Colors) =>
+const makeStyles = ({ BLUE, INK, MUTED, BORDER, CANVAS, CARD, ACTIVE_BG, TINT }: Colors) =>
   StyleSheet.create({
   root: { flex: 1, backgroundColor: CANVAS },
-  overlay: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 16, gap: 10 },
-  searchRow: { flexDirection: 'row', gap: 8 },
-  searchBox: {
-    flex: 1,
-    height: 48,
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 16, gap: 8 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 2 },
+  building: { flex: 1, fontSize: 14, fontWeight: '700', color: INK },
+  floorBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    backgroundColor: CARD,
-    ...shadow,
-  },
-  searchText: { flex: 1, fontSize: 14, color: MUTED },
-  actionBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadow,
-  },
-  floorRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  floorPill: {
-    flexDirection: 'row',
-    padding: 4,
-    gap: 4,
-    borderRadius: 999,
+    height: 40,
+    paddingLeft: 14,
+    paddingRight: 8,
+    borderRadius: 12,
     backgroundColor: CARD,
     borderWidth: 1,
     borderColor: BORDER,
-    ...shadow,
   },
-  floorItem: {
-    minWidth: 40,
-    height: 34,
-    paddingHorizontal: 10,
-    borderRadius: 17,
+  floorBtnText: { fontSize: 13, fontWeight: '700', color: INK },
+  searchRow: { flexDirection: 'row', gap: 8 },
+  searchBox: {
+    flex: 1,
+    height: 40,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: BORDER,
   },
-  floorItemActive: { backgroundColor: BLUE },
-  floorText: { fontSize: 13, fontWeight: '700', color: MUTED },
-  floorTextActive: { color: '#FFFFFF' },
+  searchText: { flex: 1, fontSize: 13, color: MUTED },
+  floorMenu: {
+    position: 'absolute',
+    width: 124,
+    maxHeight: 260,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  floorMenuItem: { height: 36, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12 },
+  floorMenuItemActive: { backgroundColor: ACTIVE_BG },
+  floorMenuText: { flex: 1, fontSize: 14, fontWeight: '600', color: INK },
+  floorMenuDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: DANGER },
   alertWrap: { position: 'absolute', right: 116 },
   alertBtn: {
     width: ZOOM_BUTTON,
@@ -744,22 +755,22 @@ const makeStyles = ({ BLUE, INK, MUTED, BORDER, CANVAS, CARD }: Colors) =>
   alertGoText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
   mapArea: { position: 'absolute', left: 0, right: 0 },
   cardSlot: { position: 'absolute', left: 16, right: 16 },
-  chipRow: { gap: 8, paddingVertical: 2 },
+  chipRow: { gap: 8, alignItems: 'center', paddingRight: 8 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     flexShrink: 0,
     paddingHorizontal: 12,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: CARD,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: TINT,
     borderWidth: 1,
-    borderColor: BORDER,
-    ...shadow,
+    borderColor: `${BLUE}55`,
   },
   chipEvac: { backgroundColor: DANGER, borderColor: DANGER },
-  chipText: { fontSize: 13, fontWeight: '700', color: BLUE },
+  chipText: { fontSize: 12.5, fontWeight: '600', color: BLUE },
+  chipEvacText: { fontWeight: '800', color: '#FFFFFF' },
   incidentBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -783,7 +794,6 @@ const makeStyles = ({ BLUE, INK, MUTED, BORDER, CANVAS, CARD }: Colors) =>
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
   },
-  building: { marginTop: 8, fontSize: 13, fontWeight: '700', color: INK },
   destCard: {
     flexDirection: 'row',
     alignItems: 'center',
