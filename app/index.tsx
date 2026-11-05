@@ -1,18 +1,24 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
+import { Text } from '@/components/scaled-text';
+import { useColors, type Colors } from '@/hooks/use-colors';
 import { setLanguage } from '@/i18n';
 
-const BLUE = '#1C4E9C';
+// Fixed brand colours (logo, button); text and surfaces follow the light / dark palette.
+const BRAND = '#1C4E9C';
 const ORANGE = '#F2641E';
-const INK = '#14213D';
-const MUTED = '#5B6B88';
 
 export default function WelcomeScreen() {
+  const colors = useColors();
+  const { BLUE } = colors;
+  const dark = useColorScheme() === 'dark';
+  const styles = useMemo(() => makeStyles(colors, dark), [colors, dark]);
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const isVi = i18n.language === 'vi';
@@ -76,8 +82,9 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F9F9FF' },
+const makeStyles = ({ BLUE, INK, MUTED, BORDER, CANVAS, BG }: Colors, dark: boolean) =>
+  StyleSheet.create({
+  safe: { flex: 1, backgroundColor: dark ? CANVAS : '#F9F9FF' },
   container: { flex: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   brandRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
@@ -91,9 +98,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BG,
   },
-  langPressed: { backgroundColor: '#E4E8F0' },
+  langPressed: { backgroundColor: BORDER },
   langDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: BLUE },
   langText: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, color: INK },
   hero: { flex: 1, justifyContent: 'center', gap: 40 },
@@ -102,9 +109,9 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 20,
-    backgroundColor: BLUE,
+    backgroundColor: BRAND,
     overflow: 'hidden',
-    shadowColor: BLUE,
+    shadowColor: BRAND,
     shadowOpacity: 0.35,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
@@ -116,7 +123,7 @@ const styles = StyleSheet.create({
   actions: { gap: 12, paddingTop: 24, paddingBottom: 8 },
   noteRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   note: { fontSize: 13, lineHeight: 18, fontWeight: '500', color: MUTED },
-  cta: { height: 58, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: BLUE },
+  cta: { height: 58, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: BRAND },
   ctaPressed: { backgroundColor: '#123A78' },
   ctaText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
 });

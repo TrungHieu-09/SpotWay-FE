@@ -28,15 +28,9 @@ const DANGER = '#D64545';
 const TEXT_SIZES: TextSize[] = ['small', 'medium', 'large'];
 const THEME_MODES: ThemeMode[] = ['system', 'light', 'dark'];
 
-const BENEFITS: { icon: keyof typeof MaterialIcons.glyphMap; key: string }[] = [
-  { icon: 'elevator', key: 'access.liftFirst' },
-  { icon: 'accessible-forward', key: 'access.avoidSteps' },
-  { icon: 'schedule', key: 'access.recalcTime' },
-];
-
 export default function AccessibilityScreen() {
   const colors = useColors();
-  const { BLUE, INK } = colors;
+  const { BLUE, INK, MUTED } = colors;
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
@@ -65,14 +59,11 @@ export default function AccessibilityScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.card}>
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleLabel}>
-              <View style={styles.iconCircle}>
-                <MaterialIcons name="accessible" size={24} color={BLUE} />
-              </View>
-              <Text style={styles.toggleText}>{t('access.priority')}</Text>
-            </View>
+        <Text style={styles.sectionTitle}>{t('access.sec.access')}</Text>
+        <View style={styles.group}>
+          <View style={styles.row}>
+            <MaterialIcons name="accessible" size={22} color={BLUE} />
+            <Text style={styles.rowText}>{t('access.priority')}</Text>
             <Switch
               accessibilityLabel={t('access.priority')}
               value={enabled}
@@ -81,35 +72,9 @@ export default function AccessibilityScreen() {
               thumbColor="#FFFFFF"
             />
           </View>
-          <Text style={styles.desc}>{t('access.priorityDesc')}</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.toggleText}>{t('access.textSize')}</Text>
-          <View style={styles.sizeRow}>
-            {TEXT_SIZES.map((size) => (
-              <Pressable
-                key={size}
-                accessibilityRole="button"
-                accessibilityState={{ selected: textSize === size }}
-                onPress={() => setTextSize(size)}
-                style={[styles.sizeBtn, textSize === size && styles.sizeBtnOn]}>
-                <Text style={[styles.sizeText, textSize === size && { color: '#FFFFFF' }]}>
-                  {t(`access.size.${size}`)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.card}>
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleLabel}>
-              <View style={styles.iconCircle}>
-                <MaterialIcons name="contrast" size={24} color={BLUE} />
-              </View>
-              <Text style={styles.toggleText}>{t('access.highContrast')}</Text>
-            </View>
+          <View style={[styles.row, styles.rowLast]}>
+            <MaterialIcons name="contrast" size={22} color={BLUE} />
+            <Text style={styles.rowText}>{t('access.highContrast')}</Text>
             <Switch
               accessibilityLabel={t('access.highContrast')}
               value={highContrast}
@@ -118,59 +83,69 @@ export default function AccessibilityScreen() {
               thumbColor="#FFFFFF"
             />
           </View>
-          <Text style={styles.desc}>{t('access.highContrastDesc')}</Text>
         </View>
+        <Text style={styles.groupDesc}>{t('access.groupDesc')}</Text>
 
-        <View style={styles.card}>
-          <Text style={styles.toggleText}>{t('access.theme')}</Text>
-          <View style={styles.sizeRow}>
-            {THEME_MODES.map((mode) => (
-              <Pressable
-                key={mode}
-                accessibilityRole="button"
-                accessibilityState={{ selected: themeMode === mode }}
-                onPress={() => setThemeMode(mode)}
-                style={[styles.sizeBtn, themeMode === mode && styles.sizeBtnOn]}>
-                <Text style={[styles.sizeText, themeMode === mode && { color: '#FFFFFF' }]}>
-                  {t(`access.theme.${mode}`)}
-                </Text>
-              </Pressable>
-            ))}
+        <Text style={styles.sectionTitle}>{t('access.sec.display')}</Text>
+        <View style={styles.group}>
+          <View style={[styles.row, styles.rowWrap]}>
+            <Text style={[styles.rowText, styles.rowLabelWrap]}>{t('access.textSize')}</Text>
+            <View style={styles.seg}>
+              {TEXT_SIZES.map((size) => (
+                <Pressable
+                  key={size}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: textSize === size }}
+                  onPress={() => setTextSize(size)}
+                  style={[styles.segBtn, textSize === size && styles.segBtnOn]}>
+                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.segText, textSize === size && { color: '#FFFFFF' }]}>
+                    {t(`access.size.${size}`)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+          <View style={[styles.row, styles.rowWrap, styles.rowLast]}>
+            <Text style={[styles.rowText, styles.rowLabelWrap]}>{t('access.theme')}</Text>
+            <View style={styles.seg}>
+              {THEME_MODES.map((mode) => (
+                <Pressable
+                  key={mode}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: themeMode === mode }}
+                  onPress={() => setThemeMode(mode)}
+                  style={[styles.segBtn, themeMode === mode && styles.segBtnOn]}>
+                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.segText, themeMode === mode && { color: '#FFFFFF' }]}>
+                    {t(`access.theme.${mode}`)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
         </View>
 
-        <View style={styles.listCard}>
-          {BENEFITS.map((b) => (
-            <View key={b.key} style={styles.benefit}>
-              <View style={styles.benefitLeft}>
-                <View style={styles.iconSquare}>
-                  <MaterialIcons name={b.icon} size={20} color={BLUE} />
-                </View>
-                <Text style={styles.benefitText}>{t(b.key)}</Text>
-              </View>
-              <View style={styles.check}>
-                <MaterialIcons name="check" size={16} color={BLUE} />
-              </View>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.demoCard}>
-          <Text style={styles.demoTitle}>{t('evac.demoTitle')}</Text>
-          <Text style={styles.desc}>{t('evac.demoDesc')}</Text>
-          {incident && (
-            <Text style={styles.demoStatus}>
-              {t('evac.banner', {
-                type: t(`hazard.type.${incident.type}`),
-                floor: incident.floor,
-                zone: t(`hazard.zone.${incident.zone}`),
-              })}
-            </Text>
-          )}
-          <Pressable accessibilityRole="button" onPress={() => setDemoOpen(true)} style={styles.demoBtn}>
-            <Text style={styles.demoBtnText}>{t('evac.demoOpen')}</Text>
+        <View style={styles.sectionGap} />
+        <Text style={styles.sectionTitle}>{t('access.sec.demo')}</Text>
+        <View style={styles.group}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('evac.demoOpen')}
+            onPress={() => setDemoOpen(true)}
+            style={[styles.row, styles.rowLast]}>
+            <MaterialIcons name="warning-amber" size={22} color={DANGER} />
+            <Text style={styles.rowText}>{t('access.demoRow')}</Text>
+            <MaterialIcons name="chevron-right" size={22} color={MUTED} />
           </Pressable>
         </View>
+        {incident && (
+          <Text style={[styles.groupDesc, { color: DANGER }]}>
+            {t('evac.banner', {
+              type: t(`hazard.type.${incident.type}`),
+              floor: incident.floor,
+              zone: t(`hazard.zone.${incident.zone}`),
+            })}
+          </Text>
+        )}
 
         <Modal visible={demoOpen} transparent animationType="fade" onRequestClose={() => setDemoOpen(false)}>
           <Pressable style={styles.backdrop} onPress={() => setDemoOpen(false)}>
@@ -243,7 +218,6 @@ export default function AccessibilityScreen() {
           </Pressable>
         </Modal>
 
-        <Text style={styles.footnote}>{t('access.footnote')}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -270,82 +244,52 @@ const makeStyles = ({ BLUE, INK, MUTED, BORDER, TINT, BG, CARD }: Colors) =>
     fontWeight: '700',
     color: INK,
   },
-  content: { padding: 16 },
-  card: {
-    padding: 20,
-    marginBottom: 20,
-    borderRadius: 16,
+  content: { padding: 16, paddingBottom: 24 },
+  sectionTitle: {
+    marginBottom: 6,
+    marginLeft: 4,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: MUTED,
+  },
+  group: {
+    borderRadius: 14,
     backgroundColor: CARD,
     borderWidth: 1,
     borderColor: BORDER,
+    overflow: 'hidden',
   },
-  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  toggleLabel: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: TINT,
-  },
-  toggleText: { flex: 1, fontSize: 16, fontWeight: '700', color: INK },
-  desc: { marginTop: 12, paddingLeft: 4, fontSize: 14, lineHeight: 22, color: MUTED },
-  sizeRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  sizeBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: TINT,
-  },
-  sizeBtnOn: { backgroundColor: BLUE },
-  sizeText: { fontSize: 14, fontWeight: '700', color: BLUE },
-  listCard: {
-    padding: 12,
-    gap: 8,
-    marginBottom: 24,
-    borderRadius: 16,
-    backgroundColor: CARD,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  benefit: {
+  row: {
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: BG,
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: BORDER,
   },
-  benefitLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconSquare: {
-    width: 32,
-    height: 32,
+  rowWrap: { flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 6 },
+  rowLast: { borderBottomWidth: 0 },
+  sectionGap: { height: 16 },
+  rowText: { flex: 1, fontSize: 15, fontWeight: '600', color: INK },
+  groupDesc: { marginTop: 6, marginLeft: 4, marginBottom: 16, fontSize: 12, lineHeight: 16, color: MUTED },
+  rowLabelWrap: { flexGrow: 1, flexShrink: 0 },
+  seg: { flexDirection: 'row', width: 250, maxWidth: '100%', marginLeft: 'auto', padding: 2, gap: 2, borderRadius: 10, backgroundColor: TINT },
+  segBtn: {
+    flex: 1,
+    minHeight: 28,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: TINT,
   },
-  benefitText: { flex: 1, fontSize: 14, fontWeight: '500', color: INK },
-  check: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: TINT,
-  },
-  demoCard: {
-    padding: 20,
-    marginBottom: 24,
-    borderRadius: 16,
-    backgroundColor: CARD,
-    borderWidth: 1,
-    borderColor: DANGER,
-  },
+  segBtnOn: { backgroundColor: BLUE },
+  segText: { fontSize: 12, fontWeight: '700', color: BLUE },
+  desc: { marginTop: 12, paddingLeft: 4, fontSize: 14, lineHeight: 22, color: MUTED },
   demoTitle: { fontSize: 16, fontWeight: '700', color: DANGER },
   demoFloors: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   demoFloor: {
@@ -377,5 +321,5 @@ const makeStyles = ({ BLUE, INK, MUTED, BORDER, TINT, BG, CARD }: Colors) =>
   modalLabel: { marginTop: 16, fontSize: 13, fontWeight: '700', color: INK },
   modalActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
   demoOff: { marginTop: 14, fontSize: 14, fontWeight: '700', color: MUTED },
-  footnote: { textAlign: 'center', paddingHorizontal: 16, fontSize: 13, color: MUTED },
+  footnote: { marginTop: 16, textAlign: 'center', paddingHorizontal: 16, fontSize: 13, color: MUTED },
 });
