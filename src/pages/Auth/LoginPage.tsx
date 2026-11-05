@@ -2,23 +2,7 @@ import { useState } from 'react'
 import { App as AntApp } from 'antd'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../auth/store'
-import type { Role } from '../../types/auth'
 import './LoginPage.css'
-
-interface DemoAccount {
-  role: Role
-  label: string
-  roleTag: string
-  email: string
-  desc: string
-}
-
-const DEMO_ACCOUNTS: DemoAccount[] = [
-  { role: 'admin', label: 'Admin', roleTag: 'Quản trị viên', email: 'admin@demo.vn', desc: 'Toàn quyền cấu hình hệ thống' },
-  { role: 'building_owner', label: 'Chủ tòa nhà', roleTag: 'Tổ hợp', email: 'owner1@demo.vn', desc: 'Quản lý bất động sản & số liệu' },
-  { role: 'building_manager', label: 'Quản lý', roleTag: 'Vận hành', email: 'manager1a@demo.vn', desc: 'Điều phối tầng, sơ đồ & thiết bị' },
-  { role: 'store_owner', label: 'Gian hàng', roleTag: 'Kinh doanh', email: 'lumi@demo.vn', desc: 'Quản lý quầy & chương trình ưu đãi' },
-]
 
 function homeForRole(user?: { role?: string; tenantId?: string | null; tenant?: unknown } | null): string {
   if (!user) return '/login'
@@ -32,15 +16,13 @@ function homeForRole(user?: { role?: string; tenantId?: string | null; tenant?: 
 }
 
 export function LoginPage() {
-  const [workspace, setWorkspace] = useState('metro-airport-corp')
-  const [email, setEmail] = useState('owner1@demo.vn')
-  const [password, setPassword] = useState('Demo@123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [selectedDemoRole, setSelectedDemoRole] = useState<Role | null>('building_owner')
   const [loginError, setLoginError] = useState<string | null>(null)
-  const [attemptsRemaining, setAttemptsRemaining] = useState<number>(3)
+  const [attemptsRemaining, setAttemptsRemaining] = useState<number>(5)
   const [activeFloor, setActiveFloor] = useState<'1F' | '2F' | '3F'>('2F')
   const [lang, setLang] = useState<'EN' | 'VI'>('VI')
 
@@ -59,14 +41,6 @@ export function LoginPage() {
     const redirect = new URLSearchParams(location.search).get('redirect')
     const nextPath = redirect?.startsWith('/') ? redirect : undefined
     return <Navigate to={nextPath ?? homeForRole(user)} replace />
-  }
-
-  const handleSelectDemo = (account: DemoAccount) => {
-    setSelectedDemoRole(account.role)
-    setEmail(account.email)
-    setPassword('Demo@123')
-    setLoginError(null)
-    setAttemptsRemaining(3)
   }
 
   const performLogin = async (loginEmail: string, loginPass: string) => {
@@ -114,8 +88,8 @@ export function LoginPage() {
   const handleSsoClick = (provider: string) => {
     message.info(
       lang === 'EN'
-        ? `Single Sign-On with ${provider} is in demo sandbox mode. Please use Quick Demo Roles to sign in.`
-        : `Xác thực qua ${provider} đang ở chế độ thử nghiệm. Vui lòng chọn vai trò demo để trải nghiệm.`
+        ? `Single Sign-On with ${provider} will be available in the upcoming release.`
+        : `Tính năng đăng nhập với ${provider} sẽ sớm được cập nhật.`
     )
   }
 
@@ -601,68 +575,12 @@ export function LoginPage() {
               </p>
             </div>
 
-            {/* Quick Demo Role Selection (PRESERVED FEATURE) */}
-            <div className="demo-role-picker-card">
-              <div className="demo-picker-title-row">
-                <span className="demo-picker-title">
-                  <span className="material-symbols-outlined" style={{ fontSize: '14px', color: '#a078ff' }}>
-                    badge
-                  </span>
-                  QUICK DEMO ACCOUNTS
-                </span>
-                <span className="demo-picker-hint">1-Click role fill &amp; test</span>
-              </div>
-
-              <div className="demo-role-chips">
-                {DEMO_ACCOUNTS.map((account) => {
-                  const isActive = selectedDemoRole === account.role
-                  return (
-                    <button
-                      key={account.role}
-                      type="button"
-                      className={`demo-chip-btn ${isActive ? 'active' : ''}`}
-                      onClick={() => handleSelectDemo(account)}
-                      title={`${account.desc} (${account.email})`}
-                    >
-                      <span>{account.label}</span>
-                      <span className="demo-chip-role-tag">{account.roleTag}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
             {/* Sign-in Form */}
             <form onSubmit={handleSubmit}>
-              {/* Workspace Domain Input */}
-              <div className="form-field-group">
-                <label className="field-label" htmlFor="workspace-field">
-                  Workspace
-                </label>
-                <div className="field-input-wrapper">
-                  <div className="field-prefix-icon">
-                    <span className="material-symbols-outlined" style={{ fontSize: '19px' }}>
-                      domain
-                    </span>
-                  </div>
-                  <input
-                    id="workspace-field"
-                    type="text"
-                    className="field-text-input"
-                    value={workspace}
-                    onChange={(e) => setWorkspace(e.target.value)}
-                    placeholder="organization-subdomain"
-                    autoComplete="organization"
-                  />
-                  <div className="field-suffix-badge">.spotway.app</div>
-                </div>
-                <p className="field-helper-text">Mã định danh không gian tổ chức của bạn</p>
-              </div>
-
               {/* Email Address Input */}
               <div className="form-field-group">
                 <label className="field-label" htmlFor="email-field">
-                  Email address
+                  {lang === 'EN' ? 'Email address' : 'Địa chỉ Email'}
                 </label>
                 <div className="field-input-wrapper">
                   <div className="field-prefix-icon">
@@ -679,7 +597,7 @@ export function LoginPage() {
                       setEmail(e.target.value)
                       setLoginError(null)
                     }}
-                    placeholder="name@facility.com"
+                    placeholder="name@company.com"
                     autoComplete="email"
                     required
                   />

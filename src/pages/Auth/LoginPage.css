@@ -769,6 +769,7 @@
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
 }
 
 .field-input-wrapper:focus-within {
@@ -800,16 +801,35 @@
 
 .field-text-input {
   width: 100%;
-  background: transparent;
+  background: transparent !important;
   padding: 0.8125rem 0.5rem 0.8125rem 0;
-  color: #ffffff;
+  color: #ffffff !important;
+  caret-color: #5de6ff;
   font-size: 0.875rem;
   border: none;
   outline: none;
+  box-shadow: none;
 }
 
 .field-text-input::placeholder {
   color: #64748b;
+}
+
+/* ── Prevent white/light background when browser autofills credentials ── */
+.field-text-input:-webkit-autofill,
+.field-text-input:-webkit-autofill:hover,
+.field-text-input:-webkit-autofill:focus,
+.field-text-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #121224 inset !important;
+  box-shadow: 0 0 0 1000px #121224 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #5de6ff !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.field-text-input:autofill {
+  background: #121224 !important;
+  color: #ffffff !important;
 }
 
 .field-suffix-badge {

@@ -7,7 +7,7 @@ import {
   verifyEmail as verifyEmailRequest,
   logout as logoutRequest,
 } from './api'
-import type { AuthUser, LoginResponse, RegisterResponse, Role } from '../types/auth'
+import type { AuthUser, RegisterResponse, Role } from '../types/auth'
 
 export const AUTH_TOKEN_KEY = 'auth:token'
 
@@ -20,7 +20,7 @@ type AuthState = {
   initialize: () => Promise<void>
   login: (email: string, password: string) => Promise<void>
   register: (fullName: string, email: string, password: string) => Promise<RegisterResponse>
-  verifyEmail: (email: string, code: string) => Promise<LoginResponse>
+  verifyEmail: (email: string, code: string) => Promise<void>
   logout: () => Promise<void>
   changePassword: (currentPassword: string | undefined, newPassword: string) => Promise<void>
   clearSession: () => void
@@ -48,7 +48,13 @@ function saveToken(token: string | null, role?: string | null, user?: AuthUser |
 function getStoredUser(): AuthUser | null {
   try {
     const raw = window.localStorage.getItem('spotway.user')
-    return raw ? (JSON.parse(raw) as AuthUser) : null
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as AuthUser
+    if (parsed.name === 'Elena Rostova' || parsed.email === 'elena@metro.com') {
+      window.localStorage.removeItem('spotway.user')
+      return null
+    }
+    return parsed
   } catch {
     return null
   }
@@ -122,7 +128,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
       saveToken(result.token, user.role, user)
       set({ user, token: result.token, error: null })
-      return { ...result, user }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Xác thực mã thất bại'
       set({ error: message })
@@ -136,8 +141,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null })
     try {
       const result = await loginRequest(email, password)
-      saveToken(result.token, result.user.role, result.user)
-      set({ user: result.user, token: result.token })
+      // Save token first so subsequent /auth/me call is authenticated
+      saveToken(result.token, null, null)
+      let user: AuthUser = result.user
+      if (!user?.id || !user?.email) {
+        user = await getCurrentUser()
+      }
+      saveToken(result.token, user.role, user)
+      set({ user, token: result.token, error: null })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Đăng nhập thất bại'
       set({ error: message })

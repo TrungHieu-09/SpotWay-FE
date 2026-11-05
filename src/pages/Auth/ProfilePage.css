@@ -1,0 +1,525 @@
+/* ==========================================================================
+   SpotWay Spatial OS — User Profile & Settings Page CSS
+   Scope: .prf-*
+   ========================================================================== */
+
+.prf-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background-color: #0b0b1a;
+  background-image:
+    radial-gradient(circle at 15% 15%, rgba(139, 92, 246, 0.16) 0%, transparent 45%),
+    radial-gradient(circle at 85% 20%, rgba(34, 211, 238, 0.14) 0%, transparent 50%),
+    radial-gradient(circle at 50% 85%, rgba(232, 121, 249, 0.12) 0%, transparent 45%),
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 48px 48px, 48px 48px;
+  color: #e3e0f6;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+.prf-container {
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+/* ── HUD Telemetry Bar ── */
+.prf-hud-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding: 0 4px;
+}
+
+.prf-hud-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Space Grotesk', monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #958ea0;
+  text-transform: uppercase;
+}
+
+.prf-hud-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #22d3ee;
+  box-shadow: 0 0 10px #22d3ee;
+}
+
+.prf-hud-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: 'Space Grotesk', monospace;
+  font-size: 11px;
+  color: #958ea0;
+}
+
+.prf-hud-tag {
+  color: #5de6ff;
+  font-weight: 600;
+}
+
+/* ── Glass Card Base ── */
+.prf-glass-card {
+  background: rgba(18, 18, 36, 0.72);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 12px 40px -4px rgba(0, 0, 0, 0.5);
+  margin-bottom: 24px;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.prf-glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 16px 48px -4px rgba(0, 0, 0, 0.65), 0 0 24px -2px rgba(139, 92, 246, 0.1);
+}
+
+/* ── Profile Header Hero ── */
+.prf-header-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.prf-header-user {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.prf-avatar-big {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a078ff 0%, #6d3bd7 100%);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 24px rgba(160, 120, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.prf-user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.prf-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.prf-user-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.prf-badge-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(34, 211, 238, 0.14);
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  color: #5de6ff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.prf-user-email {
+  font-size: 14px;
+  color: #cbc3d7;
+  margin: 0;
+}
+
+.prf-user-id-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-family: 'Space Grotesk', monospace;
+  font-size: 12px;
+  color: #958ea0;
+}
+
+.prf-id-chip {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f8acff;
+}
+
+.prf-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.prf-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e3e0f6;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.prf-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+}
+
+/* ── Section Header ── */
+.prf-section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.prf-section-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.prf-section-icon {
+  font-size: 22px;
+  color: #22d3ee;
+}
+
+.prf-section-icon--security {
+  color: #d0bcff;
+}
+
+.prf-section-icon--pref {
+  color: #f8acff;
+}
+
+/* ── Forms and Inputs ── */
+.prf-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .prf-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.prf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prf-field--full {
+  grid-column: 1 / -1;
+}
+
+.prf-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #958ea0;
+}
+
+.prf-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.prf-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  background: rgba(14, 14, 28, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.prf-input:focus {
+  border-color: #22d3ee;
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.25);
+}
+
+.prf-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.prf-input-action-btn {
+  position: absolute;
+  right: 6px;
+  height: 32px;
+  padding: 0 14px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  border: none;
+  border-radius: 7px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.prf-input-action-btn:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
+}
+
+.prf-field-hint {
+  font-size: 12px;
+  color: #958ea0;
+  margin: 0;
+}
+
+/* ── Security Rows & Password Meter ── */
+.prf-security-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  margin-bottom: 14px;
+  gap: 16px;
+}
+
+.prf-security-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.prf-security-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d0bcff;
+}
+
+.prf-security-meta h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 2px 0;
+}
+
+.prf-security-meta p {
+  font-size: 12px;
+  color: #958ea0;
+  margin: 0;
+}
+
+/* ── Password Strength Bar ── */
+.prf-strength-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.prf-strength-bars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  height: 5px;
+}
+
+.prf-strength-segment {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  transition: background-color 0.3s ease;
+}
+
+.prf-strength-segment.active-weak {
+  background: #ffb4ab;
+}
+
+.prf-strength-segment.active-med {
+  background: #f8acff;
+}
+
+.prf-strength-segment.active-good {
+  background: #a078ff;
+}
+
+.prf-strength-segment.active-strong {
+  background: #22d3ee;
+  box-shadow: 0 0 8px #22d3ee;
+}
+
+.prf-strength-label {
+  font-size: 11px;
+  color: #958ea0;
+  font-family: 'Space Grotesk', monospace;
+}
+
+/* ── Toggle Switch ── */
+.prf-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.prf-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.prf-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.12);
+  transition: 0.25s;
+  border-radius: 24px;
+}
+
+.prf-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #ffffff;
+  transition: 0.25s;
+  border-radius: 50%;
+}
+
+input:checked + .prf-slider {
+  background-color: #8b5cf6;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
+}
+
+input:checked + .prf-slider:before {
+  transform: translateX(20px);
+}
+
+/* ── Language Segmented Control ── */
+.prf-segmented-lang {
+  display: inline-flex;
+  background: rgba(14, 14, 28, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.prf-seg-btn {
+  padding: 6px 16px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: #958ea0;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.prf-seg-btn--active {
+  background: rgba(139, 92, 246, 0.35);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.3);
+}
+
+/* ── Danger Zone / Sign Out ── */
+.prf-danger-card {
+  border-color: rgba(255, 180, 171, 0.2);
+}
+
+.prf-danger-card:hover {
+  border-color: rgba(255, 180, 171, 0.4);
+}
+
+.prf-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 24px;
+  background: rgba(147, 0, 10, 0.25);
+  border: 1px solid rgba(255, 180, 171, 0.35);
+  border-radius: 12px;
+  color: #ffdad6;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.prf-btn-danger:hover {
+  background: rgba(147, 0, 10, 0.5);
+  border-color: #ffb4ab;
+  color: #ffffff;
+  box-shadow: 0 0 18px rgba(147, 0, 10, 0.4);
+}
+

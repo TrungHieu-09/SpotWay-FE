@@ -35,7 +35,7 @@ export function SpotWayNavbar({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const userDisplayName = user?.name || user?.email?.split('@')[0] || 'Elena Rostova'
+  const userDisplayName = user?.name || (user?.email ? user.email.split('@')[0] : 'User')
   const userInitial = userDisplayName.charAt(0).toUpperCase()
 
   // Close dropdown on outside click
@@ -67,7 +67,7 @@ export function SpotWayNavbar({
   }
 
   const portalRoute = getPortalRoute(user)
-  const portalLabel = user?.tenantId ? 'Vào hệ thống' : 'Không gian của tôi'
+  const portalLabel = user?.tenantId ? 'Vào hệ thống' : 'Workspace Hub'
 
   return (
     <header className="spw-navbar-header">
@@ -199,17 +199,17 @@ export function SpotWayNavbar({
                       className="spw-dropdown-item"
                       onClick={() => setIsDropdownOpen(false)}
                     >
-                      <span className="material-symbols-outlined">account_circle</span>
-                      <span>Trung tâm tài khoản</span>
+                      <span className="material-symbols-outlined">corporate_fare</span>
+                      <span>Không gian làm việc</span>
                     </Link>
 
                     <Link
-                      to="/change-password"
+                      to="/profile"
                       className="spw-dropdown-item"
                       onClick={() => setIsDropdownOpen(false)}
                     >
-                      <span className="material-symbols-outlined">lock_reset</span>
-                      <span>Bảo mật &amp; Mật khẩu</span>
+                      <span className="material-symbols-outlined">manage_accounts</span>
+                      <span>Hồ sơ &amp; Cài đặt</span>
                     </Link>
 
                     <div className="spw-dropdown-divider" />

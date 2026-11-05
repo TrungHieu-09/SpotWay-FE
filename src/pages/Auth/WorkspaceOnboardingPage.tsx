@@ -33,8 +33,8 @@ export function WorkspaceOnboardingPage() {
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
 
-  const userEmail = user?.email || 'elena@metro.com'
-  const userInitial = (user?.name || userEmail.slice(0, 1)).slice(0, 1).toUpperCase()
+  const userEmail = user?.email || 'user@spotway.vn'
+  const userInitial = (user?.name || (user?.email ? user.email.slice(0, 1) : 'U')).slice(0, 1).toUpperCase()
 
   const handleOrgNameChange = (val: string) => {
     setOrgName(val)
