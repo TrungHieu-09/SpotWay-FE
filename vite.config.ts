@@ -1,3 +1,4 @@
+import basicSsl from '@vitejs/plugin-basic-ssl'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
@@ -6,10 +7,13 @@ export default defineConfig(({ mode }) => {
   // Use real NestJS backend by default (with /api proxy to http://localhost:3000/api/v1)
   // MSW is ONLY enabled if explicitly running in 'mock' mode (vite --mode mock)
   const isMockMode = mode === 'mock'
+  // `vite --mode phone`: mở cho điện thoại cùng mạng Wi-Fi; HTTPS tự ký để trình duyệt cho phép dùng camera quét QR.
+  const isPhoneMode = mode === 'phone'
 
   return {
-    plugins: [react()],
+    plugins: isPhoneMode ? [react(), basicSsl()] : [react()],
     server: {
+      host: isPhoneMode ? true : undefined,
       // Proxy /api → NestJS backend by default
       proxy: !isMockMode
         ? {
