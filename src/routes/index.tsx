@@ -149,6 +149,7 @@ export const router = createBrowserRouter([
           { path: 'owner/staff', element: lazyElement(<OwnerStaffPage />) },
           { path: 'owner/managers', element: lazyElement(<OwnerStaffPage />) },
           { path: 'owner/store-owners', element: lazyElement(<OwnerStaffPage />) },
+          { path: 'owner/profile', element: lazyElement(<ProfilePage embedded />) },
         ],
       },
     ],
@@ -170,6 +171,7 @@ export const router = createBrowserRouter([
           { path: 'manager', element: lazyElement(<ManagerLayout />) },
           { path: 'manager/store-owners', element: lazyElement(<StoreOwnerManagementPage />) },
           { path: 'manager/navigation-test/:buildingId', element: lazyElement(<NavigationPage />) },
+          { path: 'manager/profile', element: lazyElement(<ProfilePage embedded />) },
         ],
       },
       {
@@ -180,6 +182,7 @@ export const router = createBrowserRouter([
         children: [
           { path: 'store/profile', element: lazyElement(<StoreProfilePage />) },
           { path: 'store/promotions', element: lazyElement(<StorePromotionsPage />) },
+          { path: 'store/account', element: lazyElement(<ProfilePage embedded />) },
         ],
       },
     ],
@@ -194,6 +197,7 @@ export const router = createBrowserRouter([
         children: [
           { path: 'admin', element: lazyElement(<AdminOverviewPage />) },
           { path: 'admin/accounts', element: lazyElement(<AdminAccountsPage />) },
+          { path: 'admin/profile', element: lazyElement(<ProfilePage embedded />) },
         ],
       },
     ],

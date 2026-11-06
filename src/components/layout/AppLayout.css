@@ -222,6 +222,17 @@
   border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
+.app-header-user--clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.app-header-user--clickable:hover {
+  background: rgba(139, 92, 246, 0.14);
+  border-color: rgba(93, 230, 255, 0.35);
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.25);
+}
+
 .app-header-user__role {
   padding: 1px 7px;
   border-radius: 999px;

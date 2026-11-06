@@ -51,3 +51,9 @@ export async function changePassword(payload: { currentPassword?: string; newPas
   const { data } = await apiClient.post<AuthUser>('/auth/change-password', payload)
   return data
 }
+
+export async function updateProfile(payload: { name: string }) {
+  const { data } = await apiClient.patch<AuthUser>('/auth/profile', payload)
+  return data
+}
+

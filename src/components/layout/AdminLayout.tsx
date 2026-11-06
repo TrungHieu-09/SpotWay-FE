@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-do
 import {
   BarChartOutlined,
   TeamOutlined,
+  UserOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -31,6 +32,11 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
     path: '/admin/accounts',
     icon: <TeamOutlined />,
     label: 'Quản lý tài khoản',
+  },
+  {
+    path: '/admin/profile',
+    icon: <UserOutlined />,
+    label: 'Hồ sơ cá nhân',
   },
 ]
 
@@ -139,12 +145,22 @@ export function AdminLayout() {
 
           {/* User Profile */}
           {user && (
-            <div className={`adm-user ${collapsed ? 'adm-user--collapsed' : ''}`} title={user.email}>
+            <div
+              className={`adm-user ${collapsed ? 'adm-user--collapsed' : ''}`}
+              title="Bấm để xem & chỉnh sửa hồ sơ cá nhân"
+              onClick={() => navigate('/admin/profile')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') navigate('/admin/profile')
+              }}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="adm-user__avatar">{userInitial}</div>
               {!collapsed && (
                 <div className="adm-user__info">
                   <span className="adm-user__name">{user.name || 'Quản trị viên'}</span>
-                  <span className="adm-user__role">Admin</span>
+                  <span className="adm-user__role">Admin · Hồ sơ</span>
                 </div>
               )}
             </div>
@@ -178,7 +194,17 @@ export function AdminLayout() {
               <span>Hệ thống hoạt động</span>
             </div>
             {user && (
-              <div className="adm-topbar__user" title={user.email}>
+              <div
+                className="adm-topbar__user"
+                title="Bấm để mở Hồ sơ cá nhân"
+                onClick={() => navigate('/admin/profile')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') navigate('/admin/profile')
+                }}
+                style={{ cursor: 'pointer' }}
+              >
                 <span className="adm-topbar__user-avatar">{userInitial}</span>
                 <span className="adm-topbar__user-name">{user.name || 'Admin'}</span>
               </div>

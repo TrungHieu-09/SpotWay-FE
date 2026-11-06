@@ -9,6 +9,7 @@ import {
   MenuUnfoldOutlined,
   ShopOutlined,
   TeamOutlined,
+  UserOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../../auth/store'
 import './SpotWayNavbar.css'
@@ -47,6 +48,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: <ShopOutlined />,
     label: 'Chủ gian hàng',
     matchPrefixes: ['/owner/store-owners'],
+  },
+  {
+    path: '/owner/profile',
+    icon: <UserOutlined />,
+    label: 'Hồ sơ cá nhân',
+    matchPrefixes: ['/owner/profile'],
   },
 ]
 
@@ -180,12 +187,22 @@ export function OwnerLayout() {
 
           {/* User Profile */}
           {user && (
-            <div className={`ol-user ${collapsed ? 'ol-user--collapsed' : ''}`} title={user.email}>
+            <div
+              className={`ol-user ${collapsed ? 'ol-user--collapsed' : ''}`}
+              title="Bấm để xem & chỉnh sửa hồ sơ cá nhân"
+              onClick={() => navigate('/owner/profile')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') navigate('/owner/profile')
+              }}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="ol-user__avatar">{userInitial}</div>
               {!collapsed && (
                 <div className="ol-user__info">
                   <span className="ol-user__name">{user.name || 'Chủ tòa nhà'}</span>
-                  <span className="ol-user__role">Chủ tòa nhà</span>
+                  <span className="ol-user__role">Chủ tòa nhà · Hồ sơ</span>
                 </div>
               )}
             </div>
@@ -217,7 +234,17 @@ export function OwnerLayout() {
               <span>{user?.tenant?.subdomain ? `${user.tenant.subdomain}.spotway.app` : 'Tổ hợp hoạt động'}</span>
             </div>
             {user && (
-              <div className="ol-topbar__user" title={user.email}>
+              <div
+                className="ol-topbar__user"
+                title="Bấm để mở Hồ sơ cá nhân"
+                onClick={() => navigate('/owner/profile')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') navigate('/owner/profile')
+                }}
+                style={{ cursor: 'pointer' }}
+              >
                 <span className="ol-topbar__user-avatar">{userInitial}</span>
                 <span className="ol-topbar__user-name">{user.name || 'Chủ tòa nhà'}</span>
               </div>

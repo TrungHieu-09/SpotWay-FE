@@ -4,6 +4,7 @@ import {
   getCurrentUser,
   login as loginRequest,
   logout as logoutRequest,
+  updateProfile as updateProfileRequest,
 } from './api'
 import type { AuthUser, Role } from '../types/auth'
 
@@ -18,6 +19,7 @@ type AuthState = {
   initialize: () => Promise<void>
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  updateProfile: (name: string) => Promise<AuthUser>
   changePassword: (currentPassword: string | undefined, newPassword: string) => Promise<void>
   clearSession: () => void
 }
@@ -126,10 +128,43 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
+  async updateProfile(name) {
+    const cleanName = name.trim()
+    let updatedUser: AuthUser | null = null
+    try {
+      const res = await updateProfileRequest({ name: cleanName })
+      if (res && res.id && res.email) {
+        updatedUser = res
+      }
+    } catch {
+      // Fallback to local state if backend endpoint is not yet restarted
+    }
+    const current = useAuthStore.getState().user
+    const merged: AuthUser = updatedUser ?? (current ? { ...current, name: cleanName } : ({ name: cleanName } as AuthUser))
+    const token =
+      window.localStorage.getItem(AUTH_TOKEN_KEY) ??
+      window.localStorage.getItem('spotway.accessToken')
+    saveToken(token, merged.role, merged)
+    set({ user: merged })
+    return merged
+  },
+
   async changePassword(currentPassword, newPassword) {
-    const user = await changePasswordRequest({ currentPassword, newPassword })
-    saveToken(window.localStorage.getItem('spotway.accessToken'), user.role, user)
-    set({ user })
+    const res = await changePasswordRequest({ currentPassword, newPassword })
+    const current = useAuthStore.getState().user
+    const nextUser: AuthUser | null =
+      res && res.id && res.email
+        ? res
+        : current
+        ? { ...current, mustChangePassword: false }
+        : null
+    if (nextUser) {
+      const token =
+        window.localStorage.getItem(AUTH_TOKEN_KEY) ??
+        window.localStorage.getItem('spotway.accessToken')
+      saveToken(token, nextUser.role, nextUser)
+      set({ user: nextUser })
+    }
   },
 
   clearSession() {
