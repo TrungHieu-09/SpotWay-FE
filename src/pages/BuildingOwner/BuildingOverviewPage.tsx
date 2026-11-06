@@ -3,6 +3,7 @@ import {
   Alert,
   Button,
   Card,
+  Collapse,
   Empty,
   Slider,
   Space,
@@ -17,7 +18,6 @@ import {
   CompassOutlined,
   DatabaseOutlined,
   EnvironmentOutlined,
-  EyeOutlined,
   FundProjectionScreenOutlined,
   LoadingOutlined,
   PictureOutlined,
@@ -63,7 +63,7 @@ export function BuildingOverviewPage() {
     walls: true,
     edges: true,
     nodes: false,
-    pois: true,
+    pois: false,
     verticalLinks: true,
   })
 
@@ -182,43 +182,16 @@ export function BuildingOverviewPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontWeight: 700, fontSize: 15, color: '#f8fafc' }}>
-                IndoorNav SaaS Engine — 2D to 3D Extrusion Studio
+                Tổng quan 2.5D
               </span>
-              <Tag color="blue" style={{ margin: 0 }}>
-                Enterprise MVP
-              </Tag>
             </div>
             <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-              Building: <span style={{ color: '#f8fafc', fontWeight: 600 }}>{overview?.building.name ?? 'Building'}</span> · ID: <span style={{ fontFamily: 'monospace' }}>{buildingId?.slice(0, 8)}</span>
+              Tòa nhà: <span style={{ color: '#f8fafc', fontWeight: 600 }}>{overview?.building.name ?? 'Building'}</span> · ID: <span style={{ fontFamily: 'monospace' }}>{buildingId?.slice(0, 8)}</span>
             </div>
           </div>
         </div>
 
         <Space>
-          <div
-            style={{
-              background: '#1e293b',
-              padding: '6px 12px',
-              borderRadius: 6,
-              fontSize: 12,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              border: '1px solid #334155',
-            }}
-          >
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: '#10b981',
-                boxShadow: '0 0 8px #10b981',
-              }}
-            />
-            <span style={{ color: '#cbd5e1' }}>WebGL 3D Engine: Active (60 FPS)</span>
-          </div>
-
           {buildingId && (
             <Button
               type="primary"
@@ -226,7 +199,7 @@ export function BuildingOverviewPage() {
               onClick={() => navigate(`/navigate/${buildingId}`)}
               style={{ background: '#2563eb' }}
             >
-              Mở Turn-by-Turn Mobile
+              Mở bản đồ điều hướng
             </Button>
           )}
 
@@ -269,14 +242,14 @@ export function BuildingOverviewPage() {
               <div className="floors-sidebar__header">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Floors Queue (3D Stack)
+                    Danh sách tầng (xếp chồng 3D)
                   </span>
                   <Tag color="cyan" style={{ margin: 0 }}>
-                    {sortedFloors.length} Tầng
+                    {sortedFloors.length} tầng
                   </Tag>
                 </div>
                 <p style={{ fontSize: 11, color: '#64748b', margin: '4px 0 0' }}>
-                  Click từng tầng để cô lập hoặc xem toàn bộ 3D.
+                  Chọn một tầng để xem riêng, hoặc xem toàn bộ tòa nhà.
                 </p>
               </div>
 
@@ -291,10 +264,10 @@ export function BuildingOverviewPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: '#ffffff' }}>Toàn bộ tòa nhà</span>
-                      <Tag color="blue" style={{ fontSize: 10, margin: 0 }}>ALL</Tag>
+                      <Tag color="blue" style={{ fontSize: 10, margin: 0 }}>Tất cả</Tag>
                     </div>
                     <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-                      3D Slabs & Vách Extruded
+                      Sàn và vách tường 3D
                     </div>
                   </div>
                 </div>
@@ -302,6 +275,8 @@ export function BuildingOverviewPage() {
                 {sortedFloors.map((floor) => {
                   const isActive = selectedFloorId === floor.id
                   const floorNodesCount = (overview.nodes ?? []).filter((n) => n.floorId === floor.id).length
+                  const floorPoisCount = (overview.pois ?? []).filter((poi) => poi.floorId === floor.id).length
+                  const isPublished = (floor.publishStatus ?? 'PUBLISHED') === 'PUBLISHED'
 
                   return (
                     <div
@@ -321,12 +296,20 @@ export function BuildingOverviewPage() {
                           <span style={{ fontSize: 12, fontWeight: 700, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             Tầng {floor.floorNumber}
                           </span>
-                          <Tag color="emerald" style={{ fontSize: 10, margin: 0, color: '#34d399', background: 'rgba(6, 78, 59, 0.6)', border: '1px solid #065f46' }}>
-                            {floor.publishStatus ?? 'PUBLISHED'}
+                          <Tag
+                            style={{
+                              fontSize: 10,
+                              margin: 0,
+                              color: isPublished ? '#34d399' : '#fbbf24',
+                              background: isPublished ? 'rgba(6, 78, 59, 0.6)' : 'rgba(120, 53, 15, 0.5)',
+                              border: `1px solid ${isPublished ? '#065f46' : '#92400e'}`,
+                            }}
+                          >
+                            {isPublished ? 'Đã xuất bản' : 'Bản nháp'}
                           </Tag>
                         </div>
                         <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-                          3D Walls ({floorNodesCount || 35} Nodes)
+                          {floorNodesCount} node · {floorPoisCount} POI
                         </div>
                       </div>
                     </div>
@@ -346,7 +329,7 @@ export function BuildingOverviewPage() {
                     fontWeight: 600,
                   }}
                 >
-                  {selectedFloorId === 'all' ? 'Analyze all floor plans' : 'Analyze selected floor'}
+                  {selectedFloorId === 'all' ? 'Phân tích mặt bằng tất cả tầng' : 'Phân tích mặt bằng tầng đang chọn'}
                 </Button>
               </div>
             </aside>
@@ -359,7 +342,7 @@ export function BuildingOverviewPage() {
                   <div className="scan-laser-line" />
                   <div className="scanning-status-badge">
                     <LoadingOutlined />
-                    <span>Analyzing walls, openings and labels…</span>
+                    <span>Đang phân tích tường, cửa và nhãn…</span>
                   </div>
                 </div>
               )}
@@ -368,7 +351,7 @@ export function BuildingOverviewPage() {
               <div className="floating-viewport-controls">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 8 }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <BuildOutlined style={{ color: '#38bdf8' }} /> 3D Viewport Controls
+                    <BuildOutlined style={{ color: '#38bdf8' }} /> Điều khiển 3D
                   </span>
                   <Button
                     size="small"
@@ -377,14 +360,14 @@ export function BuildingOverviewPage() {
                     onClick={() => setCameraPreset('cutaway')}
                     style={{ color: '#94a3b8', fontSize: 11 }}
                   >
-                    Reset Cam
+                    Đặt lại camera
                   </Button>
                 </div>
 
                 {/* Slider 1: Floor Separation / Explode View */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>
-                    <span>Floor Explode (Height):</span>
+                    <span>Khoảng cách giữa các tầng:</span>
                     <span style={{ color: '#38bdf8', fontWeight: 700, fontFamily: 'monospace' }}>
                       {explodeFactor.toFixed(1)}x
                     </span>
@@ -399,10 +382,10 @@ export function BuildingOverviewPage() {
                   />
                 </div>
 
-                {/* Slider 2: Room Extrusion Height */}
+                {/* Slider 2: chiều cao thân ghim POI */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>
-                    <span>Chiều cao khối phòng:</span>
+                    <span>Chiều cao ghim POI:</span>
                     <span style={{ color: '#38bdf8', fontWeight: 700, fontFamily: 'monospace' }}>
                       {wallHeight.toFixed(1)}m
                     </span>
@@ -417,10 +400,10 @@ export function BuildingOverviewPage() {
                   />
                 </div>
 
-                {/* Slider 3: Room Block Scale */}
+                {/* Slider 3: cỡ đầu ghim POI */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>
-                    <span>Kích thước khối phòng:</span>
+                    <span>Kích thước ghim POI:</span>
                     <span style={{ color: '#38bdf8', fontWeight: 700, fontFamily: 'monospace' }}>
                       {Math.round((wallThickness / 0.08) * 100)}%
                     </span>
@@ -439,15 +422,19 @@ export function BuildingOverviewPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   <Button
                     size="small"
-                    type={visibleLayers.walls || visibleLayers.pois ? 'primary' : 'default'}
-                    onClick={() => {
-                      toggleLayer('walls')
-                      toggleLayer('pois')
-                    }}
-                    icon={<EyeOutlined />}
-                    style={{ background: visibleLayers.walls || visibleLayers.pois ? '#1e3a8a' : undefined }}
+                    type={visibleLayers.walls ? 'primary' : 'default'}
+                    onClick={() => toggleLayer('walls')}
+                    icon={<BuildOutlined />}
                   >
-                    Khối phòng 3D
+                    Tường
+                  </Button>
+                  <Button
+                    size="small"
+                    type={visibleLayers.pois ? 'primary' : 'default'}
+                    onClick={() => toggleLayer('pois')}
+                    icon={<EnvironmentOutlined />}
+                  >
+                    POI
                   </Button>
                   <Button
                     size="small"
@@ -455,7 +442,7 @@ export function BuildingOverviewPage() {
                     onClick={() => setCameraPreset('cutaway')}
                     icon={<FundProjectionScreenOutlined />}
                   >
-                    Isometric
+                    Góc nhìn chéo
                   </Button>
                 </div>
               </div>
@@ -481,10 +468,10 @@ export function BuildingOverviewPage() {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: '#ffffff' }}>
-                        3D Navigation Path Active
+                        Mô phỏng tuyến 3D
                       </span>
-                      <Tag color="blue" style={{ fontSize: 10, margin: 0 }}>
-                        Dijkstra Graph
+                      <Tag color={isSimulatingRoute ? 'green' : 'default'} style={{ fontSize: 10, margin: 0 }}>
+                        {isSimulatingRoute ? 'Đang hiển thị' : 'Đang ẩn'}
                       </Tag>
                     </div>
                     <div style={{ fontSize: 11, color: '#cbd5e1', marginTop: 2 }}>
@@ -505,7 +492,7 @@ export function BuildingOverviewPage() {
                     onClick={() => navigate(`/navigate/${buildingId}`)}
                     style={{ background: '#2563eb' }}
                   >
-                    Mở Mobile View
+                    Mở bản đồ điều hướng
                   </Button>
                   <Button
                     size="small"
@@ -534,17 +521,21 @@ export function BuildingOverviewPage() {
             </div>
           </div>
 
-          {/* ── BOTTOM PANEL: SYSTEM STATE & PATHFINDING GRAPH (Matching User's Prototype) ── */}
-          <footer className="system-state-footer">
+          {/* Chi tiết kỹ thuật: gập sẵn; các cột "minh hoạ" là dữ liệu mẫu, không lấy từ BE */}
+          <Collapse
+            ghost
+            style={{ marginTop: 8 }}
+            items={[
+              {
+                key: 'tech',
+                label: 'Chi tiết kỹ thuật',
+                children: (
+          <div className="system-state-footer">
             <div className="system-state-bar">
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
-                  <DatabaseOutlined style={{ color: '#3b82f6' }} /> Backend System State & Pathfinding Graph
+                  <DatabaseOutlined style={{ color: '#3b82f6' }} /> Trạng thái hệ thống & đồ thị đường đi
                 </span>
-                <span style={{ color: '#475569' }}>|</span>
-                <span>Tenant: <span style={{ color: '#60a5fa', fontFamily: 'monospace' }}>tenant_techpark_01</span></span>
-                <span style={{ color: '#475569' }}>|</span>
-                <span>Route Status: <span style={{ color: '#34d399', fontWeight: 700, fontFamily: 'monospace' }}>VALID_PATH_FOUND</span></span>
               </div>
               <div style={{ color: '#94a3b8', fontSize: 11 }}>
                 BR-R4: Navigation Bearings Calculated (0° - 360°)
@@ -555,18 +546,18 @@ export function BuildingOverviewPage() {
               {/* Col 1: DB Schema Entities */}
               <div className="system-state-col">
                 <div className="system-state-col__title" style={{ color: '#60a5fa' }}>
-                  Floor & Building Schema
+                  Tòa nhà & tầng (dữ liệu thật)
                 </div>
                 <div>building_id: <span style={{ color: '#94a3b8' }}>{buildingId?.slice(0, 10)}</span></div>
-                <div>floor_count: <span style={{ color: '#94a3b8' }}>{overview.floors.length} Floors (T1, T2, T3)</span></div>
-                <div>publish_status: <span style={{ color: '#34d399', fontWeight: 700 }}>PUBLISHED</span></div>
-                <div>elevator_links: <span style={{ color: '#94a3b8' }}>{overview.verticalLinks?.length ? `${overview.verticalLinks.length} Active Shafts` : 'Node_E1 ⇄ Node_E2'}</span></div>
+                <div>floor_count: <span style={{ color: '#94a3b8' }}>{overview.floors.length} tầng</span></div>
+                <div>published: <span style={{ color: '#34d399', fontWeight: 700 }}>{overview.floors.filter((f) => (f.publishStatus ?? 'PUBLISHED') === 'PUBLISHED').length}/{overview.floors.length} tầng đã xuất bản</span></div>
+                <div>elevator_links: <span style={{ color: '#94a3b8' }}>{overview.verticalLinks?.length ?? 0} liên kết</span></div>
               </div>
 
               {/* Col 2: Dijkstra Calculated Nodes */}
               <div className="system-state-col">
                 <div className="system-state-col__title" style={{ color: '#c084fc' }}>
-                  Active Path Nodes (BR-R4)
+                  Mẫu node trên tuyến (minh hoạ)
                 </div>
                 <div>1. Node_T1_MainLobby [X:12, Y:0, Z:18] (Bearing: 0°)</div>
                 <div>2. Node_T1_Stairs [X:12, Y:0, Z:2] (Bearing: 90°)</div>
@@ -575,10 +566,10 @@ export function BuildingOverviewPage() {
                 <div>5. Node_T2_Room201 [X:-10, Y:12, Z:-8] (Destination)</div>
               </div>
 
-              {/* Col 3: Business Rules Compliance */}
+              {/* Col 3: Quy tắc nghiệp vụ (minh hoạ) */}
               <div className="system-state-col">
                 <div className="system-state-col__title" style={{ color: '#34d399' }}>
-                  Business Rules Compliance
+                  Quy tắc nghiệp vụ (minh hoạ)
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <CheckCircleOutlined style={{ color: '#34d399' }} />
@@ -594,7 +585,11 @@ export function BuildingOverviewPage() {
                 </div>
               </div>
             </div>
-          </footer>
+          </div>
+                ),
+              },
+            ]}
+          />
         </Card>
       ) : (
         <Empty description="Tòa nhà chưa có tầng nào">
