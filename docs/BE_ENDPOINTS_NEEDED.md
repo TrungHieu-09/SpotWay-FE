@@ -1,15 +1,17 @@
-# Trạng thái endpoint FE ↔ BE (SpotWay-BE)
+# Trạng thái endpoint FE <-> BE (SpotWay-BE)
 
-## Đã bổ sung ở BE (commit `feat(workspace)`; cần `prisma migrate deploy` + khởi động lại BE)
-- `GET /tenant/overview`, `GET /tenant/plans`, `GET /tenant/invoices`, `POST /tenant/subscription/renew`
-- `GET/POST /tenant/users`, `PATCH/DELETE /tenant/users/:id` (manager, store owner; giới hạn theo gói; mật khẩu tạm một lần)
-- `GET /tenant/areas`, `GET/POST /buildings/:id/areas`, `PATCH/DELETE /areas/:id`
+Phía Owner hiện chỉ giữ các tính năng BE đã hỗ trợ (giống nhánh `refactor/node-poi-graph-v2`):
+danh sách/chi tiết toà nhà, tầng, tải ảnh sơ đồ, tổng quan 2.5D, gán manager theo toà nhà.
+Dashboard tính từ `/buildings` + `/buildings/:id/floors`.
 
-## Còn thiếu
-| FE gọi | Ghi chú |
+## Chưa có ở BE (đã tạm gỡ khỏi FE, làm lại khi BE bổ sung)
+| Tính năng | FE từng gọi |
 | --- | --- |
-| `/admin/overview`, `/admin/plans`, `/admin/tenants`, `/admin/users`… | BE chỉ có `/tenants` (admin). Trang Admin chưa dùng được. |
-| `/store-owners` | Quản lý chủ gian hàng theo toà nhà/tầng. |
-| `GET /floors/:id/stores`, `POST /stores`, `PUT /stores/:id` | BE chỉ có GET/PATCH/DELETE `/stores/:id`. |
-| `GET /auth/me` → `tenant` | Hiện trả `tenant: null`, `name` lấy từ email. |
-| Gán tầng vào khu vực (`floor.areaId`) | Khu vực hiện chỉ để gán manager; chưa ảnh hưởng quyền sửa tầng. |
+| Gói dịch vụ, hạn mức, hoá đơn, gia hạn | `/tenant/overview`, `/tenant/plans`, `/tenant/invoices`, `/tenant/subscription/renew` (đồng đội đang có `plan_orders` ở DB, cần thống nhất thiết kế) |
+| Danh sách / tạo nhân sự, chủ gian hàng | `/tenant/users`, `/store-owners` |
+| Khu vực | `/tenant/areas`, `/buildings/:id/areas` |
+| Admin | `/admin/*` (BE chỉ có `/tenants`) |
+| Gian hàng | `GET /floors/:id/stores`, `POST /stores`, `PUT /stores/:id` |
+| Tenant trong `/auth/me` | hiện `tenant: null` |
+
+Bản thử API workspace (tổng quan, gói, nhân sự, khu vực) nằm ở nhánh BE cục bộ `wip/workspace-api`, chưa áp migration.
