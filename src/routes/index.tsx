@@ -62,6 +62,16 @@ const BuildingListPage = lazy(() =>
     default: module.BuildingListPage,
   })),
 )
+const Building2DViewerPage = lazy(() =>
+  import('../pages/BuildingOwner/Building2DViewerPage').then((module) => ({
+    default: module.Building2DViewerPage,
+  })),
+)
+const BuildingOverviewPage = lazy(() =>
+  import('../pages/BuildingOwner/BuildingOverviewPage').then((module) => ({
+    default: module.BuildingOverviewPage,
+  })),
+)
 const BuildingDetailPage = lazy(() =>
   import('../pages/BuildingOwner/BuildingDetailPage').then((module) => ({
     default: module.BuildingDetailPage,
@@ -183,6 +193,8 @@ export const router = createBrowserRouter([
           { path: 'owner/dashboard', element: lazyElement(<OwnerDashboardPage />) },
           { path: 'owner/buildings', element: lazyElement(<BuildingListPage />) },
           { path: 'owner/buildings/:buildingId', element: lazyElement(<BuildingDetailPage />) },
+          { path: 'owner/buildings/:buildingId/2d', element: lazyElement(<Building2DViewerPage />) },
+          { path: 'owner/buildings/:buildingId/overview', element: lazyElement(<BuildingOverviewPage />) },
           { path: 'owner/staff', element: lazyElement(<OwnerStaffPage />) },
           { path: 'owner/managers', element: lazyElement(<OwnerStaffPage />) },
           { path: 'owner/store-owners', element: lazyElement(<OwnerStaffPage />) },
