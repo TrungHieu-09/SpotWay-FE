@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Button, Spin } from 'antd'
 import {
   ApartmentOutlined,
   AppstoreOutlined,
-  CheckCircleOutlined,
+  CheckCircleFilled,
+  ClockCircleOutlined,
   CloudOutlined,
-  RiseOutlined,
+  CompassOutlined,
+  EnvironmentOutlined,
+  PlusOutlined,
+  RightOutlined,
   ShopOutlined,
   TeamOutlined,
   ThunderboltOutlined,
@@ -14,202 +18,431 @@ import {
 import { Link } from 'react-router-dom'
 import { getTenantOverview } from '../../api/tenant'
 import { useBuildingStore } from '../../store/useBuildingStore'
+import { useAuthStore } from '../../auth/store'
 import type { TenantOverview } from '../../types/auth'
 import type { Building } from '../../types/building'
 import { GlassCard, StatusPill } from '../../components/ui'
+import { CreateBuildingModal } from './CreateBuildingModal'
 import './OwnerDashboardPage.css'
 
 export function OwnerDashboardPage() {
   const [overview, setOverview] = useState<TenantOverview | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+
   const buildings = useBuildingStore((state) => state.buildings)
   const loadBuildings = useBuildingStore((state) => state.loadBuildings)
+  const user = useAuthStore((state) => state.user)
 
-  useEffect(() => {
-    Promise.all([getTenantOverview(), loadBuildings()])
-      .then(([nextOverview]) => setOverview(nextOverview))
-      .catch((reason: Error) => setError(reason.message))
+  const refreshData = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const [nextOverview] = await Promise.all([
+        getTenantOverview(),
+        loadBuildings(),
+      ])
+      setOverview(nextOverview)
+    } catch (reason: any) {
+      setError(reason?.message || 'Không thể tải dữ liệu không gian làm việc')
+    } finally {
+      setIsLoading(false)
+    }
   }, [loadBuildings])
 
-  if (error) {
-    return (
-      <main className="workspace odp-workspace">
-        <GlassCard>
-          <div className="odp-error">
-            <span className="odp-error__icon">⚠️</span>
-            <p>{error}</p>
-          </div>
-        </GlassCard>
-      </main>
-    )
-  }
+  useEffect(() => {
+    refreshData()
+  }, [refreshData])
+
+  const totalBuildings = buildings.length
+  const totalFloors = overview?.usage.floors ?? 0
+  const publishedFloors = overview?.usage.publishedFloors ?? 0
+  const totalManagers = overview?.usage.managers ?? 0
+  const totalStores = overview?.usage.stores ?? 0
+  const activePromos = overview?.usage.activePromotions ?? 0
+
+  // Checklist milestones calculation
+  const milestoneList = [
+    {
+      id: 'ws',
+      title: 'Khởi tạo Không gian làm việc',
+      description: `Định danh ${overview?.tenant?.subdomain ? overview.tenant.subdomain + '.spotway.app' : 'hoàn tất'}`,
+      completed: true,
+    },
+    {
+      id: 'bldg',
+      title: 'Tạo tòa nhà trung tâm đầu tiên',
+      description: totalBuildings > 0 ? `Đã có ${totalBuildings} tòa nhà trong hệ thống` : 'Chưa có tòa nhà nào',
+      completed: totalBuildings > 0,
+      action: totalBuildings === 0 ? () => setIsCreateModalOpen(true) : undefined,
+      actionLabel: '+ Tạo tòa nhà',
+    },
+    {
+      id: 'floor',
+      title: 'Tải sơ đồ kiến trúc mặt sàn',
+      description: totalFloors > 0 ? `Đã số hóa ${totalFloors} mặt sàn` : 'Cần tải ảnh sơ đồ 2D để gắn tọa độ',
+      completed: totalFloors > 0,
+      link: totalBuildings > 0 ? `/owner/buildings/${buildings[0].id}` : '/owner/buildings',
+      actionLabel: 'Quản lý tầng',
+    },
+    {
+      id: 'manager',
+      title: 'Phân quyền Quản lý khu vực',
+      description: totalManagers > 0 ? `Đã chỉ định ${totalManagers} nhân sự vận hành` : 'Chưa thêm quản lý cho các khu vực',
+      completed: totalManagers > 0,
+      link: '/owner/managers',
+      actionLabel: 'Thêm nhân sự',
+    },
+    {
+      id: 'nav',
+      title: 'Xuất bản Lưới dẫn đường 3D',
+      description: publishedFloors > 0 ? `${publishedFloors} tầng sẵn sàng dẫn đường khách` : 'Chưa xuất bản bản đồ không gian',
+      completed: publishedFloors > 0,
+      link: totalBuildings > 0 ? `/owner/buildings/${buildings[0].id}` : '/owner/buildings',
+      actionLabel: 'Xuất bản',
+    },
+  ]
+
+  const completedMilestones = milestoneList.filter((m) => m.completed).length
+  const progressPercent = Math.round((completedMilestones / milestoneList.length) * 100)
 
   return (
     <main className="workspace odp-workspace">
-      {/* ── Header ── */}
+      {/* ── Top Header ── */}
       <section className="odp-header">
         <div>
-          <span className="odp-header__eyebrow">Chủ tòa nhà</span>
-          <h1 className="odp-header__title">Tổng quan doanh nghiệp</h1>
+          <div className="odp-header__tag-row">
+            <span className="odp-header__eyebrow">KHÔNG GIAN LÀM VIỆC // SPOTWAY SPATIAL OS</span>
+            <span className="odp-header__live-pill">
+              <span className="odp-header__live-dot" />
+              Trực tuyến
+            </span>
+          </div>
+          <h1 className="odp-header__title">
+            {overview?.tenant?.name || user?.tenant?.name || 'Không gian doanh nghiệp'}
+          </h1>
           <p className="odp-header__sub">
-            Tổng quan nhanh về tài sản, đội ngũ và mức sử dụng gói dịch vụ.
+            Trung tâm kiểm soát không gian số hóa, quản lý mặt sàn và hạ tầng viễn trắc trong nhà.
           </p>
         </div>
-        {overview && (
-          <div className="odp-domain-badge">
-            <span className="odp-domain-badge__dot" />
-            <span>{overview.tenant.subdomain}.indoor-spatial.vn</span>
-          </div>
-        )}
+
+        <div className="odp-header__actions">
+          {overview?.tenant?.subdomain && (
+            <div className="odp-domain-badge" title="Tên miền định danh không gian của bạn">
+              <span className="odp-domain-badge__dot" />
+              <span>{overview.tenant.subdomain}.spotway.app</span>
+            </div>
+          )}
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            size="large"
+            className="odp-create-btn"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            Tạo tòa nhà mới
+          </Button>
+        </div>
       </section>
 
-      {!overview ? (
+      {/* ── Error Banner if any ── */}
+      {error && (
+        <div className="odp-banner-error">
+          <span className="odp-banner-error__icon">⚠️</span>
+          <span>{error}</span>
+          <Button size="small" onClick={refreshData}>
+            Thử lại
+          </Button>
+        </div>
+      )}
+
+      {isLoading && !overview ? (
         <div className="odp-loading">
-          <Spin size="large" />
+          <Spin size="large" tip="Đang đồng bộ dữ liệu không gian..." />
         </div>
       ) : (
         <>
-          {/* ── KPI Stats Grid ── */}
-          <div className="odp-stats">
-            <DashStat
+          {/* ── 4 Main KPI Cards ── */}
+          <div className="odp-stats-grid">
+            <StatCard
               icon={<ApartmentOutlined />}
-              label="Tòa nhà"
-              value={overview.usage.buildings}
-              max={overview.plan.maxBuildings}
+              label="Tòa nhà vận hành"
+              value={totalBuildings}
+              max={overview?.plan.maxBuildings}
+              sub={`${totalBuildings} đang hoạt động trong hệ thống`}
               accent="violet"
             />
-            <DashStat
+            <StatCard
               icon={<AppstoreOutlined />}
-              label="Tổng số tầng"
-              value={overview.usage.floors}
-              sub={`${overview.usage.publishedFloors} đã xuất bản`}
+              label="Bản đồ mặt sàn số hóa"
+              value={totalFloors}
+              sub={`${publishedFloors} tầng đã xuất bản dẫn đường`}
               accent="cyan"
             />
-            <DashStat
-              icon={<ShopOutlined />}
-              label="Gian hàng"
-              value={overview.usage.stores}
-              accent="fuchsia"
-            />
-            <DashStat
+            <StatCard
               icon={<TeamOutlined />}
-              label="Quản lý"
-              value={overview.usage.managers}
-              max={overview.plan.maxManagers}
+              label="Nhân sự & Quản lý"
+              value={totalManagers}
+              max={overview?.plan.maxManagers}
+              sub={`${totalManagers} quản lý khu vực được cấp quyền`}
               accent="green"
             />
-            <DashStat
+            <StatCard
               icon={<ShopOutlined />}
-              label="Chủ gian hàng"
-              value={overview.usage.storeOwners}
-              max={overview.plan.maxStoreOwners}
-              accent="violet"
-            />
-            <DashStat
-              icon={<RiseOutlined />}
-              label="Khuyến mãi đang chạy"
-              value={overview.usage.activePromotions}
-              accent="cyan"
+              label="Gian hàng & Điểm dịch vụ"
+              value={totalStores}
+              sub={`${activePromos} chương trình ưu đãi đang chạy`}
+              accent="fuchsia"
             />
           </div>
 
-          {/* ── Middle row: Plan + Quick links ── */}
-          <div className="odp-mid-row">
-            {/* Plan card */}
-            <GlassCard className="odp-plan-card" title="Gói dịch vụ hiện tại" accent>
-              <div className="odp-plan__name">
-                <TrophyOutlined className="odp-plan__icon" />
-                <span>{overview.plan.name}</span>
-              </div>
-              <p className="odp-plan__expire">
-                Hết hạn:{' '}
-                <strong>
-                  {new Intl.DateTimeFormat('vi-VN').format(
-                    new Date(overview.tenant.planExpiresAt),
-                  )}
-                </strong>
-              </p>
-
-              <div className="odp-plan-meters">
-                <PlanMeter
-                  label="Tòa nhà"
-                  used={overview.usage.buildings}
-                  max={overview.plan.maxBuildings}
-                  accent="violet"
-                />
-                <PlanMeter
-                  label="Quản lý"
-                  used={overview.usage.managers}
-                  max={overview.plan.maxManagers}
-                  accent="cyan"
-                />
-                <PlanMeter
-                  label="Chủ gian hàng"
-                  used={overview.usage.storeOwners}
-                  max={overview.plan.maxStoreOwners}
-                  accent="fuchsia"
-                />
+          {/* ── Getting Started / Deployment Checklist ── */}
+          <section className="odp-section">
+            <GlassCard className="odp-roadmap-card">
+              <div className="odp-roadmap__header">
+                <div>
+                  <div className="odp-roadmap__eyebrow">LỘ TRÌNH KHỞI TẠO</div>
+                  <h3 className="odp-roadmap__title">Các bước chuẩn bị Không gian số hóa</h3>
+                  <p className="odp-roadmap__desc">
+                    Hoàn thiện các mốc thiết lập để kích hoạt toàn diện hạ tầng bản đồ 3D và định vị UWB/QR.
+                  </p>
+                </div>
+                <div className="odp-roadmap__progress-box">
+                  <div className="odp-roadmap__progress-text">
+                    <span>Tiến độ thiết lập</span>
+                    <strong>{completedMilestones} / {milestoneList.length}</strong>
+                  </div>
+                  <div className="odp-roadmap__progress-bar">
+                    <div
+                      className="odp-roadmap__progress-fill"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                </div>
               </div>
 
-              <Link to="/owner/subscription" className="odp-plan__cta">
-                <ThunderboltOutlined /> Nâng cấp / Gia hạn
-              </Link>
+              <div className="odp-milestones-grid">
+                {milestoneList.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    className={`odp-milestone ${item.completed ? 'odp-milestone--done' : 'odp-milestone--pending'}`}
+                  >
+                    <div className="odp-milestone__status">
+                      {item.completed ? (
+                        <CheckCircleFilled className="odp-milestone__check-icon" />
+                      ) : (
+                        <span className="odp-milestone__index">{idx + 1}</span>
+                      )}
+                    </div>
+                    <div className="odp-milestone__content">
+                      <h4 className="odp-milestone__title">{item.title}</h4>
+                      <p className="odp-milestone__desc">{item.description}</p>
+                    </div>
+                    {!item.completed && (
+                      <div className="odp-milestone__action">
+                        {item.action ? (
+                          <Button size="small" type="primary" onClick={item.action}>
+                            {item.actionLabel}
+                          </Button>
+                        ) : item.link ? (
+                          <Link to={item.link}>
+                            <Button size="small">{item.actionLabel}</Button>
+                          </Link>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </GlassCard>
+          </section>
 
-            {/* Quick links */}
-            <GlassCard className="odp-quicklinks-card" title="Truy cập nhanh">
-              <div className="odp-quicklinks">
-                <QuickLink to="/owner/buildings" icon={<ApartmentOutlined />} label="Tòa nhà" color="violet" />
-                <QuickLink to="/owner/managers" icon={<TeamOutlined />} label="Quản lý" color="cyan" />
-                <QuickLink to="/owner/store-owners" icon={<ShopOutlined />} label="Chủ gian hàng" color="fuchsia" />
-                <QuickLink to="/owner/subscription" icon={<CloudOutlined />} label="Gói dịch vụ" color="green" />
+          {/* ── Buildings Grid Section ── */}
+          <section className="odp-section">
+            <div className="odp-section-header">
+              <div>
+                <h3 className="odp-section-title">Danh sách Tòa nhà ({totalBuildings})</h3>
+                <p className="odp-section-desc">Quản lý các cơ sở hạ tầng, sơ đồ tầng và điểm neo trong tòa nhà.</p>
               </div>
-            </GlassCard>
-          </div>
-
-          {/* ── Building list ── */}
-          <GlassCard
-            title={`Danh sách tòa nhà (${buildings.length})`}
-            extra={
-              <Link to="/owner/buildings">
-                <Button type="primary" size="small" icon={<ApartmentOutlined />}>
-                  Quản lý
-                </Button>
-              </Link>
-            }
-          >
-            {buildings.length === 0 ? (
-              <div className="odp-empty">
-                <ApartmentOutlined className="odp-empty__icon" />
-                <p>Chưa có tòa nhà nào</p>
+              <div className="odp-section-actions">
                 <Link to="/owner/buildings">
-                  <Button type="primary">Tạo tòa nhà đầu tiên</Button>
+                  <Button icon={<ApartmentOutlined />}>Tất cả tòa nhà ({totalBuildings})</Button>
                 </Link>
               </div>
-            ) : (
-              <div className="odp-building-table">
-                <div className="odp-building-table__head">
-                  <span>Tên</span>
-                  <span>Địa chỉ</span>
-                  <span>Số tầng</span>
-                  <span>Trạng thái</span>
-                  <span>Ngày tạo</span>
+            </div>
+
+            {totalBuildings === 0 ? (
+              <GlassCard className="odp-empty-buildings">
+                <div className="odp-empty-buildings__icon">
+                  <ApartmentOutlined />
                 </div>
+                <h4 className="odp-empty-buildings__title">Chưa có tòa nhà nào được tạo</h4>
+                <p className="odp-empty-buildings__sub">
+                  Hãy thêm tòa nhà đầu tiên của bạn để bắt đầu tải lên bản đồ mặt sàn và cấu hình điểm dẫn đường.
+                </p>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  size="large"
+                  onClick={() => setIsCreateModalOpen(true)}
+                >
+                  Tạo tòa nhà đầu tiên
+                </Button>
+              </GlassCard>
+            ) : (
+              <div className="odp-buildings-grid">
                 {buildings.map((building) => (
-                  <BuildingRow key={building.id} building={building} />
+                  <BuildingCard key={building.id} building={building} />
                 ))}
               </div>
             )}
-          </GlassCard>
+          </section>
+
+          {/* ── Bottom Section: Service Package & Quick Links ── */}
+          <div className="odp-bottom-grid">
+            {/* Service Package Card */}
+            {overview && (
+              <GlassCard className="odp-plan-card" title="Gói dịch vụ & Giới hạn tài nguyên" accent>
+                <div className="odp-plan__header">
+                  <div className="odp-plan__badge">
+                    <TrophyOutlined className="odp-plan__icon" />
+                    <span>{overview.plan.name}</span>
+                  </div>
+                  <span className="odp-plan__expires">
+                    Hạn dùng:{' '}
+                    <strong>
+                      {new Intl.DateTimeFormat('vi-VN').format(new Date(overview.tenant.planExpiresAt))}
+                    </strong>
+                  </span>
+                </div>
+
+                <div className="odp-plan-meters">
+                  <PlanMeter
+                    label="Tòa nhà"
+                    used={totalBuildings}
+                    max={overview.plan.maxBuildings}
+                    accent="violet"
+                  />
+                  <PlanMeter
+                    label="Quản lý khu vực"
+                    used={totalManagers}
+                    max={overview.plan.maxManagers}
+                    accent="cyan"
+                  />
+                  <PlanMeter
+                    label="Chủ gian hàng"
+                    used={overview.usage.storeOwners}
+                    max={overview.plan.maxStoreOwners}
+                    accent="fuchsia"
+                  />
+                </div>
+
+                <div className="odp-plan__footer">
+                  <Link to="/owner/subscription" className="odp-plan__cta">
+                    <ThunderboltOutlined /> Nâng cấp / Quản lý gói
+                  </Link>
+                </div>
+              </GlassCard>
+            )}
+
+            {/* Quick Access Grid */}
+            <GlassCard className="odp-quicklinks-card" title="Phím tắt quản trị">
+              <div className="odp-quicklinks">
+                <QuickLink
+                  to="/owner/buildings"
+                  icon={<ApartmentOutlined />}
+                  title="Quản lý Tòa nhà"
+                  desc="Cấu hình tầng, bản đồ 2D/3D & điểm neo"
+                  color="violet"
+                />
+                <QuickLink
+                  to="/owner/managers"
+                  icon={<TeamOutlined />}
+                  title="Đội ngũ Quản lý"
+                  desc="Phân quyền quản lý cho từng khu vực"
+                  color="cyan"
+                />
+                <QuickLink
+                  to="/owner/store-owners"
+                  icon={<ShopOutlined />}
+                  title="Gian hàng & Điểm thuê"
+                  desc="Tạo gian hàng và phê duyệt chủ điểm"
+                  color="fuchsia"
+                />
+                <QuickLink
+                  to="/owner/subscription"
+                  icon={<CloudOutlined />}
+                  title="Gói dịch vụ & Hóa đơn"
+                  desc="Xem tài nguyên và lịch sử gia hạn"
+                  color="green"
+                />
+              </div>
+            </GlassCard>
+          </div>
         </>
       )}
+
+      {/* ── Modal to Create Building directly ── */}
+      <CreateBuildingModal
+        open={isCreateModalOpen}
+        onClose={() => {
+          setIsCreateModalOpen(false)
+          refreshData()
+        }}
+      />
     </main>
   )
 }
 
-/* ── Sub-components ─────────────────────────────────────── */
+/* ── Building Card Component ───────────────────────────── */
 
-function DashStat({
+function BuildingCard({ building }: { building: Building }) {
+  const formattedDate = building.createdAt
+    ? new Intl.DateTimeFormat('vi-VN').format(new Date(building.createdAt))
+    : 'Mới tạo'
+
+  return (
+    <div className="odp-building-card">
+      <div className="odp-building-card__top">
+        <div className="odp-building-card__info">
+          <h4 className="odp-building-card__name">{building.name}</h4>
+          <p className="odp-building-card__addr">
+            <EnvironmentOutlined />
+            <span>{building.address || 'Chưa cập nhật địa chỉ'}</span>
+          </p>
+        </div>
+        <StatusPill status={building.status} />
+      </div>
+
+      <div className="odp-building-card__meta">
+        <div className="odp-building-card__chip">
+          <AppstoreOutlined />
+          <span>{building.floorCount ?? 0} tầng mặt sàn</span>
+        </div>
+        <div className="odp-building-card__date">
+          <ClockCircleOutlined />
+          <span>{formattedDate}</span>
+        </div>
+      </div>
+
+      <div className="odp-building-card__actions">
+        <Link to={`/owner/buildings/${building.id}`} className="odp-building-card__btn odp-building-card__btn--primary">
+          <span>Chi tiết & Mặt sàn</span>
+          <RightOutlined />
+        </Link>
+        <Link to={`/guest?buildingId=${building.id}`} className="odp-building-card__btn odp-building-card__btn--ghost" title="Mở chế độ xem sơ đồ">
+          <CompassOutlined />
+          <span>Bản đồ</span>
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+/* ── Stat Card Component ───────────────────────────────── */
+
+function StatCard({
   icon,
   label,
   value,
@@ -225,19 +458,21 @@ function DashStat({
   accent: 'violet' | 'cyan' | 'fuchsia' | 'green'
 }) {
   return (
-    <div className={`odp-stat odp-stat--${accent}`}>
-      <div className={`odp-stat__icon odp-stat__icon--${accent}`}>{icon}</div>
-      <div>
-        <div className="odp-stat__value">
+    <div className={`odp-stat-box odp-stat-box--${accent}`}>
+      <div className={`odp-stat-box__icon odp-stat-box__icon--${accent}`}>{icon}</div>
+      <div className="odp-stat-box__content">
+        <div className="odp-stat-box__val">
           {value}
-          {max !== undefined && <span className="odp-stat__max">/{max}</span>}
+          {max !== undefined && <span className="odp-stat-box__max">/{max}</span>}
         </div>
-        <div className="odp-stat__label">{label}</div>
-        {sub && <div className="odp-stat__sub">{sub}</div>}
+        <div className="odp-stat-box__label">{label}</div>
+        {sub && <div className="odp-stat-box__sub">{sub}</div>}
       </div>
     </div>
   )
 }
+
+/* ── Plan Meter Component ──────────────────────────────── */
 
 function PlanMeter({
   label,
@@ -269,41 +504,29 @@ function PlanMeter({
   )
 }
 
+/* ── Quick Link Component ──────────────────────────────── */
+
 function QuickLink({
   to,
   icon,
-  label,
+  title,
+  desc,
   color,
 }: {
   to: string
   icon: React.ReactNode
-  label: string
+  title: string
+  desc: string
   color: string
 }) {
   return (
-    <Link to={to} className={`odp-quicklink odp-quicklink--${color}`}>
-      <div className={`odp-quicklink__icon odp-quicklink__icon--${color}`}>{icon}</div>
-      <span>{label}</span>
-      <span className="odp-quicklink__arrow">→</span>
+    <Link to={to} className={`odp-quickitem odp-quickitem--${color}`}>
+      <div className={`odp-quickitem__icon odp-quickitem__icon--${color}`}>{icon}</div>
+      <div className="odp-quickitem__text">
+        <span className="odp-quickitem__title">{title}</span>
+        <span className="odp-quickitem__desc">{desc}</span>
+      </div>
+      <RightOutlined className="odp-quickitem__arrow" />
     </Link>
-  )
-}
-
-function BuildingRow({ building }: { building: Building }) {
-  return (
-    <div className="odp-building-row">
-      <span className="odp-building-row__name">
-        <CheckCircleOutlined className="odp-building-row__dot" />
-        {building.name}
-      </span>
-      <span className="odp-building-row__addr">{building.address}</span>
-      <span className="odp-building-row__floors">{building.floorCount}</span>
-      <span>
-        <StatusPill status={building.status} />
-      </span>
-      <span className="odp-building-row__date">
-        {new Intl.DateTimeFormat('vi-VN').format(new Date(building.createdAt))}
-      </span>
-    </div>
   )
 }

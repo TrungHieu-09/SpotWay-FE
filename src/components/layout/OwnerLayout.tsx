@@ -113,9 +113,20 @@ export function OwnerLayout() {
               <span className="spw-brand-ping" />
             </div>
             {!collapsed && (
-              <div className="flex items-baseline">
-                <span className="spw-brand-text">SpotWay</span>
-                <span className="spw-brand-sub">Owner</span>
+              <div className="flex flex-col">
+                <div className="flex items-baseline gap-1">
+                  <span className="spw-brand-text">SpotWay</span>
+                  <span className="spw-brand-sub">Spatial OS</span>
+                </div>
+                {user?.tenant?.name && (
+                  <span
+                    className="text-[11px] font-mono truncate max-w-[140px]"
+                    style={{ color: '#5de6ff', marginTop: '-2px' }}
+                    title={user.tenant.name}
+                  >
+                    {user.tenant.name}
+                  </span>
+                )}
               </div>
             )}
           </Link>
@@ -201,7 +212,7 @@ export function OwnerLayout() {
           <div className="ol-topbar__right">
             <div className="ol-topbar__badge">
               <span className="ol-topbar__dot" />
-              <span>Tổ hợp hoạt động</span>
+              <span>{user?.tenant?.subdomain ? `${user.tenant.subdomain}.spotway.app` : 'Tổ hợp hoạt động'}</span>
             </div>
             {user && (
               <div className="ol-topbar__user" title={user.email}>

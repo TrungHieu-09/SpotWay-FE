@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { App as AntApp } from 'antd'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../auth/store'
 import '../../components/layout/SpotWayNavbar.css'
 import './WorkspaceOnboardingPage.css'
@@ -20,21 +20,45 @@ const ORG_TYPES: OrgTypeOption[] = [
   { id: 'other', label: 'Khác', icon: 'more_horiz' },
 ]
 
-export function WorkspaceOnboardingPage() {
+export function WorkspaceOnboardingPage({ showReadyInitially = false }: { showReadyInitially?: boolean }) {
+  const [searchParams] = useSearchParams()
+  const isReadyParam = showReadyInitially || searchParams.get('ready') === 'true'
+
+  const [step, setStep] = useState<'form' | 'ready'>(isReadyParam ? 'ready' : 'form')
   const [orgName, setOrgName] = useState('')
   const [subdomain, setSubdomain] = useState('')
   const [selectedType, setSelectedType] = useState('airport')
   const [buildingCount, setBuildingCount] = useState('4 - 10 tòa nhà')
   const [region, setRegion] = useState('vn')
   const [submitting, setSubmitting] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const [createdWorkspace, setCreatedWorkspace] = useState<{
+    name: string
+    subdomain: string
+  } | null>(null)
 
   const navigate = useNavigate()
   const { message } = AntApp.useApp()
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
+  const createWorkspace = useAuthStore((state) => state.createWorkspace)
 
   const userEmail = user?.email || 'user@spotway.vn'
-  const userInitial = (user?.name || (user?.email ? user.email.slice(0, 1) : 'U')).slice(0, 1).toUpperCase()
+  const userInitial = (user?.name || (user?.email ? user.email.slice(0, 1) : 'U')).slice(0, 2).toUpperCase()
+
+  // If user already has a tenant in DB and comes to ready state
+  useEffect(() => {
+    if (user?.tenant) {
+      setCreatedWorkspace({
+        name: user.tenant.name,
+        subdomain: user.tenant.subdomain,
+      })
+      if (isReadyParam) {
+        setStep('ready')
+      }
+    }
+  }, [user, isReadyParam])
 
   const handleOrgNameChange = (val: string) => {
     setOrgName(val)
@@ -53,21 +77,35 @@ export function WorkspaceOnboardingPage() {
     navigate('/account', { replace: true })
   }
 
-  // Continue to Plan / Dashboard handler
-  const handleContinue = (e: React.FormEvent) => {
+  // Create Workspace in DB & transition to Ready UI
+  const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!orgName.trim()) {
       message.error('Vui lòng nhập tên tổ chức hoặc doanh nghiệp.')
       return
     }
 
+    const cleanSubdomain = subdomain.trim().toLowerCase().replace(/[^a-z0-9-]/g, '')
+    if (!cleanSubdomain || cleanSubdomain.length < 3) {
+      message.error('Tên miền định danh phải có ít nhất 3 ký tự.')
+      return
+    }
+
     setSubmitting(true)
-    setTimeout(() => {
+    try {
+      const res = await createWorkspace(orgName.trim(), cleanSubdomain, selectedType)
+      setCreatedWorkspace({
+        name: res.tenant.name,
+        subdomain: res.tenant.subdomain,
+      })
+      message.success(`Đã khởi tạo Workspace "${res.tenant.name}" thành công vào hệ thống!`)
+      setStep('ready')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Khởi tạo Workspace thất bại'
+      message.error(msg)
+    } finally {
       setSubmitting(false)
-      message.success(`Đã khởi tạo Workspace "${orgName}" thành công!`)
-      // Chuyển sang trang gói dịch vụ hoặc dashboard
-      navigate('/owner/subscription', { replace: true })
-    }, 600)
+    }
   }
 
   // Switch account
@@ -79,6 +117,229 @@ export function WorkspaceOnboardingPage() {
     }
   }
 
+  // Copy Workspace URL
+  const activeSubdomain = createdWorkspace?.subdomain || subdomain || 'my-facility'
+  const workspaceUrl = `${activeSubdomain}.spotway.app`
+
+  const handleCopyUrl = () => {
+    navigator.clipboard.writeText(workspaceUrl).then(() => {
+      setCopied(true)
+      message.success('Đã sao chép liên kết Workspace!')
+      setTimeout(() => setCopied(false), 2200)
+    }).catch(() => {
+      message.info(`Workspace URL: ${workspaceUrl}`)
+    })
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // STEP: WORKSPACE READY CELEBRATION PANE
+  // ══════════════════════════════════════════════════════════════════════════
+  if (step === 'ready') {
+    return (
+      <div className="wob-root">
+        {/* Ambient Aurora Backdrops */}
+        <div className="wbr-spatial-grid" />
+        <div className="wbr-aurora wbr-aurora--violet" />
+        <div className="wbr-aurora wbr-aurora--cyan" />
+        <div className="wbr-aurora wbr-aurora--fuchsia" />
+
+        {/* Top Bar: SpotWay Context Header */}
+        <header className="wob-topbar">
+          <div className="wob-topbar__inner">
+            {/* Brand Anchor Left */}
+            <div className="flex items-center gap-3">
+              <Link to="/" className="flex items-center gap-2.5 text-decoration-none group" title="Về trang chủ SpotWay">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#a078ff] via-[#5de6ff] to-[#d164e2] p-[1px] flex items-center justify-center shadow-[0_0_16px_rgba(139,92,246,0.35)]">
+                  <div className="w-full h-full bg-[#0d0d1c] rounded-[11px] flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[#5de6ff] text-[18px]">view_in_ar</span>
+                  </div>
+                </div>
+                <span className="font-bold tracking-tight text-white text-[18px] font-['Space_Grotesk']">SpotWay</span>
+              </Link>
+              <div className="h-4 w-[1px] bg-white/10 hidden sm:block" />
+              {/* Spatial OS Pill Badge */}
+              <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#292839]/80 border border-white/10 text-[#5de6ff] text-[10px] tracking-widest uppercase font-semibold font-['Space_Grotesk']">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#22D3EE] shadow-[0_0_8px_#22D3EE]" />
+                <span>Spatial OS</span>
+              </div>
+            </div>
+
+            {/* User Chip Right */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5 py-1 px-3 rounded-full bg-[#1e1e2e]/60 border border-white/10 backdrop-blur-md shadow-inner">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[12px] text-[#cbc3d7] font-mono hidden sm:inline">{userEmail}</span>
+                <div className="w-6 h-6 rounded-full bg-[#a078ff]/20 border border-[#a078ff]/40 text-[#d0bcff] flex items-center justify-center text-[10px] font-bold">
+                  {userInitial}
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Centered Content Viewport */}
+        <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-12 md:py-16">
+          {/* Central Floating Glassmorphic Celebration Pane */}
+          <div className="wbr-pane">
+            {/* Subtle Optical Rim Gradient at Top Border */}
+            <div className="wbr-rim-gradient" />
+
+            {/* Sparkle & Confetti Particle Accents */}
+            <div className="wbr-sparkle-item wbr-sparkle-item--1 wbr-sparkle-1">
+              <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+            </div>
+            <div className="wbr-sparkle-item wbr-sparkle-item--2 wbr-sparkle-2">
+              <span className="material-symbols-outlined text-[20px]">flare</span>
+            </div>
+            <div className="wbr-sparkle-item wbr-sparkle-item--3 wbr-sparkle-3">
+              <span className="material-symbols-outlined text-[14px]">star</span>
+            </div>
+
+            {/* Luminous Celebratory Emblem */}
+            <div className="wbr-emblem-wrap">
+              {/* Outer Pulsing Glow Halo */}
+              <div className="wbr-emblem-halo wbr-pulse-slow" />
+              {/* Outer Concentric Ring */}
+              <div className="wbr-emblem-ring-outer" />
+              {/* Middle Concentric Ring */}
+              <div className="wbr-emblem-ring-middle" />
+              {/* Inner Core Badge */}
+              <div className="wbr-emblem-core">
+                <div className="wbr-emblem-inner">
+                  <span className="material-symbols-outlined wbr-emblem-icon">check_circle</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Headline */}
+            <h1 className="wbr-title">Your workspace is ready</h1>
+
+            {/* Subtitle */}
+            <p className="wbr-subtitle">
+              Your 3D spatial instance has been provisioned and configured for indoor wayfinding.
+            </p>
+
+            {/* Copyable URL Pill Container */}
+            <div className="wbr-url-container group">
+              <div className="wbr-url-left">
+                <span className="material-symbols-outlined wbr-url-dns-icon">dns</span>
+                <span className="wbr-url-text" id="workspace-url">
+                  {workspaceUrl}
+                </span>
+                <span className="wbr-badge-active">
+                  <span className="wbr-pulse-dot" />
+                  Active
+                </span>
+              </div>
+
+              {/* Interactive Copy Link Button */}
+              <button
+                type="button"
+                className={`wbr-copy-btn ${copied ? 'copied' : ''}`}
+                onClick={handleCopyUrl}
+                title="Sao chép liên kết workspace"
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  {copied ? 'check' : 'content_copy'}
+                </span>
+                <span>{copied ? 'Copied!' : 'Copy link'}</span>
+              </button>
+            </div>
+
+            {/* Trial Notice */}
+            <div className="wbr-trial-notice">
+              <span className="material-symbols-outlined wbr-trial-icon">verified</span>
+              <span>14-day free trial started. No credit card required.</span>
+            </div>
+
+            {/* Rapid Provision Summary Chips */}
+            <div className="wbr-chips-grid">
+              <div className="wbr-chip-item">
+                <span className="material-symbols-outlined wbr-chip-icon wbr-chip-icon--primary">deployed_code</span>
+                <span className="wbr-chip-text">Dedicated tenant mesh deployed</span>
+              </div>
+              <div className="wbr-chip-item">
+                <span className="material-symbols-outlined wbr-chip-icon wbr-chip-icon--secondary">layers</span>
+                <span className="wbr-chip-text">AI floor plan engine connected</span>
+              </div>
+              <div className="wbr-chip-item">
+                <span className="material-symbols-outlined wbr-chip-icon wbr-chip-icon--tertiary">sensors</span>
+                <span className="wbr-chip-text">Hardware beacons ready</span>
+              </div>
+            </div>
+
+            {/* Primary Action Button */}
+            <button
+              type="button"
+              className="wbr-btn-primary"
+              onClick={() => navigate('/owner/dashboard')}
+            >
+              <span>Go to dashboard</span>
+              <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+            </button>
+
+            {/* Secondary Links */}
+            <div className="wbr-secondary-links">
+              <button
+                type="button"
+                className="wbr-sub-link"
+                onClick={() => {
+                  message.info('Tính năng gửi thư mời đồng đội qua email đang khả dụng trong Bảng điều khiển.')
+                  navigate('/owner/staff')
+                }}
+              >
+                <span className="material-symbols-outlined">group_add</span>
+                <span>Invite team members</span>
+              </button>
+
+              <span className="wbr-dot-sep" />
+
+              <button
+                type="button"
+                className="wbr-sub-link"
+                onClick={() => {
+                  message.info('Chuyên gia SpotWay sẵn sàng hỗ trợ cài đặt thiết bị định vị và sơ đồ 3D cho tòa nhà của bạn.')
+                }}
+              >
+                <span className="material-symbols-outlined">calendar_month</span>
+                <span>Book onboarding walkthrough</span>
+              </button>
+            </div>
+          </div>
+        </main>
+
+        {/* Minimal SpotWay Compliance & System Status Footer */}
+        <footer className="wbr-footer-bar">
+          <div className="wbr-footer-inner">
+            <div className="wbr-footer-left">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34D399]" />
+              <span>Spatial Engine v4.2.0 • All Systems Operational</span>
+            </div>
+
+            <div className="wbr-footer-right">
+              <span className="flex items-center gap-1">
+                <span className="material-symbols-outlined text-[15px] text-[#22D3EE]">security</span>
+                <span>SOC 2 Type II Certified</span>
+              </span>
+              <span className="opacity-30">•</span>
+              <span className="flex items-center gap-1">
+                <span className="material-symbols-outlined text-[15px] text-[#34D399]">verified_user</span>
+                <span>ISO 27001 Compliant</span>
+              </span>
+              <span className="opacity-30 hidden md:inline">•</span>
+              <span className="hidden md:inline hover:text-white cursor-pointer transition-colors" onClick={() => message.info('SpotWay Security Whitepaper')}>
+                Security Whitepaper
+              </span>
+            </div>
+          </div>
+        </footer>
+      </div>
+    )
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // STEP: FORM WORKSPACE ONBOARDING
+  // ══════════════════════════════════════════════════════════════════════════
   return (
     <div className="wob-root">
       {/* ── Spatial Grid Background ── */}
@@ -141,14 +402,14 @@ export function WorkspaceOnboardingPage() {
 
             <div className="wob-step-pill wob-step-pill--inactive">
               <span className="wob-step-dot--inactive" />
-              <span>2. Gói dịch vụ</span>
+              <span>2. Kích hoạt &amp; Sẵn sàng</span>
             </div>
           </div>
 
           {/* Header Typography */}
           <div className="wob-header">
             <h1 className="wob-title">Thiết lập không gian làm việc</h1>
-            <p className="wob-subtitle">Khởi tạo phân vùng số riêng tư cho tổ hợp & tổ chức của bạn</p>
+            <p className="wob-subtitle">Khởi tạo phân vùng số riêng tư cho tổ hợp &amp; tổ chức của bạn</p>
           </div>
 
           {/* Form Body */}
@@ -166,7 +427,7 @@ export function WorkspaceOnboardingPage() {
                   id="wob-org-name"
                   type="text"
                   className="wob-input"
-                  placeholder="Ví dụ: Tập đoàn Bất động sản Saigon"
+                  placeholder="Ví dụ: Metro Transit Authority hoặc Saigon Innovation Plaza"
                   value={orgName}
                   onChange={(e) => handleOrgNameChange(e.target.value)}
                   required
@@ -255,7 +516,7 @@ export function WorkspaceOnboardingPage() {
                     value={region}
                     onChange={(e) => setRegion(e.target.value)}
                   >
-                    <option value="vn">🇻🇳 Việt Nam (Hà Nội & TP.HCM)</option>
+                    <option value="vn">🇻🇳 Việt Nam (Hà Nội &amp; TP.HCM)</option>
                     <option value="sg">🇸🇬 Singapore (Đông Nam Á)</option>
                     <option value="us">🇺🇸 Hoa Kỳ (US East/West)</option>
                   </select>
@@ -290,7 +551,7 @@ export function WorkspaceOnboardingPage() {
                 className="wob-btn-continue"
                 disabled={submitting}
               >
-                <span>{submitting ? 'Đang xử lý...' : 'Tiếp tục'}</span>
+                <span>{submitting ? 'Đang khởi tạo vào DB...' : 'Tiếp tục'}</span>
                 <span className="material-symbols-outlined">arrow_forward</span>
               </button>
             </div>
@@ -339,4 +600,3 @@ export function WorkspaceOnboardingPage() {
 }
 
 export default WorkspaceOnboardingPage
-

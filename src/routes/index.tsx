@@ -161,6 +161,7 @@ export const router = createBrowserRouter([
   { path: 'verify', element: lazyElement(<EmailVerifyPage />) },
   { path: 'onboarding', element: lazyElement(<WorkspaceOnboardingPage />) },
   { path: 'workspace-setup', element: lazyElement(<WorkspaceOnboardingPage />) },
+  { path: 'workspace-ready', element: lazyElement(<WorkspaceOnboardingPage showReadyInitially={true} />) },
   { path: 'account', element: lazyElement(<AccountHomePage />) },
   { path: 'workspace/choose', element: lazyElement(<AccountHomePage />) },
   { path: 'profile', element: lazyElement(<ProfilePage />) },

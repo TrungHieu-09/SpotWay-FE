@@ -71,6 +71,30 @@ export async function logout() {
   await apiClient.post('/auth/logout', refreshToken ? { refreshToken } : {})
 }
 
+export interface CreateWorkspacePayload {
+  name: string
+  subdomain: string
+  orgType?: string
+}
+
+export interface CreateWorkspaceResult {
+  tenant: {
+    id: string
+    name: string
+    subdomain: string
+    status: string
+  }
+  user: AuthUser
+  accessToken?: string
+  refreshToken?: string
+  tokenType?: string
+}
+
+export async function createWorkspace(payload: CreateWorkspacePayload) {
+  const { data } = await apiClient.post<CreateWorkspaceResult>('/auth/workspace', payload)
+  return data
+}
+
 export async function changePassword(payload: { currentPassword?: string; newPassword: string }) {
   const { data } = await apiClient.post<AuthUser>('/auth/change-password', payload)
   return data
