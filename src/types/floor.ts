@@ -12,6 +12,8 @@ export type Floor = {
   mapImageUrl: string | null
   mapWidth: number
   mapHeight: number
+  /** Tỉ lệ thực tế dùng để quy đổi độ dài đường đi và kiểm tra trước khi publish. */
+  metersPerPixel?: number | null
   pois: Poi[]
   nextPoiNumber?: number
 }

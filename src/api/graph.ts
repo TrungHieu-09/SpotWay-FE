@@ -1,6 +1,7 @@
 import { apiClient } from './client'
 
-export type GraphNodeType = 'NORMAL' | 'DOOR' | 'ELEVATOR' | 'STAIR' | 'ESCALATOR' | 'JUNCTION'
+export type GraphNodeType = 'NORMAL' | 'DOOR' | 'ELEVATOR' | 'STAIR' | 'ESCALATOR' | 'JUNCTION' | 'EXIT' | 'EMERGENCY_EXIT'
+export type GraphHazard = 'NONE' | 'FIRE' | 'SMOKE' | 'BLOCKED'
 
 export type GraphNode = {
   id: string
@@ -10,6 +11,7 @@ export type GraphNode = {
   name: string | null
   type: GraphNodeType
   accessible: boolean
+  hazard?: GraphHazard
 }
 
 export type GraphEdge = {
@@ -20,6 +22,16 @@ export type GraphEdge = {
   weight: number
   accessible: boolean
   status: 'ACTIVE' | 'BLOCKED'
+  hazard?: GraphHazard
+}
+export type ConnectorKind = 'ELEVATOR' | 'STAIR' | 'ESCALATOR'
+export type BuildingConnector = {
+  id: string
+  buildingId: string
+  name: string
+  kind: ConnectorKind
+  accessible: boolean
+  stops: Array<{ floorId: string; nodeId: string }>
 }
 export type NavigationDraftNode = Omit<GraphNode, 'floorId'> & { confidence: number; requiresConfirmation: boolean }
 export type NavigationDraftEdge = { id: string; fromNodeId: string; toNodeId: string; accessible: boolean; confidence: number; requiresConfirmation: boolean }
@@ -60,9 +72,18 @@ export async function createGraphNode(floorId: string, input: Omit<GraphNode, 'i
   return data
 }
 
+export async function updateGraphNode(nodeId: string, input: Partial<Pick<GraphNode, 'x' | 'y' | 'name' | 'type' | 'accessible'>>) {
+  const { data } = await apiClient.patch<GraphNode>(`/nodes/${nodeId}`, input)
+  return data
+}
+
 export async function createGraphEdge(floorId: string, fromNodeId: string, toNodeId: string) {
   const { data } = await apiClient.post<GraphEdge>(`/floors/${floorId}/edges`, { fromNodeId, toNodeId })
   return data
+}
+
+export async function deleteFloorGraph(floorId: string) {
+  await apiClient.delete(`/floors/${floorId}/graph`)
 }
 
 export async function deleteGraphNode(nodeId: string) {
@@ -71,4 +92,29 @@ export async function deleteGraphNode(nodeId: string) {
 
 export async function deleteGraphEdge(edgeId: string) {
   await apiClient.delete(`/edges/${edgeId}`)
+}
+
+export async function getBuildingConnectors(buildingId: string) {
+  const { data } = await apiClient.get<BuildingConnector[]>(`/buildings/${buildingId}/connectors`)
+  return Array.isArray(data) ? data : []
+}
+
+export async function createBuildingConnector(
+  buildingId: string,
+  input: Omit<BuildingConnector, 'id' | 'buildingId'>,
+) {
+  const { data } = await apiClient.post<BuildingConnector>(`/buildings/${buildingId}/connectors`, input)
+  return data
+}
+
+export async function updateBuildingConnector(
+  connectorId: string,
+  input: Partial<Pick<BuildingConnector, 'name' | 'accessible' | 'stops'>>,
+) {
+  const { data } = await apiClient.patch<BuildingConnector>(`/connectors/${connectorId}`, input)
+  return data
+}
+
+export async function deleteBuildingConnector(connectorId: string) {
+  await apiClient.delete(`/connectors/${connectorId}`)
 }

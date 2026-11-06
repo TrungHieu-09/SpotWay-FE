@@ -6,7 +6,8 @@ import {
   getFloorGeometry,
   getRoute,
 } from '../api/geometry'
-import { getNodesByFloor } from '../api/nodes'
+import { getGraph } from '../api/graph'
+import { pixelToPercentPoint } from '../api/graphMapper'
 import { getStoresByFloor } from '../api/stores'
 import type { Building } from '../types/building'
 import type { Floor } from '../types/floor'
@@ -61,7 +62,19 @@ async function loadBuildingBundle(buildingId: string) {
     floors.map((floor) => getStoresByFloor(floor.id).catch(() => [])),
   )
   const nodes = await Promise.all(
-    floors.map((floor) => getNodesByFloor(floor.id).catch(() => [])),
+    floors.map((floor) =>
+      getGraph(floor.id)
+        .then((graph) =>
+          graph.nodes.map((node: { id: string; floorId: string; x: number; y: number; name?: string | null; type?: string }): Node => ({
+            id: node.id,
+            floorId: node.floorId,
+            ...pixelToPercentPoint(node.x, node.y, floor),
+            isElevatorLink: node.type === 'ELEVATOR',
+            label: node.name ?? undefined,
+          })),
+        )
+        .catch(() => [] as Node[]),
+    ),
   )
   const geometriesByFloorId = Object.fromEntries(
     geometries

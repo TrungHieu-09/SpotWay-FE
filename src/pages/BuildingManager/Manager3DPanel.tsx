@@ -3,7 +3,8 @@ import { Alert, Empty, Spin } from 'antd'
 import { getRoute } from '../../api/geometry'
 import { useFloorStore } from '../../store/useFloorStore'
 import { useGeometryStore } from '../../store/useGeometryStore'
-import { useNodeStore } from '../../store/useNodeStore'
+import { getGraph, type GraphNode } from '../../api/graph'
+import type { Node } from '../../types/node'
 import type { RouteResult } from '../../types/route'
 
 const Map3DViewer = lazy(() => import('../../components/map3d/Map3DViewer'))
@@ -18,10 +19,9 @@ export function Manager3DPanel() {
   const loadGeometriesByFloors = useGeometryStore(
     (state) => state.loadGeometriesByFloors,
   )
-  const nodesByFloorId = useNodeStore((state) => state.nodesByFloorId)
-  const isNodeLoading = useNodeStore((state) => state.isLoading)
-  const nodeError = useNodeStore((state) => state.error)
-  const loadNodesByFloors = useNodeStore((state) => state.loadNodesByFloors)
+  const [nodesByFloorId, setNodesByFloorId] = useState<Record<string, Node[]>>({})
+  const [isNodeLoading, setIsNodeLoading] = useState(false)
+  const [nodeError, setNodeError] = useState<string | null>(null)
   const floorIds = floors.map((floor) => floor.id)
   const floorIdKey = floorIds.join('|')
   const selectedFloor = useMemo(
@@ -64,9 +64,18 @@ export function Manager3DPanel() {
       return
     }
 
+    let cancelled = false
     loadGeometriesByFloors(nextFloorIds)
-    loadNodesByFloors(nextFloorIds)
-  }, [floorIdKey, loadGeometriesByFloors, loadNodesByFloors])
+    setIsNodeLoading(true)
+    void Promise.all(floors.map(async (floor) => {
+      const graph = await getGraph(floor.id)
+      return [floor.id, graph.nodes.map((node: GraphNode) => ({ id: node.id, floorId: node.floorId, x: (node.x / floor.mapWidth) * 100, y: (node.y / floor.mapHeight) * 100, label: node.name ?? undefined }))] as const
+    }))
+      .then((entries) => { if (!cancelled) { setNodesByFloorId(Object.fromEntries(entries)); setNodeError(null) } })
+      .catch((error: Error) => { if (!cancelled) setNodeError(error.message) })
+      .finally(() => { if (!cancelled) setIsNodeLoading(false) })
+    return () => { cancelled = true }
+  }, [floorIdKey, floors, loadGeometriesByFloors])
 
   useEffect(() => {
     if (!selectedBuildingId || !previewRouteNodes) {

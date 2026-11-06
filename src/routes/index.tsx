@@ -102,6 +102,12 @@ const GuestMapPage = lazy(() =>
   })),
 )
 
+const NavigationPage = lazy(() =>
+  import('../pages/Guest/NavigationPage').then((module) => ({
+    default: module.NavigationPage,
+  })),
+)
+
 // ── Store Owner ──
 const StoreProfilePage = lazy(() =>
   import('../pages/StoreOwner/StoreProfilePage').then((module) => ({
@@ -164,6 +170,8 @@ export const router = createBrowserRouter([
   { path: 'account', element: lazyElement(<AccountHomePage />) },
   { path: 'workspace/choose', element: lazyElement(<AccountHomePage />) },
   { path: 'profile', element: lazyElement(<ProfilePage />) },
+  { path: 'navigate', element: lazyElement(<NavigationPage />) },
+  { path: 'navigate/:buildingId', element: lazyElement(<NavigationPage />) },
 
   // ── Building Owner section with sidebar ──
   {
@@ -201,6 +209,7 @@ export const router = createBrowserRouter([
         children: [
           { path: 'manager', element: lazyElement(<ManagerLayout />) },
           { path: 'manager/store-owners', element: lazyElement(<StoreOwnerManagementPage />) },
+          { path: 'manager/navigation-test/:buildingId', element: lazyElement(<NavigationPage />) },
         ],
       },
       {

@@ -5,13 +5,14 @@ import {
   Card,
   Empty,
   Input,
+  InputNumber,
   List,
   message,
   Popconfirm,
+  Modal,
   Radio,
   Select,
   Space,
-  Spin,
   Tabs,
   Tag,
   Typography,
@@ -30,6 +31,9 @@ import {
 } from 'react-konva'
 import {
   BuildOutlined,
+  ApartmentOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
   DeleteOutlined,
   LinkOutlined,
   NodeIndexOutlined,
@@ -42,9 +46,13 @@ import {
   createGraphNode,
   analyzeNavigationDraft,
   applyNavigationDraft,
+  deleteFloorGraph,
   deleteGraphEdge,
   deleteGraphNode,
+  getBuildingConnectors,
   getGraph,
+  updateGraphNode,
+  type BuildingConnector,
   type GraphEdge,
   type GraphNode,
   type GraphNodeType,
@@ -60,6 +68,11 @@ export interface WallSegment {
   y2: number
 }
 import { useFloorStore } from '../../store/useFloorStore'
+import { usePoiStore } from '../../store/usePoiStore'
+import { POI_CATEGORY_LABEL, type PoiCategory } from '../../types/poi'
+import { validateFloorGraph, type FloorGraphIssue } from '../../api/floors'
+import { estimateMetersPerPixel, findEdgesCrossingWalls, findIsolatedNodeIds } from '../../utils/graphGeometry'
+import { planPoiPromotions } from '../../utils/poiPromotion'
 import type { FloorPublishStatus } from '../../types/floor'
 import { percentToPixel, pixelToPercent } from '../../utils/canvasCoordinates'
 import {
@@ -137,19 +150,35 @@ function useElementSize<T extends HTMLElement>(isEnabled: boolean) {
   return [ref, size] as const
 }
 
+const NO_POIS: never[] = []
+const NODE_TYPE_OPTIONS = [
+  { value: 'NORMAL', label: 'Lối đi' },
+  { value: 'JUNCTION', label: 'Giao lộ' },
+  { value: 'DOOR', label: 'Cửa ra vào' },
+  { value: 'ELEVATOR', label: 'Thang máy' },
+  { value: 'STAIR', label: 'Cầu thang bộ' },
+  { value: 'ESCALATOR', label: 'Thang cuốn' },
+  { value: 'EXIT', label: 'Lối ra' },
+  { value: 'EMERGENCY_EXIT', label: 'Cửa thoát hiểm' },
+]
+const POI_CATEGORY_OPTIONS = (Object.keys(POI_CATEGORY_LABEL) as PoiCategory[]).map((value) => ({ value, label: POI_CATEGORY_LABEL[value] }))
+
 export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolean } = {}) {
   const selectedFloor = useFloorStore((state) => state.selectedFloor)
   const [stageHostRef, stageHostSize] = useElementSize<HTMLDivElement>(
     Boolean(selectedFloor),
   )
-  const pois = useFloorStore((state) => state.pois)
-  const isPoiSaving = useFloorStore((state) => state.isPoiSaving)
-  const error = useFloorStore((state) => state.error)
-  const addPoi = useFloorStore((state) => state.addPoi)
-  const movePoi = useFloorStore((state) => state.movePoi)
-  const removePoi = useFloorStore((state) => state.removePoi)
+  const pois = usePoiStore((state) => (selectedFloor ? state.poisByFloorId[selectedFloor.id] : undefined)) ?? NO_POIS
+  const isPoiSaving = usePoiStore((state) => state.isSaving)
+  const error = usePoiStore((state) => state.error)
+  const loadPois = usePoiStore((state) => state.loadPois)
+  const createPoi = usePoiStore((state) => state.createPoi)
+  const updatePoi = usePoiStore((state) => state.updatePoi)
+  const removePoi = usePoiStore((state) => state.removePoi)
+  const clearPois = usePoiStore((state) => state.clearPois)
+  const calibrateFloor = useFloorStore((state) => state.calibrateFloor)
   const selectedFloorId = selectedFloor?.id
-  const [editorMode, setEditorMode] = useState<'poi' | 'node' | 'edge' | 'wall'>('node')
+  const [editorMode, setEditorMode] = useState<'poi' | 'node' | 'edge' | 'wall' | 'calibrate'>('node')
   const [nodeType, setNodeType] = useState<GraphNodeType>('NORMAL')
   const [nodeName, setNodeName] = useState('')
   const [nodes, setNodes] = useState<GraphNode[]>([])
@@ -165,31 +194,53 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
   const [isSavingWalls, setIsSavingWalls] = useState(false)
   const [graphError, setGraphError] = useState<string>()
   const [navigationDraft, setNavigationDraft] = useState<NavigationDraft>()
+  const [connectors, setConnectors] = useState<BuildingConnector[]>([])
+  const [calibrationOpen, setCalibrationOpen] = useState(false)
+  const [poiName, setPoiName] = useState('')
+  const [poiCategory, setPoiCategory] = useState<PoiCategory>('CUSTOM')
+  const [selectedPoiId, setSelectedPoiId] = useState<string>()
+  const [calibrationPoints, setCalibrationPoints] = useState<Array<{ x: number; y: number }>>([])
+  const [realDistance, setRealDistance] = useState<number | null>(null)
+  const [graphIssues, setGraphIssues] = useState<FloorGraphIssue[] | null>(null)
+  const [metersPerPixel, setMetersPerPixel] = useState<number | null>(selectedFloor?.metersPerPixel ?? null)
+  const [isCalibrating, setIsCalibrating] = useState(false)
   const mapImageUrl = selectedFloor?.mapImageUrl?.trim() || null
   const mapImage = useImage(mapImageUrl)
 
   useEffect(() => {
+    let cancelled = false
+    // Đổi tầng phải xóa state ngay: phản hồi tầng cũ không được phép lọt vào canvas mới.
+    setNodes([])
+    setEdges([])
+    setWalls([])
+    setNavigationDraft(undefined)
+    setSelectedNodeId(undefined)
+    setEdgeStartNodeId(undefined)
+    setRouteAnchorNodeId(undefined)
+    setWallStart(null)
+    setPreviewPointer(null)
+    setSelectedWallId(undefined)
+    setSelectedPoiId(undefined)
+    setCalibrationPoints([])
+    setGraphIssues(null)
     if (!selectedFloorId) {
-      setNodes([])
-      setEdges([])
-      setWalls([])
       return
     }
+    if (selectedFloor) void loadPois(selectedFloor).catch(() => undefined)
     getGraph(selectedFloorId)
       .then(({ nodes: nextNodes, edges: nextEdges }) => {
+        if (cancelled) return
         setNodes(Array.isArray(nextNodes) ? nextNodes : [])
         setEdges(Array.isArray(nextEdges) ? nextEdges : [])
-        setEdgeStartNodeId(undefined)
-        setSelectedNodeId(undefined)
-        setRouteAnchorNodeId(undefined)
       })
-      .catch((reason: Error) => setGraphError(reason.message))
+      .catch((reason: Error) => { if (!cancelled) setGraphError(reason.message) })
 
     // Only a persisted server revision may initialize the editor.  Restoring
     // browser-local walls made a newly uploaded, unanalyzed plan look as if
     // it had already been processed by the AI.
     getLatestFloorPlanRevision(selectedFloorId)
       .then((revision) => {
+        if (cancelled) return
         const draftWalls = revision?.editorState?.walls
         if (Array.isArray(draftWalls) && draftWalls.length > 0) {
           const loaded: WallSegment[] = draftWalls.map((w) => ({
@@ -201,12 +252,26 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
         }
         setWalls([])
       })
-      .catch(() => setWalls([]))
+      .catch(() => { if (!cancelled) setWalls([]) })
 
-    setWallStart(null)
-    setPreviewPointer(null)
-    setSelectedWallId(undefined)
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFloorId])
+
+  useEffect(() => {
+    const buildingId = selectedFloor?.buildingId
+    if (!buildingId) { setConnectors([]); return }
+    let cancelled = false
+    getBuildingConnectors(buildingId)
+      .then((items) => { if (!cancelled) setConnectors(items) })
+      .catch(() => { if (!cancelled) setConnectors([]) })
+    return () => { cancelled = true }
+  }, [selectedFloor?.buildingId])
+
+  const floorConnectors = useMemo(
+    () => connectors.filter((connector) => connector.stops.some((stop) => stop.floorId === selectedFloorId)),
+    [connectors, selectedFloorId],
+  )
 
   function saveWalls(nextWalls: WallSegment[]) {
     setWalls(nextWalls)
@@ -279,6 +344,95 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
       setNavigationDraft(draft)
       message.info(`Đã tạo ${draft.nodes.length} node và ${draft.edges.length} đường đi nháp. Hãy kiểm tra trước khi áp dụng.`)
     } catch (reason) { setGraphError((reason as Error).message) } finally { setIsGraphSaving(false) }
+  }
+  function applyTwoPointCalibration() {
+    if (!selectedFloor || calibrationPoints.length < 2 || !realDistance) return
+    const [a, b] = calibrationPoints
+    const scale = estimateMetersPerPixel(a, b, realDistance)
+    if (!scale) {
+      setGraphError('Hai điểm đo quá gần nhau hoặc khoảng cách thật không hợp lệ.')
+      return
+    }
+    setMetersPerPixel(Number(scale.toFixed(6)))
+  }
+  async function handleValidateGraph() {
+    if (!selectedFloor) return
+    setIsGraphSaving(true); setGraphError(undefined)
+    try {
+      const report = await validateFloorGraph(selectedFloor.id)
+      setGraphIssues(report.issues)
+      if (report.valid) message.success('Graph hợp lệ, sẵn sàng publish.')
+      else message.warning(`Graph còn ${report.issues.filter((issue) => issue.severity === 'ERROR').length} lỗi chặn publish.`)
+    } catch (reason) { setGraphError((reason as Error).message) } finally { setIsGraphSaving(false) }
+  }
+  async function handleClearGraph() {
+    if (!selectedFloor) return
+    setIsGraphSaving(true); setGraphError(undefined)
+    try {
+      await deleteFloorGraph(selectedFloor.id)
+      setNodes([]); setEdges([]); setSelectedNodeId(undefined); setEdgeStartNodeId(undefined); setRouteAnchorNodeId(undefined)
+      await loadPois(selectedFloor)
+      message.success('Đã xoá toàn bộ Node/Edge của tầng.')
+    } catch (reason) { setGraphError((reason as Error).message) } finally { setIsGraphSaving(false) }
+  }
+  async function handleDeleteCrossingEdges() {
+    setIsGraphSaving(true); setGraphError(undefined)
+    try {
+      const ids = [...crossingEdgeIds]
+      await Promise.all(ids.map((id) => deleteGraphEdge(id)))
+      setEdges((current) => current.filter((edge) => !crossingEdgeIds.has(edge.id)))
+    } catch (reason) { setGraphError((reason as Error).message) } finally { setIsGraphSaving(false) }
+  }
+  async function handlePromotePois() {
+    if (!selectedFloor) return
+    setIsGraphSaving(true); setGraphError(undefined)
+    try {
+      for (const plan of promotions) {
+        const pixel = { x: (plan.at.x / 100) * selectedFloor.mapWidth, y: (plan.at.y / 100) * selectedFloor.mapHeight }
+        const node = await createGraphNode(selectedFloor.id, { ...pixel, name: plan.name, type: plan.nodeType, accessible: true })
+        setNodes((current) => [...current, node])
+        if (plan.anchorNodeId) {
+          const edge = await createGraphEdge(selectedFloor.id, plan.anchorNodeId, node.id)
+          setEdges((current) => [...current, edge])
+        }
+        await updatePoi(selectedFloor, plan.poiId, { nodeId: node.id })
+      }
+      await loadPois(selectedFloor)
+      message.success(`Đã tạo ${promotions.length} node cho POI thang máy / lối ra.`)
+    } catch (reason) { setGraphError((reason as Error).message) } finally { setIsGraphSaving(false) }
+  }
+  async function handleNodeDragEnd(nodeId: string, event: Konva.KonvaEventObject<DragEvent>) {
+    if (!selectedFloor) return
+    const x = (event.target.x() / stageSize.width) * selectedFloor.mapWidth
+    const y = (event.target.y() / stageSize.height) * selectedFloor.mapHeight
+    const previous = nodes
+    setNodes((current) => current.map((node) => (node.id === nodeId ? { ...node, x, y } : node)))
+    try {
+      const saved = await updateGraphNode(nodeId, { x, y })
+      setNodes((current) => current.map((node) => (node.id === nodeId ? { ...node, ...saved } : node)))
+      const graph = await getGraph(selectedFloor.id)
+      setEdges(graph.edges)
+    } catch (reason) {
+      setNodes(previous)
+      setGraphError((reason as Error).message)
+    }
+  }
+  async function handleNodePatch(nodeId: string, patch: { name?: string | null; type?: GraphNodeType }) {
+    try {
+      const saved = await updateGraphNode(nodeId, patch as { name?: string; type?: GraphNodeType })
+      setNodes((current) => current.map((node) => (node.id === nodeId ? { ...node, ...saved } : node)))
+    } catch (reason) { setGraphError((reason as Error).message) }
+  }
+  async function handleSaveCalibration() {
+    if (!selectedFloor || !metersPerPixel || metersPerPixel <= 0) return
+    setIsCalibrating(true)
+    try {
+      const edgesRecomputed = await calibrateFloor(selectedFloor.id, metersPerPixel)
+      message.success(`Đã hiệu chuẩn ${metersPerPixel} m/px và tính lại ${edgesRecomputed} cạnh.`)
+      setCalibrationOpen(false)
+      setCalibrationPoints([])
+      setRealDistance(null)
+    } catch (reason) { setGraphError((reason as Error).message) } finally { setIsCalibrating(false) }
   }
   async function handleApplyNavigationDraft() {
     if (!selectedFloor || !navigationDraft) return
@@ -358,10 +512,33 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
     }
 
     if (editorMode === 'poi') {
-      await addPoi({
-        ...pixelToPercent(position.x, position.y, stageSize.width, stageSize.height),
-        type: 'custom',
-      })
+      const percent = pixelToPercent(position.x, position.y, stageSize.width, stageSize.height)
+      try {
+        const poi = await createPoi(selectedFloor, {
+          ...percent,
+          name: poiName.trim() || `POI ${pois.length + 1}`,
+          category: poiCategory,
+        })
+        setSelectedPoiId(poi.id)
+        setPoiName('')
+        if (poi.snapDistanceMeters != null) message.info(`POI gắn vào node gần nhất (${poi.snapDistanceMeters.toFixed(1)} m).`)
+      } catch (reason) {
+        setGraphError((reason as Error).message)
+      }
+      return
+    }
+
+    if (editorMode === 'calibrate') {
+      const point = {
+        x: (position.x / stageSize.width) * selectedFloor.mapWidth,
+        y: (position.y / stageSize.height) * selectedFloor.mapHeight,
+      }
+      const next = calibrationPoints.length >= 2 ? [point] : [...calibrationPoints, point]
+      setCalibrationPoints(next)
+      if (next.length === 2) {
+        setMetersPerPixel(selectedFloor.metersPerPixel ?? null)
+        setCalibrationOpen(true)
+      }
       return
     }
 
@@ -503,17 +680,26 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
       return
     }
 
-    await movePoi(poiId, {
-      ...pixelToPercent(
-        event.target.x(),
-        event.target.y(),
-        stageSize.width,
-        stageSize.height,
-      ),
-    })
+    try {
+      await updatePoi(selectedFloor, poiId, pixelToPercent(event.target.x(), event.target.y(), stageSize.width, stageSize.height))
+    } catch (reason) {
+      setGraphError((reason as Error).message)
+    }
   }
 
   const selectedNode = Array.isArray(nodes) ? nodes.find((n) => n.id === selectedNodeId) : undefined
+  const isolatedNodeIds = findIsolatedNodeIds(nodes, edges)
+  const crossingEdgeIds = findEdgesCrossingWalls(
+    edges,
+    nodes,
+    walls.map((wall) => ({
+      x1: (wall.x1 / 100) * selectedFloor.mapWidth,
+      y1: (wall.y1 / 100) * selectedFloor.mapHeight,
+      x2: (wall.x2 / 100) * selectedFloor.mapWidth,
+      y2: (wall.y2 / 100) * selectedFloor.mapHeight,
+    })),
+  )
+  const promotions = planPoiPromotions(pois, nodes, selectedFloor)
 
   return (
     <div className="canvas-workspace">
@@ -534,6 +720,7 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
               <span>{edges.length} Edge</span>
               <span>{pois.length} POI</span>
               <span>{walls.length} Tường</span>
+              {(isPoiSaving || isGraphSaving) && <Tag color="processing">Đang lưu…</Tag>}
             </Space>
           </div>
 
@@ -561,9 +748,18 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
               <Radio.Button value="wall">
                 <BuildOutlined /> Vẽ tường 3D
               </Radio.Button>
+              <Radio.Button value="calibrate">
+                <ApartmentOutlined /> Đo tỉ lệ
+              </Radio.Button>
             </Radio.Group>
             <Button icon={<ScanOutlined />} onClick={() => void handleAnalyzeNavigation()} loading={isGraphSaving} disabled={!selectedFloor.mapImageUrl}>
               Analyze điều hướng
+            </Button>
+            <Button onClick={() => { setMetersPerPixel(selectedFloor.metersPerPixel ?? null); setCalibrationOpen(true) }}>
+              Hiệu chuẩn tỉ lệ{selectedFloor.metersPerPixel ? ` (${selectedFloor.metersPerPixel} m/px)` : ''}
+            </Button>
+            <Button icon={<CheckCircleOutlined />} onClick={() => void handleValidateGraph()} loading={isGraphSaving}>
+              Kiểm tra graph
             </Button>
             {navigationDraft && <>
               <Tag color="gold">Nháp: {navigationDraft.nodes.length} Node · {navigationDraft.edges.length} đường</Tag>
@@ -576,14 +772,7 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                   value={nodeType}
                   onChange={setNodeType}
                   style={{ width: 150 }}
-                  options={[
-                    { value: 'NORMAL', label: 'Lối đi' },
-                    { value: 'JUNCTION', label: 'Giao lộ' },
-                    { value: 'DOOR', label: 'Cửa ra vào' },
-                    { value: 'ELEVATOR', label: 'Thang máy' },
-                    { value: 'STAIR', label: 'Cầu thang bộ' },
-                    { value: 'ESCALATOR', label: 'Thang cuốn' },
-                  ]}
+                  options={NODE_TYPE_OPTIONS}
                 />
                 <Input
                   value={nodeName}
@@ -593,6 +782,24 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                   style={{ width: 230 }}
                 />
               </>
+            )}
+            {editorMode === 'poi' && (
+              <>
+                <Select value={poiCategory} onChange={setPoiCategory} style={{ width: 160 }} options={POI_CATEGORY_OPTIONS} />
+                <Input
+                  value={poiName}
+                  onChange={(event) => setPoiName(event.target.value)}
+                  placeholder="Tên POI, ví dụ: WC tầng 1"
+                  maxLength={100}
+                  style={{ width: 220 }}
+                />
+                <AntText type="secondary">Click lên bản đồ để thêm POI; BE tự gắn POI vào node gần nhất.</AntText>
+              </>
+            )}
+            {editorMode === 'calibrate' && (
+              <AntText type="secondary">
+                {calibrationPoints.length === 0 ? 'Click điểm đầu của một khoảng cách đã biết (vd. chiều rộng cửa).' : calibrationPoints.length === 1 ? 'Click điểm thứ hai.' : 'Đã chọn 2 điểm.'}
+              </AntText>
             )}
             {editorMode === 'edge' && (
               <AntText type="secondary">
@@ -688,7 +895,26 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                   {Math.round((selectedNode.y / selectedFloor.mapHeight) * 100)}%)
                 </AntText>
               </Space>
-              <Space>
+              <Space wrap>
+                <Select
+                  size="small"
+                  value={selectedNode.type}
+                  style={{ width: 140 }}
+                  options={NODE_TYPE_OPTIONS}
+                  onChange={(type) => void handleNodePatch(selectedNode.id, { type })}
+                />
+                <Input
+                  key={selectedNode.id}
+                  size="small"
+                  style={{ width: 160 }}
+                  defaultValue={selectedNode.name ?? ''}
+                  placeholder="Tên điểm"
+                  maxLength={100}
+                  onBlur={(event) => {
+                    const name = event.target.value.trim()
+                    if (name !== (selectedNode.name ?? '')) void handleNodePatch(selectedNode.id, { name: name || null })
+                  }}
+                />
                 <Button
                   size="small"
                   icon={<LinkOutlined />}
@@ -724,6 +950,18 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
             </div>
           )}
 
+          {graphIssues && graphIssues.length > 0 ? (
+            <Alert
+              className="canvas-alert"
+              type={graphIssues.some((issue) => issue.severity === 'ERROR') ? 'error' : 'warning'}
+              showIcon
+              closable
+              onClose={() => setGraphIssues(null)}
+              message="Kết quả kiểm tra graph"
+              description={<ul style={{ margin: 0, paddingLeft: 18 }}>{graphIssues.map((issue, index) => <li key={`${issue.code}-${index}`}><Tag color={issue.severity === 'ERROR' ? 'error' : 'warning'}>{issue.severity}</Tag>{issue.message}{issue.ids?.length ? ` (${issue.ids.length})` : ''}</li>)}</ul>}
+            />
+          ) : null}
+
           {error || graphError ? (
             <Alert
               className="canvas-alert"
@@ -733,7 +971,7 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
             />
           ) : null}
 
-          <Spin spinning={isPoiSaving || isGraphSaving}>
+          <div>
             <div className="stage-host" ref={stageHostRef}>
               {canRenderStage ? (
                 <div
@@ -849,6 +1087,30 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                           listening={false}
                         />
                       )}
+                      {calibrationPoints.map((point, index) => (
+                        <Circle
+                          key={`cal-${index}`}
+                          x={(point.x / selectedFloor.mapWidth) * stageSize.width}
+                          y={(point.y / selectedFloor.mapHeight) * stageSize.height}
+                          radius={7}
+                          fill="#ef4444"
+                          stroke="#ffffff"
+                          strokeWidth={2}
+                          listening={false}
+                        />
+                      ))}
+                      {calibrationPoints.length === 2 && (
+                        <Line
+                          points={calibrationPoints.flatMap((point) => [
+                            (point.x / selectedFloor.mapWidth) * stageSize.width,
+                            (point.y / selectedFloor.mapHeight) * stageSize.height,
+                          ])}
+                          stroke="#ef4444"
+                          strokeWidth={3}
+                          dash={[6, 4]}
+                          listening={false}
+                        />
+                      )}
                       {pois.map((poi) => {
                         const { pixelX, pixelY } = percentToPixel(
                           poi.x,
@@ -863,10 +1125,14 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                             x={pixelX}
                             y={pixelY}
                             radius={16}
-                            fill="#f97316"
-                            stroke="#ffffff"
+                            fill={selectedPoiId === poi.id ? '#ea580c' : '#f97316'}
+                            stroke={selectedPoiId === poi.id ? '#0284c7' : '#ffffff'}
                             strokeWidth={5}
-                            draggable
+                            draggable={editorMode === 'poi'}
+                            onClick={(event) => {
+                              event.cancelBubble = true
+                              setSelectedPoiId((current) => (current === poi.id ? undefined : poi.id))
+                            }}
                             onDragEnd={(event) =>
                               handlePoiDragEnd(poi.id, event)
                             }
@@ -889,7 +1155,8 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                           <Line
                             key={edge.id}
                             points={[fromPoint.x, fromPoint.y, toPoint.x, toPoint.y]}
-                            stroke={edge.status === 'BLOCKED' ? '#ef4444' : '#22d3ee'}
+                            stroke={edge.status === 'BLOCKED' || crossingEdgeIds.has(edge.id) ? '#ef4444' : '#22d3ee'}
+                            dash={crossingEdgeIds.has(edge.id) ? [8, 5] : undefined}
                             strokeWidth={5}
                             lineCap="round"
                             listening={false}
@@ -901,6 +1168,22 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                         if (!from || !to) return null
                         return <Line key={edge.id} points={[from.x / selectedFloor.mapWidth * stageSize.width, from.y / selectedFloor.mapHeight * stageSize.height, to.x / selectedFloor.mapWidth * stageSize.width, to.y / selectedFloor.mapHeight * stageSize.height]} stroke="#f59e0b" dash={[8, 6]} strokeWidth={3} listening={false} />
                       })}
+                      {floorConnectors.flatMap((connector) => connector.stops
+                        .filter((stop) => stop.floorId === selectedFloor.id)
+                        .flatMap((stop) => {
+                          const node = nodes.find((item) => item.id === stop.nodeId)
+                          if (!node) return []
+                          const x = (node.x / selectedFloor.mapWidth) * stageSize.width
+                          const y = (node.y / selectedFloor.mapHeight) * stageSize.height
+                          const color = connector.kind === 'ELEVATOR' ? '#a855f7' : connector.kind === 'STAIR' ? '#f59e0b' : '#14b8a6'
+                          const glyph = connector.kind === 'ELEVATOR' ? 'T' : connector.kind === 'STAIR' ? 'B' : 'C'
+                          return <React.Fragment key={`${connector.id}-${node.id}`}>
+                            <Circle x={x} y={y} radius={22} stroke={color} strokeWidth={4} dash={connector.accessible ? undefined : [6, 4]} listening={false} />
+                            <Circle x={x} y={y} radius={8} fill={color} listening={false} />
+                            <Text x={x - 4} y={y - 6} text={glyph} fontSize={10} fontStyle="bold" fill="#fff" listening={false} />
+                            <Text x={x + 26} y={y - 24} text={`${connector.name} · ${connector.stops.length} tầng`} fontSize={12} fill={color} listening={false} />
+                          </React.Fragment>
+                        }))}
                       {nodes.map((node) => {
                         const x = (node.x / selectedFloor.mapWidth) * stageSize.width
                         const y = (node.y / selectedFloor.mapHeight) * stageSize.height
@@ -927,12 +1210,16 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                               fill={
                                 node.type === 'ELEVATOR'
                                   ? '#a855f7'
+                                  : node.type === 'EXIT' || node.type === 'EMERGENCY_EXIT'
+                                    ? '#16a34a'
                                   : node.type === 'DOOR'
                                     ? '#f59e0b'
                                     : '#0ea5e9'
                               }
-                              stroke="#ffffff"
+                              stroke={isolatedNodeIds.has(node.id) ? '#f59e0b' : '#ffffff'}
                               strokeWidth={isPendingEdgeStart || isSelected ? 4 : 3}
+                              draggable={editorMode === 'node' || editorMode === 'edge'}
+                              onDragEnd={(event) => void handleNodeDragEnd(node.id, event)}
                               onClick={(event) => {
                                 event.cancelBubble = true
                                 void handleNodeClick(node.id)
@@ -989,7 +1276,7 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                 </div>
               )}
             </div>
-          </Spin>
+          </div>
 
           {selectedFloor.publishStatus === 'draft' ? (
             <Typography.Paragraph
@@ -1001,6 +1288,25 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
           ) : null}
         </div>
       </Card>
+      <Modal
+        title={`Hiệu chuẩn tỉ lệ — ${selectedFloor.name}`}
+        open={calibrationOpen}
+        okText="Lưu tỉ lệ"
+        cancelText="Hủy"
+        confirmLoading={isCalibrating}
+        onOk={() => void handleSaveCalibration()}
+        onCancel={() => { setCalibrationOpen(false); setCalibrationPoints([]) }}
+      >
+        <Alert type="info" showIcon message="Tỉ lệ này dùng để tính chiều dài tuyến và kiểm tra trước khi publish." style={{ marginBottom: 12 }} />
+        {calibrationPoints.length === 2 && (
+          <Space style={{ marginBottom: 12 }} wrap>
+            <AntText>Khoảng cách thật giữa 2 điểm đã chọn:</AntText>
+            <InputNumber min={0.01} max={10000} step={0.1} value={realDistance} onChange={setRealDistance} addonAfter="m" />
+            <Button onClick={applyTwoPointCalibration} disabled={!realDistance}>Tính tỉ lệ</Button>
+          </Space>
+        )}
+        <InputNumber min={0.000001} max={100} step={0.01} value={metersPerPixel} onChange={setMetersPerPixel} addonAfter="m/px" style={{ width: '100%' }} />
+      </Modal>
 
       {/* Multi-Tab Sidebar: Nodes, Edges, POIs */}
       <Card
@@ -1014,6 +1320,19 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
               key: 'nodes',
               label: `Node (${nodes.length})`,
               children: (
+                <>
+                {nodes.length > 0 && (
+                  <Popconfirm
+                    title={`Xóa toàn bộ ${nodes.length} Node và ${edges.length} Edge của tầng này?`}
+                    description="POI vẫn giữ lại nhưng sẽ mất liên kết node."
+                    onConfirm={() => void handleClearGraph()}
+                    okText="Xóa tất cả"
+                    cancelText="Hủy"
+                    okButtonProps={{ danger: true }}
+                  >
+                    <Button danger size="small" block icon={<ClearOutlined />} style={{ marginBottom: 8 }}>Xóa toàn bộ Node/Edge</Button>
+                  </Popconfirm>
+                )}
                 <List
                   size="small"
                   dataSource={nodes}
@@ -1053,6 +1372,8 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                             color={
                               node.type === 'ELEVATOR'
                                 ? 'purple'
+                                : node.type === 'EXIT' || node.type === 'EMERGENCY_EXIT'
+                                  ? 'green'
                                 : node.type === 'DOOR'
                                   ? 'orange'
                                   : 'cyan'
@@ -1061,8 +1382,9 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                             {node.type}
                           </Tag>
                           <AntText strong style={{ fontSize: 12 }}>
-                            #{(node.id ?? '').slice(0, 6)}
+                            {node.name?.trim() || `#${(node.id ?? '').slice(0, 6)}`}
                           </AntText>
+                          {isolatedNodeIds.has(node.id) && <Tag color="warning">Chưa nối Edge</Tag>}
                         </Space>
                         <AntText type="secondary" style={{ fontSize: 11 }}>
                           {Math.round((node.x / selectedFloor.mapWidth) * 100)}%,{' '}
@@ -1072,12 +1394,25 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                     </List.Item>
                   )}
                 />
+                </>
               ),
             },
             {
               key: 'edges',
               label: `Edge (${edges.length})`,
               children: (
+                <>
+                {crossingEdgeIds.size > 0 && (
+                  <Popconfirm
+                    title={`Xóa ${crossingEdgeIds.size} edge nghi xuyên tường?`}
+                    onConfirm={() => void handleDeleteCrossingEdges()}
+                    okText="Xóa"
+                    cancelText="Hủy"
+                    okButtonProps={{ danger: true }}
+                  >
+                    <Button danger size="small" block icon={<ClearOutlined />} style={{ marginBottom: 8 }}>Xóa {crossingEdgeIds.size} edge xuyên tường</Button>
+                  </Popconfirm>
+                )}
                 <List
                   size="small"
                   dataSource={edges}
@@ -1110,50 +1445,110 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                         </AntText>
                         <AntText type="secondary" style={{ fontSize: 11 }}>
                           Khoảng cách: {Math.round(edge.weight)}px
+                          {crossingEdgeIds.has(edge.id) && <Tag color="error" style={{ marginLeft: 6 }}>Xuyên tường?</Tag>}
                         </AntText>
                       </Space>
                     </List.Item>
                   )}
                 />
+                </>
               ),
             },
             {
               key: 'pois',
               label: `POI (${pois.length})`,
               children: (
-                <List
-                  size="small"
-                  dataSource={pois}
-                  locale={{ emptyText: 'Chuyển sang chế độ POI để thêm' }}
-                  style={{ maxHeight: 520, overflowY: 'auto' }}
-                  renderItem={(poi) => (
-                    <List.Item
-                      style={{ padding: '6px 8px' }}
-                      actions={[
-                        <Button
-                          key="delete"
-                          danger
-                          size="small"
-                          type="text"
-                          icon={<DeleteOutlined />}
-                          onClick={() => removePoi(poi.id)}
-                        />,
-                      ]}
+                <>
+                  {promotions.length > 0 && (
+                    <Popconfirm
+                      title={`Tạo node cho ${promotions.length} POI thang máy / lối ra?`}
+                      description="Node mới đặt tại vị trí POI và nối vào node gần nhất."
+                      onConfirm={() => void handlePromotePois()}
+                      okText="Tạo"
+                      cancelText="Hủy"
                     >
-                      <Space orientation="vertical" size={1}>
-                        <Space>
-                          <AntText strong style={{ fontSize: 12 }}>
-                            {poi.name}
-                          </AntText>
-                          <Tag color="blue">{poi.type}</Tag>
-                        </Space>
-                        <AntText type="secondary" style={{ fontSize: 11 }}>
-                          {poi.x.toFixed(1)}%, {poi.y.toFixed(1)}%
-                        </AntText>
-                      </Space>
-                    </List.Item>
+                      <Button size="small" block icon={<ApartmentOutlined />} style={{ marginBottom: 8 }}>
+                        Tạo node cho {promotions.length} POI thang máy / lối ra
+                      </Button>
+                    </Popconfirm>
                   )}
-                />
+                  {pois.length > 0 && (
+                    <Popconfirm
+                      title={`Xóa toàn bộ ${pois.length} POI của tầng này?`}
+                      onConfirm={() => void clearPois(selectedFloor).catch((reason: Error) => setGraphError(reason.message))}
+                      okText="Xóa tất cả"
+                      cancelText="Hủy"
+                      okButtonProps={{ danger: true }}
+                    >
+                      <Button danger size="small" block icon={<ClearOutlined />} style={{ marginBottom: 8 }}>Xóa toàn bộ POI</Button>
+                    </Popconfirm>
+                  )}
+                  <List
+                    size="small"
+                    dataSource={pois}
+                    locale={{ emptyText: 'Chuyển sang chế độ POI để thêm' }}
+                    style={{ maxHeight: 520, overflowY: 'auto' }}
+                    renderItem={(poi) => (
+                      <List.Item
+                        style={{
+                          padding: '6px 8px',
+                          background: selectedPoiId === poi.id ? '#f0f9ff' : undefined,
+                          borderRadius: 4,
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => setSelectedPoiId((curr) => (curr === poi.id ? undefined : poi.id))}
+                        actions={[
+                          <div key="delete" onClick={(e) => e.stopPropagation()}>
+                            <Popconfirm
+                              title="Xác nhận xóa POI?"
+                              onConfirm={() => void removePoi(selectedFloor, poi.id).catch((reason: Error) => setGraphError(reason.message))}
+                              okText="Xóa"
+                              cancelText="Hủy"
+                              okButtonProps={{ danger: true }}
+                            >
+                              <Button danger size="small" type="text" icon={<DeleteOutlined />} />
+                            </Popconfirm>
+                          </div>,
+                        ]}
+                      >
+                        <Space orientation="vertical" size={2} style={{ width: '100%' }}>
+                          {selectedPoiId === poi.id ? (
+                            <Space wrap onClick={(e) => e.stopPropagation()}>
+                              <Input
+                                key={poi.id}
+                                size="small"
+                                style={{ width: 130 }}
+                                defaultValue={poi.name}
+                                maxLength={100}
+                                onBlur={(event) => {
+                                  const name = event.target.value.trim()
+                                  if (name && name !== poi.name) void updatePoi(selectedFloor, poi.id, { name }).catch((reason: Error) => setGraphError(reason.message))
+                                }}
+                              />
+                              <Select
+                                size="small"
+                                value={poi.category}
+                                style={{ width: 130 }}
+                                options={POI_CATEGORY_OPTIONS}
+                                onChange={(category) => void updatePoi(selectedFloor, poi.id, { category }).catch((reason: Error) => setGraphError(reason.message))}
+                              />
+                            </Space>
+                          ) : (
+                            <Space>
+                              <AntText strong style={{ fontSize: 12 }}>{poi.name}</AntText>
+                              <Tag color="blue">{POI_CATEGORY_LABEL[poi.category]}</Tag>
+                            </Space>
+                          )}
+                          <AntText type="secondary" style={{ fontSize: 11 }}>
+                            {poi.x.toFixed(1)}%, {poi.y.toFixed(1)}%
+                            {poi.snapDistanceMeters != null && ` · cách node ${poi.snapDistanceMeters.toFixed(1)} m`}
+                            {!poi.nodeId && <Tag color="warning" style={{ marginLeft: 6 }}>Chưa gắn Node</Tag>}
+                          </AntText>
+                        </Space>
+                      </List.Item>
+                    )}
+                  />
+                </>
               ),
             },
             {

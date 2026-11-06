@@ -1,35 +1,168 @@
-import { useEffect, useState } from 'react'
-import { App as AntApp, Button, Card, Empty, Form, Input, Modal, Popconfirm, Space, Spin, Table, Typography } from 'antd'
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import { useEffect, useMemo, useState } from 'react'
+import { App as AntApp, Alert, Button, Card, Empty, Input, List, Popconfirm, Space, Spin, Typography } from 'antd'
+import { DeleteOutlined, DownloadOutlined, PlusOutlined } from '@ant-design/icons'
 import { QRCodeCanvas } from 'qrcode.react'
 import { useFloorStore } from '../../store/useFloorStore'
-import { useNodeStore } from '../../store/useNodeStore'
 import { usePermissions } from '../../auth/usePermissions'
-import { createQrCode, deleteQrCode, getBuildingQrCodes } from '../../api/qr'
-import type { QrCode } from '../../types/qr'
+import { getGraph, type GraphNode } from '../../api/graph'
+import {
+  createQrAnchor,
+  deleteQrAnchor,
+  listQrAnchors,
+  qrNavigationUrl,
+  type CreatedQrAnchor,
+  type QrAnchor,
+} from '../../api/qrAnchors'
 import { AppSelect as Select } from '../../components/ui/AppSelect'
 
 const { Text, Title } = Typography
-type QrForm = { label: string; floorId: string; nodeId: string }
 
+function downloadCanvas(canvasId: string, fileName: string) {
+  const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null
+  if (!canvas) return
+  const link = document.createElement('a')
+  link.href = canvas.toDataURL('image/png')
+  link.download = `${fileName}.png`
+  link.click()
+}
+
+/** Mã QR neo theo node: BE chỉ lưu bản băm của token nên link/QR chỉ xem được ngay lúc tạo. */
 export function QrCodePanel({ readOnly = false }: { readOnly?: boolean }) {
   const floor = useFloorStore((state) => state.selectedFloor)
-  const floors = useFloorStore((state) => state.floors)
-  const nodesByFloorId = useNodeStore((state) => state.nodesByFloorId)
-  const loadNodesByFloors = useNodeStore((state) => state.loadNodesByFloors)
-  const [items, setItems] = useState<QrCode[]>([])
-  const [open, setOpen] = useState(false)
+  const [nodes, setNodes] = useState<GraphNode[]>([])
+  const [nodeId, setNodeId] = useState<string>()
+  const [label, setLabel] = useState('')
+  const [anchors, setAnchors] = useState<QrAnchor[]>([])
+  const [created, setCreated] = useState<CreatedQrAnchor[]>([])
   const [loading, setLoading] = useState(false)
-  const [form] = Form.useForm<QrForm>()
   const { message } = AntApp.useApp()
   const permissions = usePermissions()
   const canEdit = Boolean(floor && !readOnly && permissions.canEditFloor(floor))
-  const selectedFloorId = Form.useWatch('floorId', form) ?? floor?.id
+  const floorId = floor?.id
 
-  useEffect(() => { if (!floor) return; setLoading(true); void Promise.all([getBuildingQrCodes(floor.buildingId), loadNodesByFloors(floors.map((item) => item.id))]).then(([codes]) => setItems(codes)).catch((error: Error) => message.error(error.message)).finally(() => setLoading(false)) }, [floor?.buildingId, floors, loadNodesByFloors, message])
-  if (!floor) return <Empty description="Chọn tòa nhà để quản lý mã QR" />
-  const currentFloor = floor
-  const nodeOptions = (nodesByFloorId[selectedFloorId ?? currentFloor.id] ?? []).map((node) => ({ value: node.id, label: node.label ?? node.id }))
-  async function save(values: QrForm) { try { const created = await createQrCode(currentFloor.buildingId, values); setItems((current) => [...current, created]); setOpen(false); form.resetFields(); message.success('Đã tạo mã QR') } catch (error) { message.error((error as Error).message) } }
-  return <Card className="tool-card" title={<Title level={3} style={{ margin: 0 }}>Mã QR điểm đến</Title>} extra={<Button type="primary" icon={<PlusOutlined />} disabled={!canEdit} onClick={() => { form.setFieldsValue({ floorId: currentFloor.id }); setOpen(true) }}>Tạo mã QR</Button>}><Spin spinning={loading}><Table<QrCode> rowKey="id" dataSource={items} pagination={false} locale={{ emptyText: 'Chưa có mã QR' }} columns={[{ title: 'Nhãn', dataIndex: 'label' }, { title: 'Mã QR', render: (_: unknown, item: QrCode) => { const value = `${window.location.origin}/guest?buildingId=${item.buildingId}&floorId=${item.floorId}&nodeId=${item.nodeId}`; return <Space orientation="vertical" size={4}><QRCodeCanvas value={value} size={72} /><Text copyable ellipsis style={{ maxWidth: 220 }}>{value}</Text></Space> } }, { title: 'Mã', dataIndex: 'code', render: (code: string) => <Text code>{code}</Text> }, { title: 'Hành động', render: (_: unknown, item: QrCode) => <Popconfirm title="Xoá mã QR?" okText="Xoá" cancelText="Hủy" onConfirm={() => void deleteQrCode(item.id).then(() => setItems((current) => current.filter((code) => code.id !== item.id))).then(() => message.success('Đã xoá mã QR')).catch((error: Error) => message.error(error.message))}><Button danger icon={<DeleteOutlined />} disabled={!canEdit} /></Popconfirm> }]} /></Spin><Modal title="Tạo mã QR" open={open} okText="Tạo" cancelText="Hủy" onCancel={() => setOpen(false)} onOk={() => form.submit()}><Form form={form} layout="vertical" onFinish={save}><Form.Item name="label" label="Nhãn" rules={[{ required: true }]}><Input /></Form.Item><Form.Item name="floorId" label="Tầng" rules={[{ required: true }]}><Select options={floors.map((item) => ({ value: item.id, label: item.name }))} onChange={() => form.setFieldValue('nodeId', undefined)} /></Form.Item><Form.Item name="nodeId" label="Node đích" rules={[{ required: true }]}><Select options={nodeOptions} /></Form.Item></Form></Modal></Card>
+  const nodeOptions = useMemo(
+    () => nodes.map((node) => ({ value: node.id, label: node.name?.trim() || `${node.type} · ${node.id.slice(0, 8)}` })),
+    [nodes],
+  )
+
+  useEffect(() => {
+    setNodes([])
+    setNodeId(undefined)
+    setAnchors([])
+    setCreated([])
+    if (!floorId) return
+    let cancelled = false
+    setLoading(true)
+    getGraph(floorId)
+      .then((graph) => { if (!cancelled) setNodes(graph.nodes) })
+      .catch((error: Error) => { if (!cancelled) message.error(error.message) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [floorId, message])
+
+  useEffect(() => {
+    setAnchors([])
+    if (!nodeId) return
+    let cancelled = false
+    setLoading(true)
+    listQrAnchors(nodeId)
+      .then((items) => { if (!cancelled) setAnchors(items) })
+      .catch((error: Error) => { if (!cancelled) message.error(error.message) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [nodeId, message])
+
+  if (!floor) return <Empty description="Chọn tầng để quản lý mã QR" />
+
+  async function handleCreate() {
+    if (!nodeId || !label.trim()) return
+    try {
+      const anchor = await createQrAnchor(nodeId, label.trim())
+      setCreated((current) => [anchor, ...current])
+      setAnchors((current) => [anchor, ...current])
+      setLabel('')
+      message.success('Đã tạo mã QR. Hãy tải/in ngay: token chỉ hiển thị một lần.')
+    } catch (error) {
+      message.error((error as Error).message)
+    }
+  }
+
+  async function handleDelete(anchorId: string) {
+    try {
+      await deleteQrAnchor(anchorId)
+      setAnchors((current) => current.filter((anchor) => anchor.id !== anchorId))
+      setCreated((current) => current.filter((anchor) => anchor.id !== anchorId))
+      message.success('Đã xoá mã QR')
+    } catch (error) {
+      message.error((error as Error).message)
+    }
+  }
+
+  return (
+    <Card className="tool-card" title={<Title level={3} style={{ margin: 0 }}>Mã QR định vị</Title>}>
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 12 }}
+        message="Mỗi mã QR gắn vào một node. Khách quét mã để bắt đầu chỉ đường từ node đó."
+      />
+      <Space wrap style={{ marginBottom: 12 }}>
+        <Select
+          style={{ width: 260 }}
+          placeholder={`Chọn node tầng ${floor.name}`}
+          options={nodeOptions}
+          value={nodeId}
+          onChange={setNodeId}
+          showSearch
+          optionFilterProp="label"
+        />
+        <Input
+          style={{ width: 220 }}
+          placeholder="Nhãn, ví dụ: Cổng chính"
+          maxLength={100}
+          value={label}
+          onChange={(event) => setLabel(event.target.value)}
+          disabled={!canEdit || !nodeId}
+        />
+        <Button type="primary" icon={<PlusOutlined />} disabled={!canEdit || !nodeId || !label.trim()} onClick={() => void handleCreate()}>
+          Tạo mã QR
+        </Button>
+      </Space>
+      <Spin spinning={loading}>
+        <List<QrAnchor>
+          dataSource={anchors}
+          locale={{ emptyText: nodeId ? 'Node này chưa có mã QR' : 'Chọn node để xem mã QR' }}
+          renderItem={(anchor) => {
+            const fresh = created.find((item) => item.id === anchor.id)
+            const url = fresh ? qrNavigationUrl(window.location.origin, anchor.buildingId, fresh.token) : null
+            const canvasId = `qr-${anchor.id}`
+            return (
+              <List.Item
+                actions={[
+                  <Popconfirm key="delete" title="Xoá mã QR này?" okText="Xoá" cancelText="Hủy" onConfirm={() => void handleDelete(anchor.id)}>
+                    <Button danger icon={<DeleteOutlined />} disabled={!canEdit} />
+                  </Popconfirm>,
+                ]}
+              >
+                <Space align="start" size={16}>
+                  {url ? <QRCodeCanvas id={canvasId} value={url} size={96} marginSize={2} /> : null}
+                  <Space orientation="vertical" size={4}>
+                    <Text strong>{anchor.label}</Text>
+                    {url ? (
+                      <>
+                        <Text copyable={{ text: url }} ellipsis style={{ maxWidth: 320 }}>{url}</Text>
+                        <Button size="small" icon={<DownloadOutlined />} onClick={() => downloadCanvas(canvasId, anchor.label)}>Tải PNG</Button>
+                      </>
+                    ) : (
+                      <Text type="secondary">Token đã ẩn. Xoá và tạo lại nếu cần in mã mới.</Text>
+                    )}
+                  </Space>
+                </Space>
+              </List.Item>
+            )
+          }}
+        />
+      </Spin>
+    </Card>
+  )
 }

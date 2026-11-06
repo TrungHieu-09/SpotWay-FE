@@ -3,10 +3,9 @@ import { App as AntApp, Button, Select, Tabs, Tooltip, Typography, Upload } from
 import { ApartmentOutlined, ExperimentOutlined, UploadOutlined } from '@ant-design/icons'
 import { FloorSelector } from './FloorSelector'
 import { CanvasBoard } from './CanvasBoard'
-import { ElevatorLinkPanel } from './ElevatorLinkPanel'
+import { ConnectorPanel } from './ConnectorPanel'
 import { FloorRecognitionPanel } from './FloorRecognitionPanel'
 import { Manager3DPanel } from './Manager3DPanel'
-import { NavigationGraphPanel } from './NavigationGraphPanel'
 import { StoreListPanel } from './StoreListPanel'
 import { MaintenancePanel } from './MaintenancePanel'
 import { QrCodePanel } from './QrCodePanel'
@@ -239,23 +238,18 @@ export function ManagerLayout() {
                   children: <Manager3DPanel />,
                 },
                 {
-                  key: 'navigation-graph',
-                  label: 'Graph chỉ đường',
-                  children: <NavigationGraphPanel readOnly={isReadOnly} />,
-                },
-                {
                   key: 'elevator-links',
-                  label: 'Liên kết thang máy',
-                  children: <ElevatorLinkPanel readOnly={isReadOnly} />,
+                  label: 'Thang & connector',
+                  children: <ConnectorPanel readOnly={isReadOnly} />,
                 },
                 {
                   key: 'maintenance',
-                  label: 'Bảo trì',
+                  label: 'Bảo trì lối đi',
                   children: <MaintenancePanel readOnly={isReadOnly} />,
                 },
                 {
                   key: 'qr-codes',
-                  label: 'Mã QR',
+                  label: 'Mã QR định vị',
                   children: <QrCodePanel readOnly={isReadOnly} />,
                 },
               ]}

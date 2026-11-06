@@ -16,7 +16,8 @@ import {
   Tooltip,
   Typography,
 } from 'antd'
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import { validateFloorGraph } from '../../api/floors'
 import { useFloorStore } from '../../store/useFloorStore'
 import type { FloorPublishStatus } from '../../types/floor'
 
@@ -45,7 +46,7 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
   const addFloor = useFloorStore((state) => state.addFloor)
   const deleteFloor = useFloorStore((state) => state.deleteFloor)
   const updateFloorStatus = useFloorStore((state) => state.updateFloorStatus)
-  const { message } = AntApp.useApp()
+  const { message, modal } = AntApp.useApp()
   const canDeleteFloor = floors.length > 1
 
   function closeCreateModal() {
@@ -74,6 +75,20 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
     } catch (error) {
       message.error((error as Error).message)
     }
+  }
+
+  async function handleCheckFloor(floorId: string, name: string) {
+    try {
+      const report = await validateFloorGraph(floorId)
+      modal[report.valid ? 'success' : 'warning']({
+        title: report.valid ? `${name}: đủ điều kiện publish` : `${name}: chưa thể publish`,
+        content: report.issues.length === 0 ? 'Không có vấn đề nào.' : (
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {report.issues.map((issue) => <li key={`${issue.code}-${issue.message}`}><Tag color={issue.severity === 'ERROR' ? 'error' : 'warning'}>{issue.severity === 'ERROR' ? 'Lỗi' : 'Cảnh báo'}</Tag>{issue.message}{issue.ids && ` (${issue.ids.length})`}</li>)}
+          </ul>
+        ),
+      })
+    } catch (error) { message.error((error as Error).message) }
   }
 
   async function handleToggleStatus(
@@ -123,6 +138,7 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
                   <Tag color={floorStatusColor(floor.publishStatus)}>
                     {floor.publishStatus}
                   </Tag>
+                  {floor.metersPerPixel == null && <Tag color="warning">Chưa hiệu chuẩn</Tag>}
                 </Space>
                 <Text type="secondary">Level {floor.level}</Text>
               </div>
@@ -132,6 +148,9 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
                 onClick={(event) => event.stopPropagation()}
               >
                 <Tag>{floor.pois.length} POI</Tag>
+                <Tooltip title="Kiểm tra trước khi publish">
+                  <Button size="small" icon={<CheckCircleOutlined />} onClick={() => void handleCheckFloor(floor.id, floor.name)} />
+                </Tooltip>
                 <Switch
                   size="small"
                   checked={floor.publishStatus === 'published'}
