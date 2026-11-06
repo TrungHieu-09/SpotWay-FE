@@ -1,57 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { suggestConnectors, suggestEdges, type SuggestionNode } from './graphSuggestions.ts'
+import { suggestConnectors, type SuggestionNode } from './graphSuggestions.ts'
 
 const size = { width: 1000, height: 1000 }
 const point = (id: string, x: number, y: number) => ({ id, x, y })
-
-describe('suggestEdges', () => {
-  it('nối các node rời thành một mạng, ưu tiên cặp gần nhất', () => {
-    const nodes = [point('a', 0, 0), point('b', 10, 0), point('c', 20, 0), point('d', 80, 0)]
-    const result = suggestEdges(nodes, [], size)
-    assert.equal(result.length, 3) // n node -> n-1 edge
-    const pairs = result.map((s) => [s.fromNodeId, s.toNodeId].sort().join('-')).sort()
-    assert.deepEqual(pairs, ['a-b', 'b-c', 'c-d'])
-  })
-
-  it('edge đã có được tính là đã nối: không đề xuất lại, chỉ nối các mảnh còn rời', () => {
-    const nodes = [point('a', 0, 0), point('b', 10, 0), point('c', 50, 0), point('d', 60, 0)]
-    const result = suggestEdges(nodes, [{ fromNodeId: 'a', toNodeId: 'b' }, { fromNodeId: 'c', toNodeId: 'd' }], size)
-    assert.equal(result.length, 1)
-    assert.deepEqual([result[0].fromNodeId, result[0].toNodeId].sort(), ['b', 'c'])
-  })
-
-  it('mạng đã liền thì không đề xuất gì', () => {
-    const nodes = [point('a', 0, 0), point('b', 10, 0)]
-    assert.deepEqual(suggestEdges(nodes, [{ fromNodeId: 'b', toNodeId: 'a' }], size), [])
-    assert.deepEqual(suggestEdges([], [], size), [])
-  })
-
-  it('maxDistance bỏ qua cặp quá xa (đơn vị bản đồ)', () => {
-    const nodes = [point('a', 0, 0), point('b', 10, 0), point('far', 90, 90)]
-    const result = suggestEdges(nodes, [], size, { maxDistance: 200 })
-    assert.equal(result.length, 1)
-    assert.deepEqual([result[0].fromNodeId, result[0].toNodeId].sort(), ['a', 'b'])
-  })
-
-  it('isBlocked loại cặp bị chặn: nối đường vòng thay vì xuyên qua', () => {
-    // a-c ở giữa bị chặn (tường); b nằm lệch nên a-b-c vẫn nối được
-    const nodes = [point('a', 0, 0), point('c', 20, 0), point('b', 10, 10)]
-    const result = suggestEdges(nodes, [], size, { isBlocked: (x, y) => [x.id, y.id].sort().join() === 'a,c' })
-    const pairs = result.map((s) => [s.fromNodeId, s.toNodeId].sort().join('-')).sort()
-    assert.deepEqual(pairs, ['a-b', 'b-c'])
-  })
-
-  it('không có cặp nào hợp lệ thì để nguyên các mảnh rời (không ép nối)', () => {
-    const nodes = [point('a', 0, 0), point('b', 10, 0)]
-    assert.deepEqual(suggestEdges(nodes, [], size, { isBlocked: () => true }), [])
-  })
-
-  it('edge trỏ tới node không còn trong danh sách không làm hỏng kết quả', () => {
-    const nodes = [point('a', 0, 0), point('b', 10, 0)]
-    assert.equal(suggestEdges(nodes, [{ fromNodeId: 'a', toNodeId: 'ghost' }], size).length, 1)
-  })
-})
 
 describe('suggestConnectors', () => {
   const node = (id: string, type: string, x: number, y: number, name: string | null = null): SuggestionNode => ({ id, type, x, y, name })

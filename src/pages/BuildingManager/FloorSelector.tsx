@@ -160,14 +160,13 @@ export function FloorSelector({ buildingId }: FloorSelectorProps) {
                   {floor.metersPerPixel == null && <Tag color="warning">Chưa hiệu chuẩn</Tag>}
                   {!floor.mapImageUrl && <Tag color="error">Chưa có ảnh</Tag>}
                 </Space>
-                <Text type="secondary">Level {floor.level}</Text>
+                <Text type="secondary">Level {floor.level}{poisByFloor[floor.id] ? ` · ${poisByFloor[floor.id].length} POI` : ''}</Text>
               </div>
 
               <div
                 className="floor-list-actions"
                 onClick={(event) => event.stopPropagation()}
               >
-                {poisByFloor[floor.id] && <Tag>{poisByFloor[floor.id].length} POI</Tag>}
                 <Tooltip title="Hiệu chuẩn tỉ lệ mét/pixel">
                   <Button size="small" icon={<ColumnWidthOutlined />} onClick={() => setCalibratingFloor(floor)} />
                 </Tooltip>

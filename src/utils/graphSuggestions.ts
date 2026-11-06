@@ -1,58 +1,7 @@
-import type { MapSize, PercentPoint } from '../types/geometry.ts'
+import type { PercentPoint } from '../types/geometry.ts'
 import type { ConnectorKind } from '../types/graph.ts'
-import { distanceInMapUnits } from './graphGeometry.ts'
 
 type PointWithId = PercentPoint & { id: string }
-
-export type EdgeSuggestion = { id: string; fromNodeId: string; toNodeId: string }
-
-/**
- * Gợi ý edge để cả tầng thành một mạng liền: lặp lại việc nối cặp node gần nhất đang thuộc hai
- * nhóm rời nhau (cây khung nhỏ nhất, Kruskal). Edge đã có được tính là đã nối sẵn.
- * Không biết tường nên có thể nối xuyên tường — kết quả chỉ là nháp để người vẽ duyệt.
- */
-export function suggestEdges(
-  nodes: readonly PointWithId[],
-  edges: readonly { fromNodeId: string; toNodeId: string }[],
-  size: MapSize,
-  options: { maxDistance?: number; /** Cặp node không được nối (vd. đoạn thẳng xuyên tường). */ isBlocked?: (a: PointWithId, b: PointWithId) => boolean } = {},
-): EdgeSuggestion[] {
-  const maxDistance = options.maxDistance ?? Infinity
-  const parent = new Map(nodes.map((node) => [node.id, node.id]))
-  const find = (id: string): string => {
-    let root = id
-    while (parent.get(root) !== root) root = parent.get(root)!
-    for (let current = id; current !== root; ) {
-      const next = parent.get(current)!
-      parent.set(current, root)
-      current = next
-    }
-    return root
-  }
-  const union = (a: string, b: string) => {
-    const rootA = find(a)
-    const rootB = find(b)
-    if (rootA === rootB) return false
-    parent.set(rootA, rootB)
-    return true
-  }
-  for (const edge of edges) if (parent.has(edge.fromNodeId) && parent.has(edge.toNodeId)) union(edge.fromNodeId, edge.toNodeId)
-
-  const pairs: { a: PointWithId; b: PointWithId; distance: number }[] = []
-  for (let i = 0; i < nodes.length; i += 1) {
-    for (let j = i + 1; j < nodes.length; j += 1) {
-      const distance = distanceInMapUnits(nodes[i], nodes[j], size)
-      if (distance <= maxDistance && !options.isBlocked?.(nodes[i], nodes[j])) pairs.push({ a: nodes[i], b: nodes[j], distance })
-    }
-  }
-  pairs.sort((left, right) => left.distance - right.distance)
-
-  const suggestions: EdgeSuggestion[] = []
-  for (const { a, b } of pairs) {
-    if (union(a.id, b.id)) suggestions.push({ id: `suggest-${a.id}-${b.id}`, fromNodeId: a.id, toNodeId: b.id })
-  }
-  return suggestions
-}
 
 export type SuggestionNode = PointWithId & { type: string; name: string | null }
 export type SuggestionFloor = { floorId: string; level: number; nodes: readonly SuggestionNode[] }

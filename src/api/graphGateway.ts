@@ -1,8 +1,6 @@
 import { apiClient } from './client'
 import {
   connectorFromDto,
-  draftFromDto,
-  draftToApplyDto,
   edgeFromDto,
   nodeFromDto,
   nodeToCreateDto,
@@ -13,11 +11,10 @@ import {
   type ConnectorDto,
   type GraphEdgeDto,
   type GraphNodeDto,
-  type NavigationDraftDto,
   type PoiDto,
 } from './graphMapper'
 import type { MapSize, PercentPoint } from '../types/geometry'
-import type { Connector, ConnectorPatch, GraphDraft, GraphEdge, GraphNode, NewConnector, NewGraphNode } from '../types/graph'
+import type { Connector, ConnectorPatch, GraphEdge, GraphNode, NewConnector, NewGraphNode } from '../types/graph'
 import type { NewPoi, Poi, PoiDetailsPatch } from '../types/poi'
 
 /** Hợp đồng store <-> mạng. Nhận/trả domain type (%); đổi pixel xảy ra trong graphMapper. */
@@ -83,31 +80,6 @@ export const graphGateway: GraphGateway = {
   async deleteConnector(connectorId) {
     await apiClient.delete(`/connectors/${connectorId}`)
   },
-}
-
-type NavigationDraftApplyResult = {
-  nodesCreated: number
-  edgesCreated: number
-  replayed?: boolean
-}
-
-export async function analyzeNavigationDraft(floorId: string, size: MapSize): Promise<GraphDraft> {
-  const { data } = await apiClient.post<NavigationDraftDto>(`/floors/${floorId}/navigation-analysis`, undefined, {
-    timeout: 120_000,
-  })
-  if (data.coordinateSpace !== undefined && data.coordinateSpace !== 'PIXEL') {
-    throw new Error('Phản hồi Analyze không ở hệ toạ độ pixel bản đồ.')
-  }
-  return draftFromDto(data, size)
-}
-
-export async function applyNavigationDraft(floorId: string, size: MapSize, draft: GraphDraft) {
-  const { data } = await apiClient.post<NavigationDraftApplyResult>(`/floors/${floorId}/navigation-draft/apply`, {
-    // draftId để BE bỏ qua double click / retry của cùng một lần Apply
-    draftId: globalThis.crypto?.randomUUID?.(),
-    ...draftToApplyDto(draft, size),
-  })
-  return data
 }
 
 /** Hợp đồng store <-> mạng cho POI v2. Domain là %, pixel chỉ xuất hiện trong graphMapper. */

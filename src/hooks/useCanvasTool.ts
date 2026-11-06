@@ -3,9 +3,8 @@ import type Konva from 'konva'
 import { useGraphStore } from '../store/useGraphStore'
 import type { MapSize, PercentPoint } from '../types/geometry'
 import type { NodeType } from '../types/graph'
+import { useEditorToolStore, type EditorTool } from '../store/useEditorToolStore'
 import { pixelToPercent } from '../utils/canvasCoordinates'
-
-type EditorMode = 'poi' | 'node' | 'edge' | 'calibrate'
 
 type UseCanvasToolOptions = {
   floorId?: string
@@ -19,7 +18,9 @@ type UseCanvasToolOptions = {
  * Mọi toạ độ ra khỏi hook đều là %; pixel chỉ đi vào từ sự kiện Konva.
  */
 export function useCanvasTool({ floorId, stageSize, onAddPoi, onError }: UseCanvasToolOptions) {
-  const [mode, setMode] = useState<EditorMode>('node')
+  // Chế độ do thanh công cụ bên trái điều khiển (useEditorToolStore).
+  const mode = useEditorToolStore((state) => state.tool)
+  const setMode = useEditorToolStore((state) => state.setTool)
   const [nodeType, setNodeType] = useState<NodeType>('NORMAL')
   const [nodeName, setNodeName] = useState('')
   const [edgeStartNodeId, setEdgeStartNodeId] = useState<string>()
@@ -44,11 +45,13 @@ export function useCanvasTool({ floorId, stageSize, onAddPoi, onError }: UseCanv
     setCalibrationPoints([])
   }
 
-  const changeMode = useCallback((next: EditorMode) => {
-    setMode(next)
+  // Đổi công cụ: bỏ thao tác dở dang của công cụ cũ.
+  const [toolMode, setToolMode] = useState<EditorTool>(mode)
+  if (toolMode !== mode) {
+    setToolMode(mode)
     setEdgeStartNodeId(undefined)
     setCalibrationPoints([])
-  }, [])
+  }
 
   const clearCalibration = useCallback(() => setCalibrationPoints([]), [])
 
@@ -89,6 +92,10 @@ export function useCanvasTool({ floorId, stageSize, onAddPoi, onError }: UseCanv
 
   function handleNodeClick(nodeId: string) {
     if (!floorId) return
+    if (mode === 'delete') {
+      handleNodeDelete(nodeId)
+      return
+    }
     if (mode === 'edge') {
       if (!edgeStartNodeId) {
         setEdgeStartNodeId(nodeId)
@@ -124,7 +131,6 @@ export function useCanvasTool({ floorId, stageSize, onAddPoi, onError }: UseCanv
 
   return {
     mode,
-    changeMode,
     nodeType,
     setNodeType,
     nodeName,

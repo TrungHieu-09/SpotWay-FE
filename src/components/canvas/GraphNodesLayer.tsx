@@ -1,7 +1,7 @@
 import { Fragment, memo } from 'react'
 import { Circle, Layer } from 'react-konva'
 import type { MapSize, PercentPoint } from '../../types/geometry'
-import type { DraftNode, GraphNode, NodeType } from '../../types/graph'
+import type { GraphNode, NodeType } from '../../types/graph'
 import { percentToPixel, pixelToPercent } from '../../utils/canvasCoordinates'
 
 type GraphNodesLayerProps = {
@@ -10,13 +10,13 @@ type GraphNodesLayerProps = {
   edgeStartNodeId?: string
   /** Node chưa nối edge nào: vẽ vòng đỏ để người vẽ thấy ngay chỗ còn thiếu. */
   isolatedNodeIds?: ReadonlySet<string>
-  draftNodes?: readonly DraftNode[]
   size: MapSize
   onNodeClick: (nodeId: string) => void
   onNodeDelete: (nodeId: string) => void
   /** Có truyền thì node kéo thả được; vị trí mới tính theo % (chưa lưu pixel). */
   onNodeMove?: (nodeId: string, to: PercentPoint) => void
-  onDraftNodeMove: (nodeId: string, to: PercentPoint) => void
+  /** Gọi liên tục khi đang kéo để edge/POI nối với node bám theo. */
+  onNodeDragMove?: (nodeId: string, to: PercentPoint) => void
 }
 
 function nodeFill(type: NodeType) {
@@ -35,12 +35,11 @@ export const GraphNodesLayer = memo(function GraphNodesLayer({
   selectedNodeId,
   edgeStartNodeId,
   isolatedNodeIds,
-  draftNodes = [],
   size,
   onNodeClick,
   onNodeDelete,
   onNodeMove,
-  onDraftNodeMove,
+  onNodeDragMove,
 }: GraphNodesLayerProps) {
   return (
     <Layer>
@@ -65,6 +64,9 @@ export const GraphNodesLayer = memo(function GraphNodesLayer({
               stroke="#ffffff"
               strokeWidth={isHighlighted ? 4 : 3}
               draggable={Boolean(onNodeMove)}
+              onDragMove={(event) =>
+                onNodeDragMove?.(node.id, pixelToPercent(event.target.x(), event.target.y(), size.width, size.height))
+              }
               onDragEnd={(event) =>
                 onNodeMove?.(node.id, pixelToPercent(event.target.x(), event.target.y(), size.width, size.height))
               }
@@ -81,24 +83,6 @@ export const GraphNodesLayer = memo(function GraphNodesLayer({
               }}
             />
           </Fragment>
-        )
-      })}
-      {draftNodes.map((node) => {
-        const { pixelX, pixelY } = percentToPixel(node.x, node.y, size.width, size.height)
-        return (
-          <Circle
-            key={node.id}
-            x={pixelX}
-            y={pixelY}
-            radius={10}
-            fill="#facc15"
-            stroke="#854d0e"
-            strokeWidth={2}
-            draggable
-            onDragEnd={(event) =>
-              onDraftNodeMove(node.id, pixelToPercent(event.target.x(), event.target.y(), size.width, size.height))
-            }
-          />
         )
       })}
     </Layer>

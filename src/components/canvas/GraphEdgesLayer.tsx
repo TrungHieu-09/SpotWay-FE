@@ -1,18 +1,15 @@
 import { memo } from 'react'
 import { Layer, Line } from 'react-konva'
 import type { MapSize } from '../../types/geometry'
-import type { DraftEdge, DraftNode, GraphEdge, GraphNode } from '../../types/graph'
+import type { GraphEdge, GraphNode } from '../../types/graph'
 import { percentToPixel } from '../../utils/canvasCoordinates'
 
 type GraphEdgesLayerProps = {
   edges: readonly GraphEdge[]
   nodeById: ReadonlyMap<string, GraphNode>
-  draftEdges?: readonly DraftEdge[]
-  draftNodeById?: ReadonlyMap<string, DraftNode>
   /** Edge nghi xuyên tường: vẽ đỏ nét đứt để người vẽ thấy ngay. */
   flaggedEdgeIds?: ReadonlySet<string>
-  /** Edge gợi ý tự động (chưa lưu): vẽ nét đứt xanh lá giữa các node thật. */
-  suggestions?: readonly { id: string; fromNodeId: string; toNodeId: string }[]
+  /** Edge đang bị chặn bảo trì: xám nét chấm, tách biệt với màu đỏ của edge nghi xuyên tường. */
   size: MapSize
 }
 
@@ -20,10 +17,7 @@ type GraphEdgesLayerProps = {
 export const GraphEdgesLayer = memo(function GraphEdgesLayer({
   edges,
   nodeById,
-  draftEdges = [],
-  draftNodeById,
   flaggedEdgeIds,
-  suggestions = [],
   size,
 }: GraphEdgesLayerProps) {
   const segment = (from: { x: number; y: number }, to: { x: number; y: number }) => {
@@ -42,24 +36,12 @@ export const GraphEdgesLayer = memo(function GraphEdgesLayer({
           <Line
             key={edge.id}
             points={segment(from, to)}
-            stroke={flaggedEdgeIds?.has(edge.id) ? '#dc2626' : edge.status === 'BLOCKED' ? '#ef4444' : '#22d3ee'}
-            dash={flaggedEdgeIds?.has(edge.id) ? [10, 6] : undefined}
+            stroke={flaggedEdgeIds?.has(edge.id) ? '#dc2626' : edge.status === 'BLOCKED' ? '#64748b' : '#22d3ee'}
+            dash={flaggedEdgeIds?.has(edge.id) ? [10, 6] : edge.status === 'BLOCKED' ? [2, 8] : undefined}
             strokeWidth={5}
             lineCap="round"
           />
         )
-      })}
-      {draftEdges.map((edge) => {
-        const from = draftNodeById?.get(edge.fromNodeId)
-        const to = draftNodeById?.get(edge.toNodeId)
-        if (!from || !to) return null
-        return <Line key={edge.id} points={segment(from, to)} stroke="#f59e0b" dash={[8, 6]} strokeWidth={3} />
-      })}
-      {suggestions.map((edge) => {
-        const from = nodeById.get(edge.fromNodeId)
-        const to = nodeById.get(edge.toNodeId)
-        if (!from || !to) return null
-        return <Line key={edge.id} points={segment(from, to)} stroke="#16a34a" dash={[10, 6]} strokeWidth={4} lineCap="round" />
       })}
     </Layer>
   )

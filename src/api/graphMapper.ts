@@ -1,5 +1,5 @@
 import type { MapSize, PercentPoint } from '../types/geometry.ts'
-import type { Connector, ConnectorKind, EdgeStatus, GraphDraft, GraphEdge, GraphNode, HazardType, NewGraphNode, NodeType } from '../types/graph.ts'
+import type { Connector, ConnectorKind, EdgeStatus, GraphEdge, GraphNode, HazardType, NewGraphNode, NodeType } from '../types/graph.ts'
 import type { NewPoi, Poi, PoiCategory, PoiDetailsPatch } from '../types/poi.ts'
 import { percentToPixel, pixelToPercent } from '../utils/canvasCoordinates.ts'
 
@@ -41,28 +41,6 @@ export type PoiDto = {
   name: string
   category: string
   icon?: string | null
-}
-
-export type NavigationDraftDto = {
-  schemaVersion?: 1
-  /** Backend luôn trả pixel bản đồ; fixture dựng cục bộ có thể bỏ trống. */
-  coordinateSpace?: 'PIXEL'
-  image?: { width: number; height: number }
-  nodes: Array<
-    Omit<GraphNodeDto, 'floorId' | 'hazard'> & { confidence: number; requiresConfirmation: boolean; source?: string }
-  >
-  edges: Array<{
-    id: string
-    fromNodeId: string
-    toNodeId: string
-    accessible: boolean
-    confidence: number
-    requiresConfirmation: boolean
-    weight?: number
-    source?: string
-  }>
-  warnings: string[]
-  diagnostics?: Record<string, unknown>
 }
 
 export type ConnectorDto = {
@@ -177,45 +155,6 @@ export function poiToUpdateDto(
     category: patch.category?.toUpperCase(),
     icon: patch.icon ?? undefined,
     nodeId: patch.nodeId ?? undefined,
-  }
-}
-
-export function draftFromDto(dto: NavigationDraftDto, size: MapSize): GraphDraft {
-  return {
-    nodes: dto.nodes.map((node) => ({
-      id: node.id,
-      ...positionFromDto(node, size),
-      name: node.name ?? null,
-      type: node.type,
-      accessible: node.accessible ?? true,
-      confidence: node.confidence,
-      requiresConfirmation: node.requiresConfirmation,
-      source: node.source,
-    })),
-    edges: dto.edges.map(({ weight: _weight, ...edge }) => edge),
-    warnings: dto.warnings,
-  }
-}
-
-/** Payload áp dụng nháp: người dùng đã xem và xác nhận nên `confirmed: true`. */
-export function draftToApplyDto(draft: GraphDraft, size: MapSize) {
-  return {
-    mode: 'APPEND' as const,
-    nodes: draft.nodes.map(({ id, name, type, accessible, ...position }) => ({
-      id,
-      ...positionToDto(position, size),
-      name,
-      type,
-      accessible,
-      confirmed: true,
-    })),
-    edges: draft.edges.map(({ id, fromNodeId, toNodeId, accessible }) => ({
-      id,
-      fromNodeId,
-      toNodeId,
-      accessible,
-      confirmed: true,
-    })),
   }
 }
 

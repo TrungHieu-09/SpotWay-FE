@@ -8,7 +8,6 @@ import {
   Input,
   message,
   Popconfirm,
-  Radio,
   Select,
   Space,
   Tag,
@@ -16,23 +15,17 @@ import {
 } from 'antd'
 import { Stage } from 'react-konva'
 import {
-  ColumnWidthOutlined,
   DeleteOutlined,
   QrcodeOutlined,
-  ThunderboltOutlined,
   LinkOutlined,
   LoadingOutlined,
-  NodeIndexOutlined,
-  PushpinOutlined,
-  ScanOutlined,
 } from '@ant-design/icons'
-import { analyzeNavigationDraft, applyNavigationDraft } from '../../api/graphGateway'
 import { positionToDto } from '../../api/graphMapper'
-import { buildCorridorDraft } from '../../utils/navigationDraft'
 
 import { useFloorStore } from '../../store/useFloorStore'
 import { useGraphStore } from '../../store/useGraphStore'
 import { usePoiStore } from '../../store/usePoiStore'
+import { useEditorToolStore } from '../../store/useEditorToolStore'
 import { CanvasSidebar } from './CanvasSidebar'
 import { CalibrationDistanceModal } from '../../components/canvas/CalibrationDistanceModal'
 import { CalibrationLayer } from '../../components/canvas/CalibrationLayer'
@@ -49,24 +42,18 @@ import { useCanvasTool } from '../../hooks/useCanvasTool'
 import { useWallMask } from '../../hooks/useWallMask'
 import { useElementSize } from '../../hooks/useElementSize'
 import { useImage } from '../../hooks/useImage'
-import type { FloorPublishStatus } from '../../types/floor'
 import type { PercentPoint } from '../../types/geometry'
-import type { Connector, GraphDraft, GraphEdge, GraphNode } from '../../types/graph'
+import type { Connector, GraphEdge, GraphNode } from '../../types/graph'
 import type { Poi } from '../../types/poi'
 import { distanceInMapUnits, findIsolatedNodeIds } from '../../utils/graphGeometry'
-import { suggestEdges, type EdgeSuggestion } from '../../utils/graphSuggestions'
 import { planPoiPromotions } from '../../utils/poiPromotion'
-import { findWallCrossingEdgeIds, segmentCrossesWall } from '../../utils/wallMask'
+import { findWallCrossingEdgeIds } from '../../utils/wallMask'
 
 const EMPTY_NODES: GraphNode[] = []
 const EMPTY_EDGES: GraphEdge[] = []
 const EMPTY_POIS: Poi[] = []
 const EMPTY_CONNECTORS: Connector[] = []
 const { Text: AntText } = Typography
-
-function floorStatusColor(status: FloorPublishStatus) {
-  return status === 'published' ? 'green' : 'gold'
-}
 
 export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
   const selectedFloor = useFloorStore((state) => state.selectedFloor)
@@ -75,9 +62,7 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
   )
   const error = useFloorStore((state) => state.error)
   const selectedFloorId = selectedFloor?.id
-  const [isGraphSaving, setIsGraphSaving] = useState(false)
   const [graphError, setGraphError] = useState<string>()
-  const [navigationDraft, setNavigationDraft] = useState<GraphDraft>()
   const floorIdRef = useRef(selectedFloorId)
   const mapWidth = selectedFloor?.mapWidth
   const mapHeight = selectedFloor?.mapHeight
@@ -103,8 +88,6 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [isPromoting, setIsPromoting] = useState(false)
   const [qrModalOpen, setQrModalOpen] = useState(false)
   const promotingRef = useRef(false)
-  const [suggestedEdges, setSuggestedEdges] = useState<EdgeSuggestion[]>([])
-  const createEdge = useGraphStore((state) => state.createEdge)
   const createNode = useGraphStore((state) => state.createNode)
   const moveNode = useGraphStore((state) => state.moveNode)
   const floors = useFloorStore((state) => state.floors)
@@ -159,32 +142,11 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [draftFloorId, setDraftFloorId] = useState(selectedFloorId)
   if (draftFloorId !== selectedFloorId) {
     setDraftFloorId(selectedFloorId)
-    setNavigationDraft(undefined)
-    setSuggestedEdges([])
     setGraphError(undefined)
   }
 
   const handleMovePoi = (poiId: string, to: PercentPoint) => {
     if (selectedFloorId) movePoi(selectedFloorId, poiId, to)
-  }
-
-  function handleSuggestEdges() {
-    if (!selectedFloor) return
-    const found = suggestEdges(currentFloorNodes, currentFloorEdges, { width: selectedFloor.mapWidth, height: selectedFloor.mapHeight }, {
-      isBlocked: wallMask ? (a, b) => segmentCrossesWall(wallMask, a, b) : undefined,
-    })
-    setSuggestedEdges(found)
-    if (!wallMask) message.warning('Chưa đọc được ảnh sơ đồ nên gợi ý không tránh được tường — hãy kiểm tra kỹ.')
-    else if (found.length === 0) message.info('Không còn cặp node nào nối được mà không xuyên tường (hoặc đã nối liền).')
-  }
-
-  function handleApplySuggestedEdges() {
-    if (!selectedFloorId) return
-    const existing = new Set(currentFloorNodes.map((node) => node.id))
-    for (const edge of suggestedEdges) {
-      if (existing.has(edge.fromNodeId) && existing.has(edge.toNodeId)) createEdge(selectedFloorId, edge.fromNodeId, edge.toNodeId)
-    }
-    setSuggestedEdges([])
   }
 
   function handleDeleteCrossingEdges() {
@@ -243,44 +205,6 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
     void deleteAllPois(selectedFloorId)
   }
 
-  async function handleAnalyzeNavigation() {
-    if (!selectedFloor) return
-    const floor = selectedFloor
-    const size = { width: floor.mapWidth, height: floor.mapHeight }
-    setIsGraphSaving(true); setGraphError(undefined)
-    try {
-      const draft = await analyzeNavigationDraft(floor.id, size)
-      if (floorIdRef.current !== floor.id) return
-      if (draft.nodes.length === 0) {
-        setNavigationDraft(buildCorridorDraft(draft.warnings))
-        message.warning('AI không nhận diện được node nào. Đã tạo bản nháp mẫu dọc hành lang — hãy kéo các điểm vàng cho khớp sơ đồ rồi bấm Áp dụng nháp.', 6)
-        return
-      }
-      setNavigationDraft(draft)
-      message.info(`Đã tạo ${draft.nodes.length} node và ${draft.edges.length} đường đi nháp. Hãy kiểm tra trước khi áp dụng.`)
-    } catch (reason) {
-      if (floorIdRef.current !== floor.id) return
-      setNavigationDraft(buildCorridorDraft())
-      message.warning(`Analyze điều hướng chưa trả về node (${(reason as Error).message}). Đã tạo bản nháp mẫu dọc hành lang để bạn chỉnh sửa ngay.`, 6)
-    } finally { setIsGraphSaving(false) }
-  }
-  async function handleApplyNavigationDraft() {
-    if (!selectedFloor || !navigationDraft) return
-    const floorId = selectedFloor.id
-    const size = { width: selectedFloor.mapWidth, height: selectedFloor.mapHeight }
-    setIsGraphSaving(true)
-    try {
-      const result = await applyNavigationDraft(floorId, size, navigationDraft)
-      await loadFloorGraph(floorId, size)
-      if (floorIdRef.current !== floorId) return
-      setNavigationDraft(undefined)
-      message.success(`Đã áp dụng ${result.nodesCreated} Node và ${result.edgesCreated} đường đi.`)
-    } catch (reason) { setGraphError((reason as Error).message) } finally { setIsGraphSaving(false) }
-  }
-  function moveDraftNode(id: string, to: PercentPoint) {
-    setNavigationDraft((draft) => draft && { ...draft, nodes: draft.nodes.map((node) => node.id === id ? { ...node, ...to } : node) })
-  }
-
   const stageSize = useMemo(() => {
     if (!selectedFloor) {
       return { width: 0, height: 0 }
@@ -300,6 +224,7 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
 
   const canRenderStage = stageSize.width > 0 && stageSize.height > 0
 
+  const setTool = useEditorToolStore((state) => state.setTool)
   const tool = useCanvasTool({
     floorId: selectedFloorId,
     stageSize,
@@ -320,11 +245,13 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
     onError: setGraphError,
   })
 
-  const nodeById = useMemo(() => new Map(currentFloorNodes.map((node) => [node.id, node])), [currentFloorNodes])
-  const draftNodeById = useMemo(
-    () => new Map((navigationDraft?.nodes ?? []).map((node) => [node.id, node])),
-    [navigationDraft],
+  // Vị trí node đang kéo (%): edge và đường nối POI bám theo ngay khi kéo, chưa chờ lưu.
+  const [liveNodePos, setLiveNodePos] = useState<Record<string, PercentPoint>>({})
+  const displayNodes = useMemo(
+    () => currentFloorNodes.map((node) => (liveNodePos[node.id] ? { ...node, ...liveNodePos[node.id] } : node)),
+    [currentFloorNodes, liveNodePos],
   )
+  const nodeById = useMemo(() => new Map(displayNodes.map((node) => [node.id, node])), [displayNodes])
   // Một node lẻ loi là bình thường (mới đặt); từ 2 node trở lên, node chưa nối edge sẽ bị tô đỏ.
   const isolatedNodeIds = useMemo(
     () => (currentFloorNodes.length > 1 ? findIsolatedNodeIds(currentFloorNodes, currentFloorEdges) : undefined),
@@ -355,7 +282,7 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
       const edges = await calibrateFloor(selectedFloor!.id, { pointA, pointB, realDistanceMeters })
       message.success(`Đã hiệu chuẩn tầng, tính lại độ dài ${edges} edge.`)
       tool.clearCalibration()
-      tool.changeMode('node')
+      setTool('node')
       return true
     } catch (reason) {
       message.error((reason as Error).message)
@@ -382,73 +309,21 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
           <div className="canvas-toolbar">
             <div>
               <strong>{selectedFloor.name}</strong>
-              <Tag color={floorStatusColor(selectedFloor.publishStatus)}>
-                {selectedFloor.publishStatus}
-              </Tag>
               <span>
                 {selectedFloor.mapWidth} x {selectedFloor.mapHeight}
               </span>
             </div>
             <Space size="middle">
-              {(pendingOps > 0 || poiPendingOps > 0 || isGraphSaving) && (
+              {(pendingOps > 0 || poiPendingOps > 0) && (
                 <Tag icon={<LoadingOutlined spin />} color="processing">
                   Đang lưu...
                 </Tag>
               )}
-              <span>{currentFloorNodes.length} Node</span>
-              <span>{currentFloorEdges.length} Edge</span>
-              <span>{pois.length} POI</span>
             </Space>
           </div>
 
           <fieldset disabled={readOnly} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
           <Space wrap style={{ padding: '0 16px 12px' }}>
-            <Radio.Group
-              value={tool.mode}
-              onChange={(event) => tool.changeMode(event.target.value)}
-              optionType="button"
-              buttonStyle="solid"
-            >
-              <Radio.Button value="node">
-                <NodeIndexOutlined /> Vẽ tuyến
-              </Radio.Button>
-              <Radio.Button value="edge">
-                <LinkOutlined /> Edge
-              </Radio.Button>
-              <Radio.Button value="poi">
-                <PushpinOutlined /> POI
-              </Radio.Button>
-              <Radio.Button value="calibrate">
-                <ColumnWidthOutlined /> Hiệu chuẩn
-              </Radio.Button>
-            </Radio.Group>
-            <Button icon={<ScanOutlined />} onClick={() => void handleAnalyzeNavigation()} loading={isGraphSaving} disabled={!selectedFloor.mapImageUrl}>
-              Analyze điều hướng
-            </Button>
-            <Button icon={<ThunderboltOutlined />} onClick={handleSuggestEdges} disabled={currentFloorNodes.length < 2}>
-              Gợi ý nối edge
-            </Button>
-            {suggestedEdges.length > 0 && (
-              <>
-                <Tag color="green">Gợi ý: {suggestedEdges.length} edge (nét đứt xanh) — kiểm tra không xuyên tường</Tag>
-                <Button type="primary" onClick={handleApplySuggestedEdges}>Áp dụng gợi ý</Button>
-                <Button onClick={() => setSuggestedEdges([])}>Bỏ gợi ý</Button>
-              </>
-            )}
-            {navigationDraft && <>
-              {navigationDraft.warnings.length > 0 && (
-                <Alert
-                  type="warning"
-                  showIcon
-                  style={{ width: '100%' }}
-                  message="Cảnh báo từ Analyze điều hướng"
-                  description={<ul style={{ margin: 0, paddingLeft: 18 }}>{navigationDraft.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
-                />
-              )}
-              <Tag color="gold">Nháp: {navigationDraft.nodes.length} Node · {navigationDraft.edges.length} đường</Tag>
-              <Button type="primary" onClick={() => void handleApplyNavigationDraft()} loading={isGraphSaving}>Áp dụng nháp</Button>
-              <Button onClick={() => setNavigationDraft(undefined)}>Bỏ nháp</Button>
-            </>}
             {tool.mode === 'node' && (
               <>
                 <Select
@@ -588,26 +463,31 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
                     <GraphEdgesLayer
                       edges={currentFloorEdges}
                       nodeById={nodeById}
-                      draftEdges={navigationDraft?.edges}
-                      draftNodeById={draftNodeById}
                       flaggedEdgeIds={crossingEdgeIds}
-                      suggestions={suggestedEdges}
                       size={stageSize}
                     />
                     <ConnectorsLayer floorId={selectedFloor.id} connectors={connectors} nodeById={nodeById} size={stageSize} />
                     <GraphNodesLayer
-                      nodes={currentFloorNodes}
+                      nodes={displayNodes}
                       selectedNodeId={selectedNodeId}
                       edgeStartNodeId={tool.edgeStartNodeId}
                       isolatedNodeIds={isolatedNodeIds}
-                      draftNodes={navigationDraft?.nodes}
                       size={stageSize}
                       onNodeClick={tool.handleNodeClick}
                       onNodeDelete={readOnly ? () => undefined : tool.handleNodeDelete}
-                      onNodeMove={readOnly ? undefined : (nodeId, to) => selectedFloorId && moveNode(selectedFloorId, nodeId, to)}
-                      onDraftNodeMove={moveDraftNode}
+                      onNodeMove={readOnly ? undefined : (nodeId, to) => {
+                          if (selectedFloorId) moveNode(selectedFloorId, nodeId, to)
+                          setLiveNodePos((current) => {
+                            const { [nodeId]: _done, ...rest } = current
+                            return rest
+                          })
+                        }}
+                      onNodeDragMove={readOnly ? undefined : (nodeId, to) => setLiveNodePos((current) => ({ ...current, [nodeId]: to }))}
                     />
-                    <PoiMarkersLayer pois={pois} nodes={currentFloorNodes} size={stageSize} selectedPoiId={editingPoiId} onMove={readOnly ? () => undefined : handleMovePoi} onSelect={setEditingPoiId} />
+                    <PoiMarkersLayer pois={pois} nodes={displayNodes} size={stageSize} selectedPoiId={editingPoiId} onMove={readOnly ? () => undefined : handleMovePoi} onSelect={(poiId) => {
+                      if (!readOnly && tool.mode === 'delete' && selectedFloorId) deletePoi(selectedFloorId, poiId)
+                      else setEditingPoiId(poiId)
+                    }} />
                     <CalibrationLayer points={tool.calibrationPoints} size={stageSize} />
                   </Stage>
                   {editingPoi && (
