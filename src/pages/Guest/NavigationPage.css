@@ -433,3 +433,37 @@
 .navigation-page__panel .ant-steps-item-description {
   overflow-wrap: anywhere;
 }
+
+/* ── ĐIỆN THOẠI THẬT: bỏ khung giả lập, dùng toàn màn hình ── */
+@media (max-width: 520px) {
+  .navigation-page {
+    width: 100%;
+    padding: 0;
+  }
+
+  .phone-mockup-wrapper {
+    padding: 0;
+    display: block;
+  }
+
+  .phone-device {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* Đồng hồ, "5G" và dynamic island chỉ là hình minh hoạ của khung giả lập. */
+  .phone-status-bar,
+  .phone-dynamic-island {
+    display: none;
+  }
+
+  .phone-screen {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
