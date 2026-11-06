@@ -36,6 +36,16 @@ const BuildingListPage = lazy(() =>
     default: module.BuildingListPage,
   })),
 )
+const Building2DViewerPage = lazy(() =>
+  import('../pages/BuildingOwner/Building2DViewerPage').then((module) => ({
+    default: module.Building2DViewerPage,
+  })),
+)
+const BuildingOverviewPage = lazy(() =>
+  import('../pages/BuildingOwner/BuildingOverviewPage').then((module) => ({
+    default: module.BuildingOverviewPage,
+  })),
+)
 const BuildingDetailPage = lazy(() =>
   import('../pages/BuildingOwner/BuildingDetailPage').then((module) => ({
     default: module.BuildingDetailPage,
@@ -67,6 +77,12 @@ const StoreOwnerManagementPage = lazy(() =>
 const GuestMapPage = lazy(() =>
   import('../pages/Guest/GuestMapPage').then((module) => ({
     default: module.GuestMapPage,
+  })),
+)
+
+const NavigationPage = lazy(() =>
+  import('../pages/Guest/NavigationPage').then((module) => ({
+    default: module.NavigationPage,
   })),
 )
 
@@ -115,6 +131,8 @@ export const router = createBrowserRouter([
   { path: 'account', element: lazyElement(<AccountHomePage />) },
   { path: 'workspace/choose', element: lazyElement(<AccountHomePage />) },
   { path: 'profile', element: lazyElement(<ProfilePage />) },
+  { path: 'navigate', element: lazyElement(<NavigationPage />) },
+  { path: 'navigate/:buildingId', element: lazyElement(<NavigationPage />) },
 
   // ── Building Owner section with sidebar ──
   {
@@ -126,6 +144,8 @@ export const router = createBrowserRouter([
           { path: 'owner/dashboard', element: lazyElement(<OwnerDashboardPage />) },
           { path: 'owner/buildings', element: lazyElement(<BuildingListPage />) },
           { path: 'owner/buildings/:buildingId', element: lazyElement(<BuildingDetailPage />) },
+          { path: 'owner/buildings/:buildingId/2d', element: lazyElement(<Building2DViewerPage />) },
+          { path: 'owner/buildings/:buildingId/overview', element: lazyElement(<BuildingOverviewPage />) },
           { path: 'owner/staff', element: lazyElement(<OwnerStaffPage />) },
           { path: 'owner/managers', element: lazyElement(<OwnerStaffPage />) },
           { path: 'owner/store-owners', element: lazyElement(<OwnerStaffPage />) },
@@ -149,6 +169,7 @@ export const router = createBrowserRouter([
         children: [
           { path: 'manager', element: lazyElement(<ManagerLayout />) },
           { path: 'manager/store-owners', element: lazyElement(<StoreOwnerManagementPage />) },
+          { path: 'manager/navigation-test/:buildingId', element: lazyElement(<NavigationPage />) },
         ],
       },
       {

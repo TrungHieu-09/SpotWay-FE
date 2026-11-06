@@ -14,7 +14,7 @@ import {
 } from 'react-konva'
 import type { Floor } from '../../types/floor'
 import type { FloorGeometry, Point, Room } from '../../types/geometry'
-import type { Poi, PoiType } from '../../types/poi'
+import { poiVisualType, type Poi, type PoiType } from '../../types/poi'
 import type { RouteResult } from '../../types/route'
 import type { Destination } from '../../types/route'
 import type { Store } from '../../types/store'
@@ -32,6 +32,7 @@ type FocusTarget = {
 
 type MapViewer2DProps = {
   floor?: Floor
+  pois?: Poi[]
   geometry?: FloorGeometry
   stores: Store[]
   destinations: Destination[]
@@ -162,6 +163,7 @@ function getRouteSegment(route: RouteResult | null, floorId?: string) {
 
 export function MapViewer2D({
   floor,
+  pois = [],
   geometry,
   stores,
   destinations,
@@ -284,7 +286,7 @@ export function MapViewer2D({
     )
   }
 
-  const selectedPoi = floor?.pois.find((poi) => poi.id === selectedPoiId) ?? null
+  const selectedPoi = pois.find((poi) => poi.id === selectedPoiId) ?? null
   const selectedPoiStore = selectedPoi ? getPoiStore(selectedPoi, stores) : null
   const selectedPoiScreenPosition = useMemo(() => {
     if (!floor || !selectedPoi) {
@@ -464,7 +466,7 @@ export function MapViewer2D({
                   </Group>
                 ) : null}
 
-                {floor.pois.filter((poi) => shouldShowPoi(poi.type, zoom)).map((poi) => {
+                {pois.filter((poi) => shouldShowPoi(poiVisualType(poi.category), zoom)).map((poi) => {
                   const { pixelX, pixelY } = percentToPixel(
                     poi.x,
                     poi.y,
@@ -484,7 +486,7 @@ export function MapViewer2D({
                     >
                       <Circle
                         radius={15 / totalScale}
-                        fill={poiColor(poi.type)}
+                        fill={poiColor(poiVisualType(poi.category))}
                         stroke={designTokens.surface}
                         strokeWidth={4 / totalScale}
                       />
@@ -492,7 +494,7 @@ export function MapViewer2D({
                         x={-13 / totalScale}
                         y={-5 / totalScale}
                         width={26 / totalScale}
-                        text={poiIcon(poi.type)}
+                        text={poiIcon(poiVisualType(poi.category))}
                         fontSize={9 / totalScale}
                         fontStyle="bold"
                         align="center"
@@ -513,7 +515,7 @@ export function MapViewer2D({
                 }}
               >
                 <strong>{selectedPoi.name}</strong>
-                <Tag color="blue">{selectedPoi.type}</Tag>
+                <Tag color="blue">{poiVisualType(selectedPoi.category)}</Tag>
                 {selectedPoiStore ? (
                   <AntText type="secondary">
                     {selectedPoiStore.category} - {selectedPoiStore.status}

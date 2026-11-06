@@ -7,6 +7,8 @@ type RouteMapProps = {
   routeSteps: RouteStep[]
   activeStep?: RouteStep
   destinationName?: string
+  hazardNodeIds?: string[]
+  interactiveFireMode?: boolean
   onSelectNode: (nodeId: string) => void
 }
 
@@ -15,6 +17,8 @@ export function RouteMap({
   routeSteps,
   activeStep,
   destinationName,
+  hazardNodeIds = [],
+  interactiveFireMode = false,
   onSelectNode,
 }: RouteMapProps) {
   if (!map) return <Empty description="Không có dữ liệu tầng này" />
@@ -92,6 +96,7 @@ export function RouteMap({
               key={node.id}
               className="route-map__node"
               onClick={() => onSelectNode(node.id)}
+              data-fire-mode={interactiveFireMode || undefined}
             >
               <circle
                 cx={node.x}
@@ -103,6 +108,7 @@ export function RouteMap({
                     : 'route-map__node--base'
                 }
               />
+              {hazardNodeIds.includes(node.id) && <text x={node.x} y={node.y + 5} textAnchor="middle" fontSize="14">🔥</text>}
             </g>
           )
         })}

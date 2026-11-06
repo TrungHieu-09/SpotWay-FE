@@ -1,3 +1,5 @@
+import type { HazardType } from './graph'
+
 export type PublicFloor = {
   id: string
   buildingId: string
@@ -6,6 +8,51 @@ export type PublicFloor = {
   mapImageUrl: string | null
   mapWidth: number | null
   mapHeight: number | null
+  mapUnitsPerMeter?: number | null
+  northOffsetDegrees?: number | null
+}
+
+export type NodeHazardType = HazardType
+export type VerticalLinkKind = 'ELEVATOR' | 'STAIR' | 'ESCALATOR'
+export type VerticalLinkDirection = 'UP' | 'DOWN' | 'BIDIRECTIONAL'
+
+export type VerticalLink = {
+  id?: string
+  nodeIdFrom: string
+  nodeIdTo: string
+  kind: VerticalLinkKind
+  direction?: VerticalLinkDirection
+  accessible?: boolean
+  emergencyAllowed?: boolean
+  status?: 'ACTIVE' | 'BLOCKED'
+}
+
+export type Maneuver =
+  | 'START' | 'STRAIGHT' | 'SLIGHT_LEFT' | 'SLIGHT_RIGHT'
+  | 'TURN_LEFT' | 'TURN_RIGHT' | 'U_TURN_LEFT' | 'U_TURN_RIGHT'
+  | 'ELEVATOR' | 'STAIR' | 'ESCALATOR' | 'ARRIVE' | 'ARRIVE_AT_SAFE_EXIT'
+
+export type RouteInstruction = {
+  maneuver: Maneuver
+  floorId: string
+  fromNodeId: string
+  toNodeId: string
+  distanceMeters: number
+  bearing: number | null
+  deltaBearing: number | null
+  durationSeconds: number
+  waitSeconds?: number
+  targetFloorId?: string
+  text: string
+}
+
+export type PublicQrResolution = {
+  nodeId: string
+  floorId: string
+  buildingId: string
+  x: number
+  y: number
+  label: string
 }
 
 export type PublicNode = {
@@ -15,6 +62,8 @@ export type PublicNode = {
   y: number
   type: string
   accessible: boolean
+  name?: string | null
+  hazard?: NodeHazardType
 }
 
 export type PublicStore = {
@@ -36,7 +85,15 @@ export type PublicPoi = {
 export type PublicFloorMap = {
   floor: PublicFloor
   nodes: PublicNode[]
-  edges: Array<{ id: string; fromNodeId: string; toNodeId: string; floorId: string }>
+  edges: Array<{
+    id: string
+    fromNodeId: string
+    toNodeId: string
+    floorId: string
+    accessible?: boolean
+    status?: 'ACTIVE' | 'BLOCKED'
+    hazard?: NodeHazardType
+  }>
   pois: PublicPoi[]
   stores: PublicStore[]
 }
@@ -57,14 +114,35 @@ export type RouteStep = {
   x: number
   y: number
   bearing: number | null
-  transition?: 'ELEVATOR'
+  transition?: VerticalLinkKind
   targetFloorId?: string
   instruction: string
+  maneuver?: Maneuver
+  distanceMeters?: number
+  waitSeconds?: number
 }
 
+export type RouteWarningPayload = {
+  code: string
+  severity: 'CRITICAL' | 'WARNING' | 'INFO'
+  message: string
+}
+
+export type RouteDestinationRef = { type: string; id: string; nodeId: string }
+
 export type IndoorRoute = {
+  requestedMode?: 'NORMAL' | 'EVACUATION'
+  effectiveMode?: 'NORMAL' | 'EVACUATION'
+  routeReason?: string
+  destinationCancelled?: boolean
+  requestedDestination?: RouteDestinationRef | null
+  resolvedDestination?: RouteDestinationRef | null
+  warnings?: RouteWarningPayload[]
   totalDistance: number
   estimatedDurationSeconds: number
   nodeIds: string[]
   steps: RouteStep[]
+  instructions?: RouteInstruction[]
+  walkingDurationSeconds?: number
+  transitionDurationSeconds?: number
 }

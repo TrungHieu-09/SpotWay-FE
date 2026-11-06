@@ -6,12 +6,13 @@ import {
   getFloorGeometry,
   getRoute,
 } from '../api/geometry'
-import { getNodesByFloor } from '../api/nodes'
+import { graphGateway, poiGateway } from '../api/graphGateway'
 import { getStoresByFloor } from '../api/stores'
 import type { Building } from '../types/building'
 import type { Floor } from '../types/floor'
 import type { FloorGeometry } from '../types/geometry'
-import type { Node } from '../types/node'
+import type { GraphNode } from '../types/graph'
+import type { Poi } from '../types/poi'
 import type { Destination, RouteResult } from '../types/route'
 import type { Store } from '../types/store'
 
@@ -19,7 +20,8 @@ type GuestMapState = {
   buildings: Building[]
   floors: Floor[]
   geometriesByFloorId: Record<string, FloorGeometry>
-  nodesByFloorId: Record<string, Node[]>
+  nodesByFloorId: Record<string, GraphNode[]>
+  poisByFloorId: Record<string, Poi[]>
   storesByFloorId: Record<string, Store[]>
   destinations: Destination[]
   selectedBuildingId?: string
@@ -60,8 +62,19 @@ async function loadBuildingBundle(buildingId: string) {
   const stores = await Promise.all(
     floors.map((floor) => getStoresByFloor(floor.id).catch(() => [])),
   )
-  const nodes = await Promise.all(
-    floors.map((floor) => getNodesByFloor(floor.id).catch(() => [])),
+  const graphs = await Promise.all(
+    floors.map((floor) =>
+      graphGateway
+        .fetchGraph(floor.id, { width: floor.mapWidth, height: floor.mapHeight })
+        .catch(() => ({ nodes: [] as GraphNode[], edges: [] })),
+    ),
+  )
+  const pois = await Promise.all(
+    floors.map((floor) =>
+      poiGateway
+        .fetchPois(floor.id, { width: floor.mapWidth, height: floor.mapHeight })
+        .catch(() => [] as Poi[]),
+    ),
   )
   const geometriesByFloorId = Object.fromEntries(
     geometries
@@ -72,7 +85,10 @@ async function loadBuildingBundle(buildingId: string) {
     floors.map((floor, index) => [floor.id, stores[index]]),
   )
   const nodesByFloorId = Object.fromEntries(
-    floors.map((floor, index) => [floor.id, nodes[index]]),
+    floors.map((floor, index) => [floor.id, graphs[index].nodes]),
+  )
+  const poisByFloorId = Object.fromEntries(
+    floors.map((floor, index) => [floor.id, pois[index]]),
   )
 
   return {
@@ -81,6 +97,7 @@ async function loadBuildingBundle(buildingId: string) {
     geometriesByFloorId,
     storesByFloorId,
     nodesByFloorId,
+    poisByFloorId,
   }
 }
 
@@ -89,6 +106,7 @@ export const useGuestMapStore = create<GuestMapState>((set, get) => ({
   floors: [],
   geometriesByFloorId: {},
   nodesByFloorId: {},
+  poisByFloorId: {},
   storesByFloorId: {},
   destinations: [],
   route: null,

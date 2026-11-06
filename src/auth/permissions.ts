@@ -8,7 +8,10 @@ export const PERMISSIONS = {
 export function canEditFloor(user: AuthUser | null, floor: Floor | null) {
   if (!user || !floor || user.tenantId === null) return false
   if (user.role === 'building_owner') return true
-  return user.role === 'building_manager' && Boolean(floor.areaId && user.areaIds?.includes(floor.areaId))
+  if (user.role !== 'building_manager') return false
+  // BE không có khái niệm khu vực: manager được gán theo toà nhà và BE tự chặn (403) nếu không đúng toà.
+  // Chỉ khi tầng có areaId (dữ liệu cũ) mới yêu cầu khớp khu vực.
+  return !floor.areaId || Boolean(user.areaIds?.includes(floor.areaId))
 }
 
 export function can(user: AuthUser | null, action: string, resource: string) {

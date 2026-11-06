@@ -214,6 +214,9 @@
   }
 
   .bdp-header__title {
+    font-size: 22px;
+  }
+
   .bdp-floor-list {
     grid-template-columns: 1fr;
   }

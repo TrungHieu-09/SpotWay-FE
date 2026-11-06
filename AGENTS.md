@@ -93,6 +93,14 @@ Mục tiêu: mọi người trong team (Kiệt, KDuy, Hiếu...) code các phầ
 
 Không tự đổi tên field hoặc thêm endpoint ngoài danh sách dưới đây. Nếu cần field mới, thêm vào file này trước, rồi mới code, để người khác trong team biết.
 
+## Cập nhật theo BE thật (graph v2)
+- BE lưu toạ độ Node/POI theo **pixel ảnh sơ đồ**. FE domain (store, canvas) vẫn dùng **%** (0-100); việc đổi pixel<->% chỉ xảy ra ở `src/api/graphMapper.ts` (qua `graphGateway`).
+- Graph dùng chung qua `useGraphStore`, POI qua `usePoiStore`; panel nào cần node/POI thì đọc store (`useLoadFloorData`), KHÔNG tự gọi API riêng.
+- POI tự snap vào node gần nhất: tầng phải được hiệu chuẩn (`metersPerPixel`) và có node trong bán kính snap.
+- Đã bỏ MSW/mocks và `Floor.pois`; endpoint thật xem Swagger của `SpotWay-BE`.
+
+---
+
 ## Nguyên tắc chung
 - Toạ độ (POI, Node, Edge) LUÔN lưu dạng phần trăm (0-100), KHÔNG lưu pixel tuyệt đối. Xem chi tiết ở skill `canvas-coordinate-rule`.
 - Mọi response mock trả về đúng shape TypeScript type tương ứng trong `src/types/`.

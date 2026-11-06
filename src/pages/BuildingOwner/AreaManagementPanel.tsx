@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { App as AntApp, Button, Form, Input, Modal, Popconfirm } from 'antd'
+import { Alert, App as AntApp, Button, Form, Input, Modal, Popconfirm } from 'antd'
 import {
   PlusOutlined,
   EditOutlined,
@@ -19,6 +19,8 @@ export function AreaManagementPanel({ buildingId }: { buildingId: string }) {
   const [editing, setEditing] = useState<Area | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  // BE chưa có endpoint khu vực: báo ngay trong panel, không bật toast mỗi lần mở chi tiết toà nhà.
+  const [unavailable, setUnavailable] = useState(false)
   const [form] = Form.useForm<AreaFormValues>()
   const { message } = AntApp.useApp()
 
@@ -26,8 +28,10 @@ export function AreaManagementPanel({ buildingId }: { buildingId: string }) {
     setLoading(true)
     try {
       setAreas(await getBuildingAreas(buildingId))
+      setUnavailable(false)
     } catch (error) {
-      message.error((error as Error).message)
+      if ((error as { isMissingEndpoint?: boolean }).isMissingEndpoint) setUnavailable(true)
+      else message.error((error as Error).message)
     } finally {
       setLoading(false)
     }
@@ -86,13 +90,21 @@ export function AreaManagementPanel({ buildingId }: { buildingId: string }) {
             type="primary"
             size="small"
             icon={<PlusOutlined />}
+            disabled={unavailable}
             onClick={() => openForm()}
           >
             Thêm khu vực
           </Button>
         }
       >
-        {loading ? (
+        {unavailable ? (
+          <Alert
+            type="info"
+            showIcon
+            message="Khu vực chưa khả dụng"
+            description="Máy chủ chưa có endpoint quản lý khu vực. Tính năng sẽ dùng được khi BE bổ sung."
+          />
+        ) : loading ? (
           <div className="amp-loading">
             {[1, 2, 3].map((i) => (
               <div key={i} className="amp-skeleton" />

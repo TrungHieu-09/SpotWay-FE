@@ -1,312 +1,209 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Button,
   Card,
+  Checkbox,
   Empty,
   Input,
-  List,
   message,
   Popconfirm,
-  Radio,
   Select,
   Space,
-  Spin,
-  Tabs,
   Tag,
   Typography,
 } from 'antd'
-import type Konva from 'konva'
+import { Stage } from 'react-konva'
 import {
-  Circle,
-  Image as KonvaImage,
-  Label,
-  Layer,
-  Line,
-  Rect,
-  Stage,
-  Tag as KonvaTag,
-  Text,
-} from 'react-konva'
-import {
-  BuildOutlined,
   DeleteOutlined,
+  QrcodeOutlined,
   LinkOutlined,
-  NodeIndexOutlined,
-  PushpinOutlined,
-  SaveOutlined,
-  ScanOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons'
-import {
-  createGraphEdge,
-  createGraphNode,
-  analyzeNavigationDraft,
-  applyNavigationDraft,
-  deleteGraphEdge,
-  deleteGraphNode,
-  getGraph,
-  type GraphEdge,
-  type GraphNode,
-  type GraphNodeType,
-  type NavigationDraft,
-} from '../../api/graph'
+import { positionToDto } from '../../api/graphMapper'
 
-export interface WallSegment {
-  id: string
-  floorId: string
-  x1: number
-  y1: number
-  x2: number
-  y2: number
-}
 import { useFloorStore } from '../../store/useFloorStore'
-import type { FloorPublishStatus } from '../../types/floor'
-import { percentToPixel, pixelToPercent } from '../../utils/canvasCoordinates'
-import {
-  analyzeFloorPlan,
-  getLatestFloorPlanRevision,
-  saveFloorPlanRevision,
-} from '../../api/floorPlanAnalysis'
-import { detectWallsFromFloorPlanImage } from '../../utils/wallDetection'
+import { useGraphStore } from '../../store/useGraphStore'
+import { usePoiStore } from '../../store/usePoiStore'
+import { useEditorToolStore } from '../../store/useEditorToolStore'
+import { CanvasSidebar } from './CanvasSidebar'
+import { CalibrationDistanceModal } from '../../components/canvas/CalibrationDistanceModal'
+import { CalibrationLayer } from '../../components/canvas/CalibrationLayer'
+import { QrAnchorModal } from '../../components/canvas/QrAnchorModal'
+import { ConnectorSuggestModal } from '../../components/canvas/ConnectorSuggestModal'
+import { ConnectorFormModal } from '../../components/canvas/ConnectorFormModal'
+import { ConnectorsLayer } from '../../components/canvas/ConnectorsLayer'
+import { GraphEdgesLayer } from '../../components/canvas/GraphEdgesLayer'
+import { GraphNodesLayer } from '../../components/canvas/GraphNodesLayer'
+import { MapBackgroundLayer } from '../../components/canvas/MapBackgroundLayer'
+import { PoiEditPopover } from '../../components/canvas/PoiEditPopover'
+import { PoiMarkersLayer } from '../../components/canvas/PoiMarkersLayer'
+import { useCanvasTool } from '../../hooks/useCanvasTool'
+import { useWallMask } from '../../hooks/useWallMask'
+import { useElementSize } from '../../hooks/useElementSize'
+import { useImage } from '../../hooks/useImage'
+import type { PercentPoint } from '../../types/geometry'
+import type { Connector, GraphEdge, GraphNode } from '../../types/graph'
+import type { Poi } from '../../types/poi'
+import { distanceInMapUnits, findIsolatedNodeIds } from '../../utils/graphGeometry'
+import { planPoiPromotions } from '../../utils/poiPromotion'
+import { findWallCrossingEdgeIds } from '../../utils/wallMask'
 
+const EMPTY_NODES: GraphNode[] = []
+const EMPTY_EDGES: GraphEdge[] = []
+const EMPTY_POIS: Poi[] = []
+const EMPTY_CONNECTORS: Connector[] = []
 const { Text: AntText } = Typography
 
-type ImageStatus = 'idle' | 'loading' | 'loaded' | 'failed'
-
-function floorStatusColor(status: FloorPublishStatus) {
-  return status === 'published' ? 'green' : 'gold'
-}
-
-function useImage(src?: string | null) {
-  const [image, setImage] = useState<HTMLImageElement | null>(null)
-  const [status, setStatus] = useState<ImageStatus>('idle')
-
-  useEffect(() => {
-    const normalizedSrc = src?.trim()
-
-    if (!normalizedSrc) {
-      setImage(null)
-      setStatus('idle')
-      return
-    }
-
-    const nextImage = new window.Image()
-    setImage(null)
-    setStatus('loading')
-    nextImage.onload = () => {
-      setImage(nextImage)
-      setStatus('loaded')
-    }
-    nextImage.onerror = () => {
-      setImage(null)
-      setStatus('failed')
-    }
-    nextImage.src = normalizedSrc
-  }, [src])
-
-  return { image, status }
-}
-
-function useElementSize<T extends HTMLElement>(isEnabled: boolean) {
-  const ref = useRef<T | null>(null)
-  const [size, setSize] = useState({ width: 0, height: 0 })
-
-  useEffect(() => {
-    const element = ref.current
-    if (!isEnabled || !element) {
-      setSize({ width: 0, height: 0 })
-      return
-    }
-
-    const updateSize = (entry: ResizeObserverEntry) => {
-      setSize({
-        width: Math.floor(entry.contentRect.width),
-        height: Math.floor(entry.contentRect.height),
-      })
-    }
-
-    const observer = new ResizeObserver(([entry]) => updateSize(entry))
-    observer.observe(element)
-
-    const bounds = element.getBoundingClientRect()
-    setSize({ width: Math.floor(bounds.width), height: Math.floor(bounds.height) })
-
-    return () => observer.disconnect()
-  }, [isEnabled])
-
-  return [ref, size] as const
-}
-
-export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolean } = {}) {
+export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
   const selectedFloor = useFloorStore((state) => state.selectedFloor)
   const [stageHostRef, stageHostSize] = useElementSize<HTMLDivElement>(
     Boolean(selectedFloor),
   )
-  const pois = useFloorStore((state) => state.pois)
-  const isPoiSaving = useFloorStore((state) => state.isPoiSaving)
   const error = useFloorStore((state) => state.error)
-  const addPoi = useFloorStore((state) => state.addPoi)
-  const movePoi = useFloorStore((state) => state.movePoi)
-  const removePoi = useFloorStore((state) => state.removePoi)
   const selectedFloorId = selectedFloor?.id
-  const [editorMode, setEditorMode] = useState<'poi' | 'node' | 'edge' | 'wall'>('node')
-  const [nodeType, setNodeType] = useState<GraphNodeType>('NORMAL')
-  const [nodeName, setNodeName] = useState('')
-  const [nodes, setNodes] = useState<GraphNode[]>([])
-  const [edges, setEdges] = useState<GraphEdge[]>([])
-  const [edgeStartNodeId, setEdgeStartNodeId] = useState<string>()
-  const [selectedNodeId, setSelectedNodeId] = useState<string>()
-  const [routeAnchorNodeId, setRouteAnchorNodeId] = useState<string>()
-  const [walls, setWalls] = useState<WallSegment[]>([])
-  const [wallStart, setWallStart] = useState<{ x: number; y: number } | null>(null)
-  const [previewPointer, setPreviewPointer] = useState<{ x: number; y: number } | null>(null)
-  const [selectedWallId, setSelectedWallId] = useState<string>()
-  const [isGraphSaving, setIsGraphSaving] = useState(false)
-  const [isSavingWalls, setIsSavingWalls] = useState(false)
   const [graphError, setGraphError] = useState<string>()
-  const [navigationDraft, setNavigationDraft] = useState<NavigationDraft>()
+  const floorIdRef = useRef(selectedFloorId)
+  const mapWidth = selectedFloor?.mapWidth
+  const mapHeight = selectedFloor?.mapHeight
+
+  // Graph (node/edge/selection/optimistic) nằm trong useGraphStore
+  const currentFloorNodes = useGraphStore((state) => (selectedFloorId && state.nodesByFloor[selectedFloorId]) || EMPTY_NODES)
+  const currentFloorEdges = useGraphStore((state) => (selectedFloorId && state.edgesByFloor[selectedFloorId]) || EMPTY_EDGES)
+  const selectedNodeId = useGraphStore((state) => state.selectedNodeId)
+  const pendingOps = useGraphStore((state) => state.pendingOps)
+  const graphStoreError = useGraphStore((state) => state.error)
+  const loadFloorGraph = useGraphStore((state) => state.loadFloorGraph)
+  const deleteEdge = useGraphStore((state) => state.deleteEdge)
+  const deleteAllNodes = useGraphStore((state) => state.deleteAllNodes)
+  const selectNode = useGraphStore((state) => state.selectNode)
+  const buildingId = selectedFloor?.buildingId
+  const connectors = useGraphStore((state) => (buildingId && state.connectorsByBuilding[buildingId]) || EMPTY_CONNECTORS)
+  const loadConnectors = useGraphStore((state) => state.loadConnectors)
+  const clearConnectors = useGraphStore((state) => state.clearConnectors)
+  const createConnector = useGraphStore((state) => state.createConnector)
+  const deleteConnector = useGraphStore((state) => state.deleteConnector)
+  const updateConnector = useGraphStore((state) => state.updateConnector)
+  const [connectorModalOpen, setConnectorModalOpen] = useState(false)
+  const [suggestModalOpen, setSuggestModalOpen] = useState(false)
+  const [isPromoting, setIsPromoting] = useState(false)
+  const [qrModalOpen, setQrModalOpen] = useState(false)
+  const promotingRef = useRef(false)
+  const createNode = useGraphStore((state) => state.createNode)
+  const moveNode = useGraphStore((state) => state.moveNode)
+  const floors = useFloorStore((state) => state.floors)
+  const calibrateFloor = useFloorStore((state) => state.calibrateFloor)
+  const [editingPoiId, setEditingPoiId] = useState<string>()
+
+  // POI là entity riêng trong usePoiStore (tự snap vào node gần nhất khi tạo/kéo)
+  const pois = usePoiStore((state) => (selectedFloorId && state.poisByFloor[selectedFloorId]) || EMPTY_POIS)
+  const poiPendingOps = usePoiStore((state) => state.pendingOps)
+  const poiStoreError = usePoiStore((state) => state.error)
+  const loadFloorPois = usePoiStore((state) => state.loadFloorPois)
+  const createPoi = usePoiStore((state) => state.createPoi)
+  const movePoi = usePoiStore((state) => state.movePoi)
+  const deletePoi = usePoiStore((state) => state.deletePoi)
+  const deleteAllPois = usePoiStore((state) => state.deleteAllPois)
+  const updatePoiDetails = usePoiStore((state) => state.updatePoiDetails)
   const mapImageUrl = selectedFloor?.mapImageUrl?.trim() || null
   const mapImage = useImage(mapImageUrl)
+  const wallMask = useWallMask(mapImageUrl)
+
+  // Graph nằm trong useGraphStore theo tầng; rời tầng thì dọn để dữ liệu không lọt sang tầng khác
+  useEffect(() => {
+    if (!selectedFloorId || !mapWidth || !mapHeight) return
+    void loadFloorGraph(selectedFloorId, { width: mapWidth, height: mapHeight })
+  }, [selectedFloorId, mapWidth, mapHeight, loadFloorGraph])
 
   useEffect(() => {
-    if (!selectedFloorId) {
-      setNodes([])
-      setEdges([])
-      setWalls([])
-      return
-    }
-    getGraph(selectedFloorId)
-      .then(({ nodes: nextNodes, edges: nextEdges }) => {
-        setNodes(Array.isArray(nextNodes) ? nextNodes : [])
-        setEdges(Array.isArray(nextEdges) ? nextEdges : [])
-        setEdgeStartNodeId(undefined)
-        setSelectedNodeId(undefined)
-        setRouteAnchorNodeId(undefined)
-      })
-      .catch((reason: Error) => setGraphError(reason.message))
+    if (!selectedFloorId || !mapWidth || !mapHeight) return
+    void loadFloorPois(selectedFloorId, { width: mapWidth, height: mapHeight })
+  }, [selectedFloorId, mapWidth, mapHeight, loadFloorPois])
 
-    // Only a persisted server revision may initialize the editor.  Restoring
-    // browser-local walls made a newly uploaded, unanalyzed plan look as if
-    // it had already been processed by the AI.
-    getLatestFloorPlanRevision(selectedFloorId)
-      .then((revision) => {
-        const draftWalls = revision?.editorState?.walls
-        if (Array.isArray(draftWalls) && draftWalls.length > 0) {
-          const loaded: WallSegment[] = draftWalls.map((w) => ({
-            ...w,
-            floorId: selectedFloorId,
-          }))
-          setWalls(loaded)
-          return
-        }
-        setWalls([])
-      })
-      .catch(() => setWalls([]))
+  // Connector theo toà nhà (đổi tầng trong cùng toà không cần nạp lại)
+  useEffect(() => {
+    if (!buildingId) return
+    void loadConnectors(buildingId)
+    return () => clearConnectors(buildingId)
+  }, [buildingId, loadConnectors, clearConnectors])
 
-    setWallStart(null)
-    setPreviewPointer(null)
-    setSelectedWallId(undefined)
+  useEffect(() => {
+    if (graphStoreError) message.error(graphStoreError)
+  }, [graphStoreError])
+
+  useEffect(() => {
+    if (poiStoreError) message.error(poiStoreError)
+  }, [poiStoreError])
+
+  useEffect(() => {
+    floorIdRef.current = selectedFloorId
   }, [selectedFloorId])
 
-  function saveWalls(nextWalls: WallSegment[]) {
-    setWalls(nextWalls)
-    if (selectedFloor) {
-      try {
-        localStorage.setItem(`spotway.walls.${selectedFloor.id}`, JSON.stringify(nextWalls))
-      } catch {}
-    }
-  }
-
-  function handleDeleteWall(wallId: string) {
-    const next = walls.filter((w) => w.id !== wallId)
-    saveWalls(next)
-    if (selectedWallId === wallId) setSelectedWallId(undefined)
-  }
-
-  function handleClearWalls() {
-    saveWalls([])
-    setWallStart(null)
-    setPreviewPointer(null)
-    setSelectedWallId(undefined)
-  }
-
-  async function handleAutoExtractWallsFromImage() {
-    if (!selectedFloor?.mapImageUrl) return
-    setIsGraphSaving(true)
+  // Đổi tầng: bỏ bản nháp điều hướng và lỗi của tầng cũ (điều chỉnh state ngay trong render).
+  const [draftFloorId, setDraftFloorId] = useState(selectedFloorId)
+  if (draftFloorId !== selectedFloorId) {
+    setDraftFloorId(selectedFloorId)
     setGraphError(undefined)
+  }
+
+  const handleMovePoi = (poiId: string, to: PercentPoint) => {
+    if (selectedFloorId) movePoi(selectedFloorId, poiId, to)
+  }
+
+  function handleDeleteCrossingEdges() {
+    if (!selectedFloorId) return
+    crossingEdgeIds?.forEach((edgeId) => deleteEdge(selectedFloorId, edgeId))
+  }
+
+  /**
+   * Một yêu cầu xoá cả tầng: BE gỡ node, edge, POI và connector gắn vào trong một giao dịch (xoá từng node sẽ
+   * khoá dòng tầng mỗi lần và quá hạn). Xong thì nạp lại POI/connector vì chúng đã đổi theo.
+   * Cửa hàng và QR anchor gắn vào node vẫn chặn: BE từ chối và lỗi hiện ra, node được khôi phục.
+   */
+  async function handleDeleteAllNodes() {
+    if (!selectedFloor) return
+    const floor = selectedFloor
+    setEditingPoiId(undefined)
+    const deleted = await deleteAllNodes(floor.id)
+    tool.resetNodeContext()
+    if (!deleted) return
+    void loadFloorPois(floor.id, { width: floor.mapWidth, height: floor.mapHeight })
+    if (floor.buildingId) void loadConnectors(floor.buildingId)
+  }
+
+  /**
+   * POI thang máy / lối ra → thêm node cùng loại tại chỗ POI (nối edge tới node hành lang POI đang gắn), rồi cho POI
+   * snap lại vào node mới. Từng POI một: chờ node có id thật trước khi gắn POI, và tránh dồn giao dịch lên BE.
+   */
+  async function handlePromotePois() {
+    if (!selectedFloorId || promotingRef.current) return
+    promotingRef.current = true
+    setIsPromoting(true)
+    const floorId = selectedFloorId
     try {
-      let detectedWalls: WallSegment[] = []
-      try {
-        const revision = await analyzeFloorPlan(selectedFloor.id)
-        if (revision.editorState.walls && revision.editorState.walls.length > 0) {
-          detectedWalls = revision.editorState.walls.map((wall) => ({
-            ...wall,
-            floorId: selectedFloor.id,
-          }))
-        }
-      } catch {
-        // Fallback to client-side extraction using canvas image
+      let created = 0
+      // Tính lại kế hoạch từ store sau mỗi POI để không dựa vào ảnh chụp cũ (tránh tạo trùng).
+      for (let guard = 0; guard < 100; guard += 1) {
+        const plan = planPoiPromotions(usePoiStore.getState().poisByFloor[floorId] ?? [], useGraphStore.getState().nodesByFloor[floorId] ?? [])[0]
+        if (!plan) break
+        createNode(floorId, { ...plan.at, name: plan.name, type: plan.nodeType, accessible: true }, { linkFromNodeId: plan.anchorNodeId ?? undefined })
+        await useGraphStore.getState().flush()
+        movePoi(floorId, plan.poiId, plan.at)
+        await usePoiStore.getState().flush()
+        created += 1
       }
-
-      if (detectedWalls.length === 0 && selectedFloor.mapImageUrl) {
-        const clientWalls = await detectWallsFromFloorPlanImage(selectedFloor.mapImageUrl, selectedFloor.id)
-        detectedWalls = clientWalls
-      }
-
-      if (detectedWalls.length > 0) {
-        saveWalls(detectedWalls)
-        message.success(`Đã tự động nhận diện và dựng ${detectedWalls.length} vách tường!`)
-        // Auto-persist draft to backend revision
-        try {
-          await saveFloorPlanRevision(selectedFloor.id, { walls: detectedWalls })
-        } catch {}
-      } else {
-        message.warning('Không tìm thấy vách tường rõ nét trên sơ đồ.')
-      }
-      setWallStart(null)
-    } catch (reason) {
-      setGraphError((reason as Error).message)
+      selectNode(null)
+      if (created > 0) message.success(`Đã tạo node cho ${created} POI. Kiểm tra các edge nối vào hành lang rồi tạo connector.`)
     } finally {
-      setIsGraphSaving(false)
+      promotingRef.current = false
+      setIsPromoting(false)
     }
   }
 
-  async function handleAnalyzeNavigation() {
-    if (!selectedFloor) return
-    setIsGraphSaving(true); setGraphError(undefined)
-    try {
-      const draft = await analyzeNavigationDraft(selectedFloor.id)
-      setNavigationDraft(draft)
-      message.info(`Đã tạo ${draft.nodes.length} node và ${draft.edges.length} đường đi nháp. Hãy kiểm tra trước khi áp dụng.`)
-    } catch (reason) { setGraphError((reason as Error).message) } finally { setIsGraphSaving(false) }
-  }
-  async function handleApplyNavigationDraft() {
-    if (!selectedFloor || !navigationDraft) return
-    setIsGraphSaving(true)
-    try {
-      const result = await applyNavigationDraft(selectedFloor.id, navigationDraft)
-      const graph = await getGraph(selectedFloor.id); setNodes(graph.nodes); setEdges(graph.edges); setNavigationDraft(undefined)
-      message.success(`Đã áp dụng ${result.nodesCreated} Node và ${result.edgesCreated} đường đi.`)
-    } catch (reason) { setGraphError((reason as Error).message) } finally { setIsGraphSaving(false) }
-  }
-  function moveDraftNode(id: string, x: number, y: number) {
-    setNavigationDraft((draft) => draft && { ...draft, nodes: draft.nodes.map((node) => node.id === id ? { ...node, x, y } : node) })
-  }
-
-  async function handleSaveWallsDraft() {
-    if (!selectedFloor) return
-    setIsSavingWalls(true)
-    try {
-      await saveFloorPlanRevision(selectedFloor.id, {
-        walls,
-        updatedAt: new Date().toISOString(),
-      })
-      message.success('Đã lưu bản vẽ vách tường thành công! Mô hình 3D sẽ tự động cập nhật.')
-    } catch (err) {
-      message.error((err as Error).message || 'Không thể lưu bản vẽ vách tường')
-    } finally {
-      setIsSavingWalls(false)
-    }
+  function handleDeleteAllPois() {
+    if (!selectedFloorId) return
+    setEditingPoiId(undefined)
+    void deleteAllPois(selectedFloorId)
   }
 
   const stageSize = useMemo(() => {
@@ -328,6 +225,43 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
 
   const canRenderStage = stageSize.width > 0 && stageSize.height > 0
 
+  const setTool = useEditorToolStore((state) => state.setTool)
+  const tool = useCanvasTool({
+    floorId: selectedFloorId,
+    stageSize,
+    onAddPoi: (at) => {
+      if (readOnly || !selectedFloorId) return
+      if (selectedFloor?.metersPerPixel == null) {
+        message.warning('Tầng chưa hiệu chuẩn tỉ lệ: BE cần tỉ lệ để gắn POI vào node gần nhất. Hãy chuyển sang chế độ Hiệu chuẩn trước.')
+        return
+      }
+      if (currentFloorNodes.length === 0) {
+        message.warning('Tầng chưa có node nào để gắn POI. Hãy vẽ tuyến (Node/Edge) trước.')
+        return
+      }
+      {
+        createPoi(selectedFloorId, { ...at, name: `POI ${pois.length + 1}`, category: 'custom', icon: null })
+      }
+    },
+    onError: setGraphError,
+  })
+
+  // Vị trí node đang kéo (%): edge và đường nối POI bám theo ngay khi kéo, chưa chờ lưu.
+  const [liveNodePos, setLiveNodePos] = useState<Record<string, PercentPoint>>({})
+  const displayNodes = useMemo(
+    () => currentFloorNodes.map((node) => (liveNodePos[node.id] ? { ...node, ...liveNodePos[node.id] } : node)),
+    [currentFloorNodes, liveNodePos],
+  )
+  const nodeById = useMemo(() => new Map(displayNodes.map((node) => [node.id, node])), [displayNodes])
+  // Một node lẻ loi là bình thường (mới đặt); từ 2 node trở lên, node chưa nối edge sẽ bị tô đỏ.
+  const isolatedNodeIds = useMemo(
+    () => (currentFloorNodes.length > 1 ? findIsolatedNodeIds(currentFloorNodes, currentFloorEdges) : undefined),
+    [currentFloorNodes, currentFloorEdges],
+  )
+
+  // Edge có đoạn thẳng cắt nét tường trên ảnh sơ đồ: đường đi thật sẽ không đi được như vậy.
+  const crossingEdgeIds = wallMask ? findWallCrossingEdgeIds(wallMask, currentFloorNodes, currentFloorEdges) : undefined
+
   if (!selectedFloor) {
     return (
       <Card className="tool-card canvas-card">
@@ -338,182 +272,36 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
     )
   }
 
-  async function handleStageClick(event: Konva.KonvaEventObject<MouseEvent>) {
-    if (!selectedFloor) {
-      return
-    }
+  function handleDeleteEdge(edgeId: string) {
+    if (selectedFloor) deleteEdge(selectedFloor.id, edgeId)
+  }
 
-    const clickedMap =
-      event.target === event.target.getStage() ||
-      event.target.name() === 'map-background'
-
-    if (!clickedMap) {
-      return
-    }
-
-    const stage = event.target.getStage()
-    const position = stage?.getPointerPosition()
-    if (!position) {
-      return
-    }
-
-    if (editorMode === 'poi') {
-      await addPoi({
-        ...pixelToPercent(position.x, position.y, stageSize.width, stageSize.height),
-        type: 'custom',
-      })
-      return
-    }
-
-    if (editorMode === 'wall') {
-      const percentCoords = pixelToPercent(position.x, position.y, stageSize.width, stageSize.height)
-      const roundedX = Math.round(percentCoords.x * 10) / 10
-      const roundedY = Math.round(percentCoords.y * 10) / 10
-
-      if (!wallStart) {
-        setWallStart({ x: roundedX, y: roundedY })
-      } else {
-        if (wallStart.x !== roundedX || wallStart.y !== roundedY) {
-          const newWall: WallSegment = {
-            id: `wall_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-            floorId: selectedFloor.id,
-            x1: wallStart.x,
-            y1: wallStart.y,
-            x2: roundedX,
-            y2: roundedY,
-          }
-          saveWalls([...walls, newWall])
-          setWallStart({ x: roundedX, y: roundedY })
-        }
-      }
-      return
-    }
-
-    if (editorMode !== 'node') return
-
-    if (nodeType !== 'NORMAL' && !nodeName.trim()) {
-      setGraphError('Nhập tên điểm trước khi tạo Node chức năng.')
-      return
-    }
-
-    setIsGraphSaving(true)
-    setGraphError(undefined)
+  async function handleCalibrate(realDistanceMeters: number) {
+    const size = { width: selectedFloor!.mapWidth, height: selectedFloor!.mapHeight }
+    const [pointA, pointB] = tool.calibrationPoints.map((point) => positionToDto(point, size))
     try {
-      const node = await createGraphNode(selectedFloor.id, {
-        x: (position.x / stageSize.width) * selectedFloor.mapWidth,
-        y: (position.y / stageSize.height) * selectedFloor.mapHeight,
-        name: nodeName.trim() || null,
-        type: nodeType,
-        accessible: true,
-      })
-      setNodes((current) => [...current, node])
-      if (routeAnchorNodeId) {
-        const edge = await createGraphEdge(selectedFloor.id, routeAnchorNodeId, node.id)
-        setEdges((current) => [...current, edge])
-      }
-      setRouteAnchorNodeId(node.id)
-      setSelectedNodeId(node.id)
-      setNodeName('')
+      const edges = await calibrateFloor(selectedFloor!.id, { pointA, pointB, realDistanceMeters })
+      message.success(`Đã hiệu chuẩn tầng, tính lại độ dài ${edges} edge.`)
+      tool.clearCalibration()
+      setTool('node')
+      return true
     } catch (reason) {
-      setGraphError((reason as Error).message)
-    } finally {
-      setIsGraphSaving(false)
+      message.error((reason as Error).message)
+      return false
     }
   }
 
-  function handleStageMouseMove(event: Konva.KonvaEventObject<MouseEvent>) {
-    if (editorMode !== 'wall' || !wallStart) {
-      if (previewPointer) setPreviewPointer(null)
-      return
-    }
-    const stage = event.target.getStage()
-    const pos = stage?.getPointerPosition()
-    if (pos) {
-      setPreviewPointer(pos)
-    }
+  /** Độ dài edge theo đơn vị pixel ảnh sơ đồ (chỉ để hiển thị; weight không lưu ở FE). */
+  function edgeLength(edge: GraphEdge) {
+    const from = nodeById.get(edge.fromNodeId)
+    const to = nodeById.get(edge.toNodeId)
+    return from && to ? distanceInMapUnits(from, to, { width: selectedFloor!.mapWidth, height: selectedFloor!.mapHeight }) : 0
   }
 
-  async function handleNodeClick(nodeId: string) {
-    if (!selectedFloor) return
-
-    if (editorMode === 'edge') {
-      if (!edgeStartNodeId) {
-        setEdgeStartNodeId(nodeId)
-        return
-      }
-      if (edgeStartNodeId === nodeId) {
-        setEdgeStartNodeId(undefined)
-        return
-      }
-      setIsGraphSaving(true)
-      setGraphError(undefined)
-      try {
-        const edge = await createGraphEdge(selectedFloor.id, edgeStartNodeId, nodeId)
-        setEdges((current) => [...current, edge])
-        setEdgeStartNodeId(undefined)
-      } catch (reason) {
-        setGraphError((reason as Error).message)
-      } finally {
-        setIsGraphSaving(false)
-      }
-      return
-    }
-
-    // In node/poi mode: toggle node selection
-    setSelectedNodeId((current) => (current === nodeId ? undefined : nodeId))
-  }
-
-  async function handleDeleteNode(nodeId: string) {
-    if (!selectedFloor) return
-    setIsGraphSaving(true)
-    setGraphError(undefined)
-    try {
-      await deleteGraphNode(nodeId)
-      setNodes((current) => current.filter((n) => n.id !== nodeId))
-      setEdges((current) => current.filter((e) => e.fromNodeId !== nodeId && e.toNodeId !== nodeId))
-      if (selectedNodeId === nodeId) setSelectedNodeId(undefined)
-      if (routeAnchorNodeId === nodeId) setRouteAnchorNodeId(undefined)
-      if (edgeStartNodeId === nodeId) setEdgeStartNodeId(undefined)
-    } catch (reason) {
-      setGraphError((reason as Error).message)
-    } finally {
-      setIsGraphSaving(false)
-    }
-  }
-
-  async function handleDeleteEdge(edgeId: string) {
-    if (!selectedFloor) return
-    setIsGraphSaving(true)
-    setGraphError(undefined)
-    try {
-      await deleteGraphEdge(edgeId)
-      setEdges((current) => current.filter((e) => e.id !== edgeId))
-    } catch (reason) {
-      setGraphError((reason as Error).message)
-    } finally {
-      setIsGraphSaving(false)
-    }
-  }
-
-  async function handlePoiDragEnd(
-    poiId: string,
-    event: Konva.KonvaEventObject<DragEvent>,
-  ) {
-    if (!selectedFloor) {
-      return
-    }
-
-    await movePoi(poiId, {
-      ...pixelToPercent(
-        event.target.x(),
-        event.target.y(),
-        stageSize.width,
-        stageSize.height,
-      ),
-    })
-  }
-
-  const selectedNode = Array.isArray(nodes) ? nodes.find((n) => n.id === selectedNodeId) : undefined
+  const floorConnectors = connectors.filter((connector) => connector.stops.some((stop) => stop.floorId === selectedFloor.id))
+  const floorNameById = new Map(floors.map((floor) => [floor.id, floor.name]))
+  const editingPoi = pois.find((poi) => poi.id === editingPoiId)
+  const selectedNode = currentFloorNodes.find((n) => n.id === selectedNodeId)
 
   return (
     <div className="canvas-workspace">
@@ -522,59 +310,26 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
           <div className="canvas-toolbar">
             <div>
               <strong>{selectedFloor.name}</strong>
-              <Tag color={floorStatusColor(selectedFloor.publishStatus)}>
-                {selectedFloor.publishStatus}
-              </Tag>
               <span>
                 {selectedFloor.mapWidth} x {selectedFloor.mapHeight}
               </span>
             </div>
             <Space size="middle">
-              <span>{nodes.length} Node</span>
-              <span>{edges.length} Edge</span>
-              <span>{pois.length} POI</span>
-              <span>{walls.length} Tường</span>
+              {(pendingOps > 0 || poiPendingOps > 0) && (
+                <Tag icon={<LoadingOutlined spin />} color="processing">
+                  Đang lưu...
+                </Tag>
+              )}
             </Space>
           </div>
 
+          <fieldset disabled={readOnly} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
           <Space wrap style={{ padding: '0 16px 12px' }}>
-            <Radio.Group
-              value={editorMode}
-              onChange={(event) => {
-                setEditorMode(event.target.value)
-                setEdgeStartNodeId(undefined)
-                setWallStart(null)
-                setPreviewPointer(null)
-              }}
-              optionType="button"
-              buttonStyle="solid"
-            >
-              <Radio.Button value="node">
-                <NodeIndexOutlined /> Vẽ tuyến
-              </Radio.Button>
-              <Radio.Button value="edge">
-                <LinkOutlined /> Edge
-              </Radio.Button>
-              <Radio.Button value="poi">
-                <PushpinOutlined /> POI
-              </Radio.Button>
-              <Radio.Button value="wall">
-                <BuildOutlined /> Vẽ tường 3D
-              </Radio.Button>
-            </Radio.Group>
-            <Button icon={<ScanOutlined />} onClick={() => void handleAnalyzeNavigation()} loading={isGraphSaving} disabled={!selectedFloor.mapImageUrl}>
-              Analyze điều hướng
-            </Button>
-            {navigationDraft && <>
-              <Tag color="gold">Nháp: {navigationDraft.nodes.length} Node · {navigationDraft.edges.length} đường</Tag>
-              <Button type="primary" onClick={() => void handleApplyNavigationDraft()} loading={isGraphSaving}>Áp dụng nháp</Button>
-              <Button onClick={() => setNavigationDraft(undefined)}>Bỏ nháp</Button>
-            </>}
-            {editorMode === 'node' && (
+            {tool.mode === 'node' && (
               <>
                 <Select
-                  value={nodeType}
-                  onChange={setNodeType}
+                  value={tool.nodeType}
+                  onChange={tool.setNodeType}
                   style={{ width: 150 }}
                   options={[
                     { value: 'NORMAL', label: 'Lối đi' },
@@ -583,86 +338,48 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                     { value: 'ELEVATOR', label: 'Thang máy' },
                     { value: 'STAIR', label: 'Cầu thang bộ' },
                     { value: 'ESCALATOR', label: 'Thang cuốn' },
+                    { value: 'EXIT', label: 'Cửa thoát hiểm' },
+                    { value: 'EMERGENCY_EXIT', label: 'Thang thoát hiểm PCCC' },
                   ]}
                 />
                 <Input
-                  value={nodeName}
-                  onChange={(event) => setNodeName(event.target.value)}
+                  value={tool.nodeName}
+                  onChange={(event) => tool.setNodeName(event.target.value)}
                   placeholder="Tên điểm, ví dụ: Cửa vào Zara"
                   maxLength={100}
                   style={{ width: 230 }}
                 />
               </>
             )}
-            {editorMode === 'edge' && (
+            {tool.mode === 'calibrate' && (
               <AntText type="secondary">
-                {edgeStartNodeId
+                {tool.calibrationPoints.length === 0
+                  ? 'Click điểm đầu của một khoảng đã biết độ dài thật (vd. bề rộng cửa chính, hành lang).'
+                  : 'Click điểm thứ hai. Click thêm lần nữa để chấm lại từ đầu.'}
+              </AntText>
+            )}
+            {tool.mode === 'edge' && (
+              <AntText type="secondary">
+                {tool.edgeStartNodeId
                   ? 'Chọn Node thứ hai để nối.'
                   : 'Chọn Node đầu tiên để nối.'}
               </AntText>
             )}
-            {editorMode === 'node' && (
+            {tool.mode === 'node' && (
               <>
                 <AntText type="secondary">
                   Click liên tiếp trên lối đi: Node mới tự nối với Node trước. Chuột phải vào Node để xóa nhanh.
                 </AntText>
-                <Button size="small" onClick={() => setRouteAnchorNodeId(undefined)}>
+                <Button size="small" onClick={() => tool.setRouteAnchorNodeId(undefined)}>
                   Bắt đầu tuyến mới
                 </Button>
-              </>
-            )}
-            {editorMode === 'wall' && (
-              <>
-                <AntText type="secondary">
-                  {wallStart
-                    ? `Đang vẽ từ (${Math.round(wallStart.x)}%, ${Math.round(wallStart.y)}%). Click điểm tiếp theo để tạo vách tường. Chuột phải để ngắt.`
-                    : 'Click lên bản đồ để bắt đầu vách tường.'}
-                </AntText>
-                {wallStart && (
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      setWallStart(null)
-                      setPreviewPointer(null)
-                    }}
-                  >
-                    Ngắt đoạn tường
-                  </Button>
-                )}
-                <Button
-                  size="small"
-                  icon={<ScanOutlined />}
-                  onClick={() => void handleAutoExtractWallsFromImage()}
-                  disabled={!selectedFloor.mapImageUrl}
-                >
-                  Quét vách tường từ ảnh
-                </Button>
-                <Button
-                  size="small"
-                  type="primary"
-                  icon={<SaveOutlined />}
-                  onClick={() => void handleSaveWallsDraft()}
-                  loading={isSavingWalls}
-                  disabled={walls.length === 0}
-                >
-                  Lưu vách tường (Save 3D)
-                </Button>
-                {walls.length > 0 && (
-                  <Popconfirm
-                    title="Xác nhận xóa toàn bộ tường của tầng này?"
-                    onConfirm={handleClearWalls}
-                    okText="Xóa tất cả"
-                    cancelText="Hủy"
-                    okButtonProps={{ danger: true }}
-                  >
-                    <Button size="small" danger icon={<DeleteOutlined />}>
-                      Xóa tất cả tường
-                    </Button>
-                  </Popconfirm>
-                )}
+                <Checkbox checked={tool.autoLink} onChange={(event) => tool.setAutoLink(event.target.checked)}>
+                  Tự nối edge với node trước
+                </Checkbox>
               </>
             )}
           </Space>
+          </fieldset>
 
           {/* Active Node Selection Action Bar */}
           {selectedNode && (
@@ -682,33 +399,29 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
             >
               <Space>
                 <Tag color="cyan">{selectedNode.type}</Tag>
-                <AntText strong>Node #{(selectedNode.id ?? '').slice(0, 8)}</AntText>
+                <AntText strong>Node #{selectedNode.id.slice(0, 8)}</AntText>
                 <AntText type="secondary">
-                  ({Math.round((selectedNode.x / selectedFloor.mapWidth) * 100)}%,{' '}
-                  {Math.round((selectedNode.y / selectedFloor.mapHeight) * 100)}%)
+                  ({Math.round(selectedNode.x)}%, {Math.round(selectedNode.y)}%)
                 </AntText>
               </Space>
               <Space>
                 <Button
                   size="small"
                   icon={<LinkOutlined />}
-                  onClick={() => {
-                    setEditorMode('edge')
-                    setEdgeStartNodeId(selectedNode.id)
-                  }}
+                  onClick={() => tool.startEdgeFrom(selectedNode.id)}
                 >
                   Nối Edge từ đây
                 </Button>
                 <Button
                   size="small"
-                  onClick={() => setRouteAnchorNodeId(selectedNode.id)}
+                  onClick={() => tool.setRouteAnchorNodeId(selectedNode.id)}
                 >
                   Tiếp tục vẽ tuyến
                 </Button>
                 <Popconfirm
                   title="Xác nhận xóa Node này?"
                   description="Các lối đi (Edge) nối với Node này cũng sẽ bị xóa."
-                  onConfirm={() => handleDeleteNode(selectedNode.id)}
+                  onConfirm={() => tool.handleNodeDelete(selectedNode.id)}
                   okText="Xóa"
                   cancelText="Hủy"
                   okButtonProps={{ danger: true }}
@@ -717,7 +430,10 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                     Xóa Node
                   </Button>
                 </Popconfirm>
-                <Button size="small" onClick={() => setSelectedNodeId(undefined)}>
+                <Button size="small" icon={<QrcodeOutlined />} onClick={() => setQrModalOpen(true)}>
+                  Tạo mã QR
+                </Button>
+                <Button size="small" onClick={() => selectNode(null)}>
                   Bỏ chọn
                 </Button>
               </Space>
@@ -727,261 +443,66 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
           {error || graphError ? (
             <Alert
               className="canvas-alert"
-              message={error ?? graphError}
+              message={error ?? graphError ?? graphStoreError ?? poiStoreError}
               type="error"
               showIcon
             />
           ) : null}
 
-          <Spin spinning={isPoiSaving || isGraphSaving}>
             <div className="stage-host" ref={stageHostRef}>
               {canRenderStage ? (
                 <div
                   className="stage-wrap"
-                  style={{ width: stageSize.width, height: stageSize.height }}
+                  style={{ width: stageSize.width, height: stageSize.height, position: 'relative' }}
                 >
                   <Stage
                     width={stageSize.width}
                     height={stageSize.height}
-                    onClick={handleStageClick}
-                    onMouseMove={handleStageMouseMove}
-                    onContextMenu={(e) => {
-                      if (editorMode === 'wall') {
-                        e.evt.preventDefault()
-                        setWallStart(null)
-                        setPreviewPointer(null)
-                      }
-                    }}
+                    onClick={readOnly ? undefined : tool.handleStageClick}
                   >
-                    <Layer>
-                      {mapImage.image ? (
-                        <KonvaImage
-                          name="map-background"
-                          image={mapImage.image}
-                          width={stageSize.width}
-                          height={stageSize.height}
-                        />
-                      ) : (
-                        <>
-                          <Rect
-                            name="map-background"
-                            width={stageSize.width}
-                            height={stageSize.height}
-                            fill="#f1f5f9"
-                            stroke="#94a3b8"
-                            strokeWidth={2}
-                          />
-                          <Text
-                            x={24}
-                            y={24}
-                            text={
-                              mapImage.status === 'failed'
-                                ? 'Không tải được ảnh sơ đồ'
-                                : mapImage.status === 'loading'
-                                  ? 'Đang tải ảnh sơ đồ'
-                                  : 'Chưa có ảnh sơ đồ'
-                            }
-                            fontSize={18}
-                            fill="#475569"
-                            listening={false}
-                          />
-                        </>
-                      )}
-
-                      {/* 2D Architectural Partition Walls */}
-                      {walls.map((wall) => {
-                        const p1 = percentToPixel(wall.x1, wall.y1, stageSize.width, stageSize.height)
-                        const p2 = percentToPixel(wall.x2, wall.y2, stageSize.width, stageSize.height)
-                        const isSelected = selectedWallId === wall.id
-
-                        return (
-                          <React.Fragment key={wall.id}>
-                            <Line
-                              points={[p1.pixelX, p1.pixelY, p2.pixelX, p2.pixelY]}
-                              stroke={isSelected ? '#f43f5e' : '#2563eb'}
-                              strokeWidth={isSelected ? 8 : 6}
-                              lineCap="round"
-                              onClick={(e) => {
-                                e.cancelBubble = true
-                                setSelectedWallId((curr) => (curr === wall.id ? undefined : wall.id))
-                              }}
-                              onContextMenu={(e) => {
-                                e.evt.preventDefault()
-                                e.cancelBubble = true
-                                handleDeleteWall(wall.id)
-                              }}
-                            />
-                            <Circle
-                              x={p1.pixelX}
-                              y={p1.pixelY}
-                              radius={isSelected ? 5 : 4}
-                              fill={isSelected ? '#f43f5e' : '#3b82f6'}
-                              stroke="#ffffff"
-                              strokeWidth={1.5}
-                              listening={false}
-                            />
-                            <Circle
-                              x={p2.pixelX}
-                              y={p2.pixelY}
-                              radius={isSelected ? 5 : 4}
-                              fill={isSelected ? '#f43f5e' : '#3b82f6'}
-                              stroke="#ffffff"
-                              strokeWidth={1.5}
-                              listening={false}
-                            />
-                          </React.Fragment>
-                        )
-                      })}
-
-                      {/* Dynamic Wall Drawing Preview Line */}
-                      {wallStart && previewPointer && (
-                        <Line
-                          points={[
-                            (wallStart.x / 100) * stageSize.width,
-                            (wallStart.y / 100) * stageSize.height,
-                            previewPointer.x,
-                            previewPointer.y,
-                          ]}
-                          stroke="#60a5fa"
-                          strokeWidth={4}
-                          dash={[8, 5]}
-                          lineCap="round"
-                          listening={false}
-                        />
-                      )}
-                      {pois.map((poi) => {
-                        const { pixelX, pixelY } = percentToPixel(
-                          poi.x,
-                          poi.y,
-                          stageSize.width,
-                          stageSize.height,
-                        )
-
-                        return (
-                          <Circle
-                            key={poi.id}
-                            x={pixelX}
-                            y={pixelY}
-                            radius={16}
-                            fill="#f97316"
-                            stroke="#ffffff"
-                            strokeWidth={5}
-                            draggable
-                            onDragEnd={(event) =>
-                              handlePoiDragEnd(poi.id, event)
-                            }
-                          />
-                        )
-                      })}
-                      {edges.map((edge) => {
-                        const from = nodes.find((node) => node.id === edge.fromNodeId)
-                        const to = nodes.find((node) => node.id === edge.toNodeId)
-                        if (!from || !to) return null
-                        const fromPoint = {
-                          x: (from.x / selectedFloor.mapWidth) * stageSize.width,
-                          y: (from.y / selectedFloor.mapHeight) * stageSize.height,
-                        }
-                        const toPoint = {
-                          x: (to.x / selectedFloor.mapWidth) * stageSize.width,
-                          y: (to.y / selectedFloor.mapHeight) * stageSize.height,
-                        }
-                        return (
-                          <Line
-                            key={edge.id}
-                            points={[fromPoint.x, fromPoint.y, toPoint.x, toPoint.y]}
-                            stroke={edge.status === 'BLOCKED' ? '#ef4444' : '#22d3ee'}
-                            strokeWidth={5}
-                            lineCap="round"
-                            listening={false}
-                          />
-                        )
-                      })}
-                      {navigationDraft?.edges.map((edge) => {
-                        const from = navigationDraft.nodes.find((node) => node.id === edge.fromNodeId); const to = navigationDraft.nodes.find((node) => node.id === edge.toNodeId)
-                        if (!from || !to) return null
-                        return <Line key={edge.id} points={[from.x / selectedFloor.mapWidth * stageSize.width, from.y / selectedFloor.mapHeight * stageSize.height, to.x / selectedFloor.mapWidth * stageSize.width, to.y / selectedFloor.mapHeight * stageSize.height]} stroke="#f59e0b" dash={[8, 6]} strokeWidth={3} listening={false} />
-                      })}
-                      {nodes.map((node) => {
-                        const x = (node.x / selectedFloor.mapWidth) * stageSize.width
-                        const y = (node.y / selectedFloor.mapHeight) * stageSize.height
-                        const isPendingEdgeStart = edgeStartNodeId === node.id
-                        const isSelected = selectedNodeId === node.id
-
-                        return (
-                          <React.Fragment key={node.id}>
-                            {isSelected && (
-                              <Circle
-                                x={x}
-                                y={y}
-                                radius={19}
-                                stroke="#0284c7"
-                                strokeWidth={3}
-                                dash={[4, 3]}
-                                listening={false}
-                              />
-                            )}
-                            <Circle
-                              x={x}
-                              y={y}
-                              radius={isPendingEdgeStart || isSelected ? 15 : 11}
-                              fill={
-                                node.type === 'ELEVATOR'
-                                  ? '#a855f7'
-                                  : node.type === 'DOOR'
-                                    ? '#f59e0b'
-                                    : '#0ea5e9'
-                              }
-                              stroke="#ffffff"
-                              strokeWidth={isPendingEdgeStart || isSelected ? 4 : 3}
-                              onClick={(event) => {
-                                event.cancelBubble = true
-                                void handleNodeClick(node.id)
-                              }}
-                              onMouseEnter={(e) => {
-                                const container = e.target.getStage()?.container()
-                                if (container) container.style.cursor = 'pointer'
-                              }}
-                              onMouseLeave={(e) => {
-                                const container = e.target.getStage()?.container()
-                                if (container) container.style.cursor = 'default'
-                              }}
-                              onContextMenu={(event) => {
-                                event.evt.preventDefault()
-                                event.cancelBubble = true
-                                void handleDeleteNode(node.id)
-                              }}
-                            />
-                          </React.Fragment>
-                        )
-                      })}
-                      {navigationDraft?.nodes?.map((node) => <Circle key={node.id} x={node.x / selectedFloor.mapWidth * stageSize.width} y={node.y / selectedFloor.mapHeight * stageSize.height} radius={10} fill="#facc15" stroke="#854d0e" strokeWidth={2} draggable onDragEnd={(event) => moveDraftNode(node.id, event.target.x() / stageSize.width * selectedFloor.mapWidth, event.target.y() / stageSize.height * selectedFloor.mapHeight)} />)}
-                      {pois.map((poi) => {
-                        const { pixelX, pixelY } = percentToPixel(
-                          poi.x,
-                          poi.y,
-                          stageSize.width,
-                          stageSize.height,
-                        )
-
-                        return (
-                          <Label
-                            key={`${poi.id}-label`}
-                            x={pixelX + 18}
-                            y={pixelY - 17}
-                            listening={false}
-                          >
-                            <KonvaTag fill="#111827" cornerRadius={4} />
-                            <Text
-                              text={poi.name}
-                              fontSize={14}
-                              fill="#ffffff"
-                              padding={6}
-                            />
-                          </Label>
-                        )
-                      })}
-                    </Layer>
+                    <MapBackgroundLayer image={mapImage.image} status={mapImage.status} size={stageSize} />
+                    <GraphEdgesLayer
+                      edges={currentFloorEdges}
+                      nodeById={nodeById}
+                      flaggedEdgeIds={crossingEdgeIds}
+                      size={stageSize}
+                    />
+                    <ConnectorsLayer floorId={selectedFloor.id} connectors={connectors} nodeById={nodeById} size={stageSize} />
+                    <GraphNodesLayer
+                      nodes={displayNodes}
+                      selectedNodeId={selectedNodeId}
+                      edgeStartNodeId={tool.edgeStartNodeId}
+                      isolatedNodeIds={isolatedNodeIds}
+                      size={stageSize}
+                      onNodeClick={tool.handleNodeClick}
+                      onNodeDelete={readOnly ? () => undefined : tool.handleNodeDelete}
+                      onNodeMove={readOnly ? undefined : (nodeId, to) => {
+                          if (selectedFloorId) moveNode(selectedFloorId, nodeId, to)
+                          setLiveNodePos((current) => {
+                            const { [nodeId]: _done, ...rest } = current
+                            return rest
+                          })
+                        }}
+                      onNodeDragMove={readOnly ? undefined : (nodeId, to) => setLiveNodePos((current) => ({ ...current, [nodeId]: to }))}
+                    />
+                    <PoiMarkersLayer pois={pois} nodes={displayNodes} size={stageSize} selectedPoiId={editingPoiId} onMove={readOnly ? () => undefined : handleMovePoi} onSelect={(poiId) => {
+                      if (!readOnly && tool.mode === 'delete' && selectedFloorId) deletePoi(selectedFloorId, poiId)
+                      else setEditingPoiId(poiId)
+                    }} />
+                    <CalibrationLayer points={tool.calibrationPoints} size={stageSize} />
                   </Stage>
+                  {editingPoi && (
+                    <PoiEditPopover
+                      poi={editingPoi}
+                      size={stageSize}
+                      onSave={(patch) => updatePoiDetails(selectedFloor.id, editingPoi.id, patch)}
+                      onDelete={() => {
+                        deletePoi(selectedFloor.id, editingPoi.id)
+                        setEditingPoiId(undefined)
+                      }}
+                      onClose={() => setEditingPoiId(undefined)}
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="stage-empty">
@@ -989,7 +510,6 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
                 </div>
               )}
             </div>
-          </Spin>
 
           {selectedFloor.publishStatus === 'draft' ? (
             <Typography.Paragraph
@@ -1002,234 +522,57 @@ export function CanvasBoard({ readOnly: _readOnly = false }: { readOnly?: boolea
         </div>
       </Card>
 
-      {/* Multi-Tab Sidebar: Nodes, Edges, POIs */}
-      <Card
-        className="tool-card poi-card"
-        styles={{ body: { padding: '12px 14px' } }}
-      >
-        <Tabs
-          defaultActiveKey="nodes"
-          items={[
-            {
-              key: 'nodes',
-              label: `Node (${nodes.length})`,
-              children: (
-                <List
-                  size="small"
-                  dataSource={nodes}
-                  locale={{ emptyText: 'Chưa có Node. Click lên bản đồ để thêm' }}
-                  style={{ maxHeight: 520, overflowY: 'auto' }}
-                  renderItem={(node) => (
-                    <List.Item
-                      style={{
-                        padding: '6px 8px',
-                        background: selectedNodeId === node.id ? '#f0f9ff' : undefined,
-                        borderRadius: 4,
-                        cursor: 'pointer',
-                      }}
-                      onClick={() => setSelectedNodeId((curr) => (curr === node.id ? undefined : node.id))}
-                      actions={[
-                        <div key="delete" onClick={(e) => e.stopPropagation()}>
-                          <Popconfirm
-                            title="Xác nhận xóa Node?"
-                            onConfirm={() => void handleDeleteNode(node.id)}
-                            okText="Xóa"
-                            cancelText="Hủy"
-                            okButtonProps={{ danger: true }}
-                          >
-                            <Button
-                              danger
-                              size="small"
-                              type="text"
-                              icon={<DeleteOutlined />}
-                            />
-                          </Popconfirm>
-                        </div>,
-                      ]}
-                    >
-                      <Space orientation="vertical" size={1}>
-                        <Space>
-                          <Tag
-                            color={
-                              node.type === 'ELEVATOR'
-                                ? 'purple'
-                                : node.type === 'DOOR'
-                                  ? 'orange'
-                                  : 'cyan'
-                            }
-                          >
-                            {node.type}
-                          </Tag>
-                          <AntText strong style={{ fontSize: 12 }}>
-                            #{(node.id ?? '').slice(0, 6)}
-                          </AntText>
-                        </Space>
-                        <AntText type="secondary" style={{ fontSize: 11 }}>
-                          {Math.round((node.x / selectedFloor.mapWidth) * 100)}%,{' '}
-                          {Math.round((node.y / selectedFloor.mapHeight) * 100)}%
-                        </AntText>
-                      </Space>
-                    </List.Item>
-                  )}
-                />
-              ),
-            },
-            {
-              key: 'edges',
-              label: `Edge (${edges.length})`,
-              children: (
-                <List
-                  size="small"
-                  dataSource={edges}
-                  locale={{ emptyText: 'Chưa có Edge. Nối 2 Node ở chế độ Edge' }}
-                  style={{ maxHeight: 520, overflowY: 'auto' }}
-                  renderItem={(edge) => (
-                    <List.Item
-                      style={{ padding: '6px 8px' }}
-                      actions={[
-                        <Popconfirm
-                          key="delete"
-                          title="Xác nhận xóa Edge?"
-                          onConfirm={() => void handleDeleteEdge(edge.id)}
-                          okText="Xóa"
-                          cancelText="Hủy"
-                          okButtonProps={{ danger: true }}
-                        >
-                          <Button
-                            danger
-                            size="small"
-                            type="text"
-                            icon={<DeleteOutlined />}
-                          />
-                        </Popconfirm>,
-                      ]}
-                    >
-                      <Space orientation="vertical" size={1}>
-                        <AntText style={{ fontSize: 12 }}>
-                          #{(edge.fromNodeId ?? '').slice(0, 5)} → #{(edge.toNodeId ?? '').slice(0, 5)}
-                        </AntText>
-                        <AntText type="secondary" style={{ fontSize: 11 }}>
-                          Khoảng cách: {Math.round(edge.weight)}px
-                        </AntText>
-                      </Space>
-                    </List.Item>
-                  )}
-                />
-              ),
-            },
-            {
-              key: 'pois',
-              label: `POI (${pois.length})`,
-              children: (
-                <List
-                  size="small"
-                  dataSource={pois}
-                  locale={{ emptyText: 'Chuyển sang chế độ POI để thêm' }}
-                  style={{ maxHeight: 520, overflowY: 'auto' }}
-                  renderItem={(poi) => (
-                    <List.Item
-                      style={{ padding: '6px 8px' }}
-                      actions={[
-                        <Button
-                          key="delete"
-                          danger
-                          size="small"
-                          type="text"
-                          icon={<DeleteOutlined />}
-                          onClick={() => removePoi(poi.id)}
-                        />,
-                      ]}
-                    >
-                      <Space orientation="vertical" size={1}>
-                        <Space>
-                          <AntText strong style={{ fontSize: 12 }}>
-                            {poi.name}
-                          </AntText>
-                          <Tag color="blue">{poi.type}</Tag>
-                        </Space>
-                        <AntText type="secondary" style={{ fontSize: 11 }}>
-                          {poi.x.toFixed(1)}%, {poi.y.toFixed(1)}%
-                        </AntText>
-                      </Space>
-                    </List.Item>
-                  )}
-                />
-              ),
-            },
-            {
-              key: 'walls',
-              label: `Tường (${walls.length})`,
-              children: (
-                <List
-                  size="small"
-                  dataSource={walls}
-                  locale={{
-                    emptyText: (
-                      <div style={{ padding: '16px 0', textAlign: 'center' }}>
-                        <p style={{ margin: 0, color: '#94a3b8', fontSize: 12 }}>
-                          Chưa có vách tường nào.
-                        </p>
-                        <Button
-                          size="small"
-                          type="link"
-                          icon={<ScanOutlined />}
-                          onClick={() => void handleAutoExtractWallsFromImage()}
-                          disabled={!selectedFloor.mapImageUrl}
-                          style={{ marginTop: 4, padding: 0 }}
-                        >
-                          Quét vách tường từ ảnh sơ đồ
-                        </Button>
-                      </div>
-                    ),
-                  }}
-                  style={{ maxHeight: 520, overflowY: 'auto' }}
-                  renderItem={(wall, idx) => (
-                    <List.Item
-                      style={{
-                        padding: '6px 8px',
-                        background: selectedWallId === wall.id ? '#f0f9ff' : undefined,
-                        borderRadius: 4,
-                        cursor: 'pointer',
-                      }}
-                      onClick={() => setSelectedWallId((curr) => (curr === wall.id ? undefined : wall.id))}
-                      actions={[
-                        <div key="delete" onClick={(e) => e.stopPropagation()}>
-                          <Popconfirm
-                            title="Xác nhận xóa vách tường này?"
-                            onConfirm={() => handleDeleteWall(wall.id)}
-                            okText="Xóa"
-                            cancelText="Hủy"
-                            okButtonProps={{ danger: true }}
-                          >
-                            <Button
-                              danger
-                              size="small"
-                              type="text"
-                              icon={<DeleteOutlined />}
-                            />
-                          </Popconfirm>
-                        </div>,
-                      ]}
-                    >
-                      <Space orientation="vertical" size={1}>
-                        <Space>
-                          <Tag color="geekblue">Vách #{idx + 1}</Tag>
-                          <AntText strong style={{ fontSize: 12 }}>
-                            ({Math.round(wall.x1)}%, {Math.round(wall.y1)}%) → ({Math.round(wall.x2)}%, {Math.round(wall.y2)}%)
-                          </AntText>
-                        </Space>
-                        <AntText type="secondary" style={{ fontSize: 11 }}>
-                          Dài ~{Math.round(Math.hypot(wall.x2 - wall.x1, wall.y2 - wall.y1))}% ảnh · Tự extrude sang 3D
-                        </AntText>
-                      </Space>
-                    </List.Item>
-                  )}
-                />
-              ),
-            },
-          ]}
-        />
-      </Card>
+      <CanvasSidebar
+        nodes={currentFloorNodes}
+        edges={currentFloorEdges}
+        connectors={floorConnectors}
+        pois={pois}
+        floorNameById={floorNameById}
+        isolatedNodeIds={isolatedNodeIds}
+        crossingEdgeIds={crossingEdgeIds}
+        selectedNodeId={selectedNodeId}
+        edgeLength={edgeLength}
+        onSelectNode={selectNode}
+        onDeleteNode={tool.handleNodeDelete}
+        onDeleteEdge={handleDeleteEdge}
+        onDeleteCrossingEdges={handleDeleteCrossingEdges}
+        onCreateConnector={() => setConnectorModalOpen(true)}
+        onSuggestConnectors={() => setSuggestModalOpen(true)}
+        onUpdateConnector={(connectorId, patch) => buildingId && updateConnector(buildingId, connectorId, patch)}
+        readOnly={readOnly}
+        onDeleteConnector={(connectorId) => buildingId && deleteConnector(buildingId, connectorId)}
+        onDeletePoi={(poiId) => deletePoi(selectedFloor.id, poiId)}
+        onDeleteAllNodes={() => void handleDeleteAllNodes()}
+        onDeleteAllPois={handleDeleteAllPois}
+        promotablePoiCount={isPromoting ? 0 : planPoiPromotions(pois, currentFloorNodes).length}
+        onPromotePois={() => void handlePromotePois()}
+      />
+      <CalibrationDistanceModal
+        points={tool.calibrationPoints}
+        mapSize={{ width: selectedFloor.mapWidth, height: selectedFloor.mapHeight }}
+        onSubmit={handleCalibrate}
+        onCancel={tool.clearCalibration}
+      />
+      <QrAnchorModal
+        open={qrModalOpen}
+        buildingId={buildingId}
+        node={selectedNode ? { id: selectedNode.id, name: selectedNode.name } : undefined}
+        onClose={() => setQrModalOpen(false)}
+      />
+      <ConnectorSuggestModal
+        open={suggestModalOpen}
+        floors={floors}
+        connectors={connectors}
+        onCreate={(input) => (buildingId ? createConnector(buildingId, input) : Promise.resolve(false))}
+        onClose={() => setSuggestModalOpen(false)}
+      />
+      <ConnectorFormModal
+        open={connectorModalOpen}
+        floors={floors}
+        defaultFloorId={selectedFloor.id}
+        onSubmit={(input) => (buildingId ? createConnector(buildingId, input) : Promise.resolve(false))}
+        onClose={() => setConnectorModalOpen(false)}
+      />
     </div>
   )
 }

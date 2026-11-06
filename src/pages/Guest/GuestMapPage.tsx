@@ -53,6 +53,7 @@ export function GuestMapPage() {
   const floors = useGuestMapStore((state) => state.floors)
   const geometriesByFloorId = useGuestMapStore((state) => state.geometriesByFloorId)
   const nodesByFloorId = useGuestMapStore((state) => state.nodesByFloorId)
+  const poisByFloorId = useGuestMapStore((state) => state.poisByFloorId)
   const storesByFloorId = useGuestMapStore((state) => state.storesByFloorId)
   const destinations = useGuestMapStore((state) => state.destinations)
   const selectedBuildingId = useGuestMapStore((state) => state.selectedBuildingId)
@@ -227,6 +228,7 @@ export function GuestMapPage() {
               {viewMode === '2d' ? (
                 <MapViewer2D
                   floor={selectedFloor}
+                  pois={selectedFloorId ? (poisByFloorId[selectedFloorId] ?? []) : []}
                   geometry={
                     selectedFloorId ? geometriesByFloorId[selectedFloorId] : undefined
                   }
@@ -255,6 +257,7 @@ export function GuestMapPage() {
                     floors={floors}
                     geometriesByFloorId={geometriesByFloorId}
                     nodesByFloorId={nodesByFloorId}
+                    poisByFloorId={poisByFloorId}
                     selectedFloorId={selectedFloorId}
                     route={route}
                     focusTarget={focusTarget}

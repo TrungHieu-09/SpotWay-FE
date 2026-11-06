@@ -706,7 +706,7 @@ function InteractiveNode({
   )
 }
 
-// ── 3D ARCHITECTURAL ROOM BLOCK (KHỐI PHÒNG 3D NỔI THEO KHU VỰC - HƯỚNG 2) ──
+// ── Ghim POI/gian hàng 3D ──
 function ArchitecturalRoomBlock3D({
   poi,
   floor,
@@ -789,16 +789,20 @@ function ArchitecturalRoomBlock3D({
     }
   }, [poi.category, isStore])
 
-  const blockW = Math.max(0.7, 1.25 * roomScale)
-  const blockD = Math.max(0.7, 1.25 * roomScale)
-  const blockH = Math.max(0.25, roomHeight)
-  const scale = isSelected ? 1.05 : hovered ? 1.03 : 1.0
+  // roomHeight/roomScale giờ điều khiển chiều cao thân ghim và cỡ đầu ghim.
+  const stemH = Math.max(0.25, roomHeight)
+  const headR = Math.max(0.1, 0.16 * roomScale)
+  const scale = isSelected ? 1.15 : hovered ? 1.08 : 1.0
 
   return (
     <group position={[localX, elevation, localZ]} scale={[scale, scale, scale]}>
-      {/* 3D Extruded Architectural Room Volume */}
+      {/* Ghim POI: thân mảnh + đầu tròn, thay cho khối hộp lớn để bản đồ đỡ rối */}
+      <mesh position={[0, stemH / 2, 0]}>
+        <cylinderGeometry args={[0.025, 0.025, stemH, 8]} />
+        <meshStandardMaterial color={theme.glow} />
+      </mesh>
       <mesh
-        position={[0, blockH / 2, 0]}
+        position={[0, stemH + headR, 0]}
         onClick={(e) => {
           e.stopPropagation()
           onSelect()
@@ -813,88 +817,53 @@ function ArchitecturalRoomBlock3D({
           document.body.style.cursor = 'auto'
         }}
       >
-        <boxGeometry args={[blockW, blockH, blockD]} />
+        <sphereGeometry args={[headR, 20, 14]} />
         <meshStandardMaterial
           color={isSelected ? '#38bdf8' : theme.fill}
           emissive={isSelected ? '#0284c7' : theme.glow}
-          emissiveIntensity={isSelected ? 0.9 : hovered ? 0.55 : 0.22}
-          transparent
-          opacity={0.82}
-          roughness={0.25}
-          metalness={0.15}
+          emissiveIntensity={isSelected ? 0.9 : hovered ? 0.6 : 0.25}
+          roughness={0.3}
         />
       </mesh>
 
-      {/* Crisp Architectural Wireframe Edge Outlines */}
-      <lineSegments position={[0, blockH / 2, 0]}>
-        <edgesGeometry args={[new BoxGeometry(blockW, blockH, blockD)]} />
-        <lineBasicMaterial
-          color={isSelected ? '#38bdf8' : hovered ? '#ffffff' : theme.glow}
-        />
-      </lineSegments>
-
-      {/* Entrance Doorway Cutout Indicator */}
-      <mesh position={[0, (blockH * 0.65) / 2, blockD / 2 + 0.01]}>
-        <planeGeometry args={[blockW * 0.38, blockH * 0.65]} />
-        <meshBasicMaterial color="#0b0f19" side={DoubleSide} />
-      </mesh>
-
-      {/* Ground Projection Halo when selected */}
+      {/* Vòng sáng dưới chân khi được chọn */}
       {isSelected && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-          <planeGeometry args={[blockW * 1.35, blockD * 1.35]} />
-          <meshBasicMaterial color="#38bdf8" transparent opacity={0.4} />
+          <ringGeometry args={[headR * 1.2, headR * 1.8, 28]} />
+          <meshBasicMaterial color="#38bdf8" transparent opacity={0.55} side={DoubleSide} />
         </mesh>
       )}
 
-      {/* Floating 3D Room Title Badge */}
-      <Html position={[0, blockH + 0.42, 0]} center distanceFactor={13}>
-        <div
-          onClick={(e) => {
-            e.stopPropagation()
-            onSelect()
-          }}
-          style={{
-            background: isSelected
-              ? 'rgba(2, 132, 199, 0.96)'
-              : hovered
-                ? 'rgba(30, 27, 75, 0.96)'
-                : 'rgba(15, 23, 42, 0.90)',
-            border: isSelected
-              ? '1.5px solid #38bdf8'
-              : `1px solid ${theme.glow}`,
-            color: '#ffffff',
-            padding: '3px 8px',
-            borderRadius: 6,
-            fontSize: '11px',
-            fontWeight: 600,
-            whiteSpace: 'nowrap',
-            cursor: 'pointer',
-            boxShadow: isSelected
-              ? '0 0 16px rgba(56, 189, 248, 0.65)'
-              : '0 4px 12px rgba(0,0,0,0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 5,
-            backdropFilter: 'blur(4px)',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <span style={{ fontSize: '12px' }}>{icon}</span>
-          <span>{poi.name}</span>
-          <span
+      {/* Nhãn chỉ hiện khi rê chuột hoặc chọn */}
+      {(isSelected || hovered) && (
+        <Html position={[0, stemH + headR * 2 + 0.35, 0]} center distanceFactor={13} zIndexRange={[20, 0]}>
+          <div
+            onClick={(e) => {
+              e.stopPropagation()
+              onSelect()
+            }}
             style={{
-              fontSize: '9px',
-              padding: '1px 4px',
-              borderRadius: 3,
-              background: theme.tagBg,
-              opacity: 0.95,
+              background: isSelected ? 'rgba(2, 132, 199, 0.96)' : 'rgba(15, 23, 42, 0.94)',
+              border: `1px solid ${isSelected ? '#38bdf8' : theme.glow}`,
+              color: '#ffffff',
+              padding: '3px 8px',
+              borderRadius: 6,
+              fontSize: '11px',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              pointerEvents: 'none',
             }}
           >
-            {theme.label}
-          </span>
-        </div>
-      </Html>
+            <span style={{ fontSize: '12px' }}>{icon}</span>
+            <span>{poi.name}</span>
+            <span style={{ fontSize: '9px', padding: '1px 4px', borderRadius: 3, background: theme.tagBg }}>{theme.label}</span>
+          </div>
+        </Html>
+      )}
     </group>
   )
 }
@@ -1359,8 +1328,8 @@ export function BuildingOverviewScene({
           )
         })}
 
-      {/* 3D POIs & Zoned Room Blocks */}
-      {(visibleLayers.pois || visibleLayers.walls) &&
+      {/* Ghim POI */}
+      {visibleLayers.pois &&
         resolvedPois.map((poi) => {
           if (selectedFloorId !== 'all' && selectedFloorId !== poi.floorId) return null
           const floor = floorsMap.get(poi.floorId)
@@ -1393,8 +1362,8 @@ export function BuildingOverviewScene({
           )
         })}
 
-      {/* 3D Stores & Zoned Room Blocks */}
-      {(visibleLayers.pois || visibleLayers.walls) &&
+      {/* Ghim gian hàng */}
+      {visibleLayers.pois &&
         resolvedStores.map((store) => {
           if (selectedFloorId !== 'all' && selectedFloorId !== store.floorId) return null
           const floor = floorsMap.get(store.floorId)

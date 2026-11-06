@@ -1,11 +1,10 @@
 import { Button, Space, Tag, Tooltip, Typography } from 'antd'
-import { AimOutlined, DeleteOutlined, EnvironmentOutlined, LinkOutlined, PlusOutlined, SaveOutlined, ReloadOutlined } from '@ant-design/icons'
-import { useEffect, useState, type ReactNode } from 'react'
+import { AimOutlined, ColumnWidthOutlined, DeleteOutlined, EnvironmentOutlined, LinkOutlined, NodeIndexOutlined, SaveOutlined } from '@ant-design/icons'
+import { useEffect, type ReactNode } from 'react'
+import { useEditorToolStore, type EditorTool } from '../../store/useEditorToolStore'
 import { AppSelect as Select } from './AppSelect'
 import type { Building } from '../../types/building'
 import type { Floor } from '../../types/floor'
-
-type EditorTool = 'select' | 'node' | 'edge' | 'poi' | 'delete'
 
 type EditorShellProps = {
   buildings: Building[]
@@ -24,31 +23,33 @@ type EditorShellProps = {
 
 const toolItems: Array<{ key: EditorTool; label: string; shortcut: string; icon: ReactNode }> = [
   { key: 'select', label: 'Chọn đối tượng', shortcut: 'V', icon: <AimOutlined /> },
-  { key: 'node', label: 'Thêm node', shortcut: 'N', icon: <PlusOutlined /> },
+  { key: 'node', label: 'Vẽ tuyến (node + edge)', shortcut: 'N', icon: <NodeIndexOutlined /> },
   { key: 'edge', label: 'Nối cạnh', shortcut: 'E', icon: <LinkOutlined /> },
   { key: 'poi', label: 'Thêm POI', shortcut: 'P', icon: <EnvironmentOutlined /> },
+  { key: 'calibrate', label: 'Hiệu chuẩn tỉ lệ', shortcut: 'C', icon: <ColumnWidthOutlined /> },
   { key: 'delete', label: 'Xóa đối tượng', shortcut: 'Delete', icon: <DeleteOutlined /> },
 ]
 
 export function EditorShell({ buildings, buildingId, floors, selectedFloorId, isBuildingLoading = false, readOnly = false, status = 'saved', secondaryAction, primaryAction, children, onBuildingChange, onFloorChange }: EditorShellProps) {
-  const [activeTool, setActiveTool] = useState<EditorTool>('select')
+  const activeTool = useEditorToolStore((state) => state.tool)
+  const setActiveTool = useEditorToolStore((state) => state.setTool)
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return
       if (event.key === 'Escape') setActiveTool('select')
       const tool = toolItems.find((item) => item.shortcut.toLowerCase() === event.key.toLowerCase())
       if (tool && !readOnly) setActiveTool(tool.key)
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [readOnly])
+  }, [readOnly, setActiveTool])
   const statusLabel = status === 'saving' ? 'Đang lưu...' : status === 'dirty' ? 'Chưa lưu' : 'Đã lưu'
   const selectedFloor = floors.find((floor) => floor.id === selectedFloorId)
 
   return <section className="editor-shell">
     <aside className="editor-tool-rail" aria-label="Công cụ bản đồ">
       {toolItems.map((tool) => <Tooltip key={tool.key} title={`${tool.label} (${tool.shortcut})`} placement="right"><Button type={activeTool === tool.key ? 'primary' : 'text'} danger={tool.key === 'delete' && activeTool !== tool.key} className="editor-tool-button" disabled={readOnly} icon={tool.icon} aria-label={tool.label} aria-disabled={readOnly} onClick={() => setActiveTool(tool.key)} /></Tooltip>)}
-      <div className="editor-tool-spacer" />
-      <Tooltip title="Hoàn tác"><Button type="text" className="editor-tool-button" icon={<ReloadOutlined />} aria-label="Hoàn tác" /></Tooltip>
     </aside>
     <div className="editor-stage-column">
       <div className="editor-context-bar">

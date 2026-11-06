@@ -58,20 +58,41 @@ export type BuildingOverview = {
   stores?: OverviewStore[]
 }
 
+/**
+ * BE trả node/POI theo pixel ảnh sơ đồ. Đổi một lần về % (0-100) theo kích thước từng tầng để cảnh 3D
+ * không phải đoán đơn vị (trước đây toạ độ pixel nhỏ hơn 100 bị hiểu nhầm là %).
+ */
+function toPercentOverview(overview: BuildingOverview): BuildingOverview {
+  const sizes = new Map(overview.floors.map((floor) => [floor.id, floor]))
+  const percent = (floorId: string, x: number, y: number) => {
+    const floor = sizes.get(floorId)
+    return floor?.mapWidth && floor.mapHeight
+      ? { x: (x / floor.mapWidth) * 100, y: (y / floor.mapHeight) * 100 }
+      : { x, y }
+  }
+  return {
+    ...overview,
+    nodes: overview.nodes?.map((node) => ({ ...node, ...percent(node.floorId, node.x, node.y) })),
+    pois: overview.pois?.map((poi) =>
+      poi.x != null && poi.y != null ? { ...poi, ...percent(poi.floorId, poi.x, poi.y) } : { ...poi, x: undefined, y: undefined },
+    ),
+  }
+}
+
 export async function getBuildingOverview(buildingId: string) {
   try {
     const { data } = await apiClient.get<BuildingOverview>(`/buildings/${buildingId}/overview`, {
       timeout: 30_000,
     })
-    return data
+    return toPercentOverview(data)
   } catch (error: unknown) {
-    // If unauthorized or forbidden, try public endpoint for guest navigation
-    const err = error as { response?: { status?: number }; message?: string }
-    if (err?.response?.status === 401 || err?.response?.status === 403) {
+    // Chưa đăng nhập hoặc không đủ quyền: dùng endpoint công khai cho khách.
+    const status = (error as { status?: number })?.status
+    if (status === 401 || status === 403) {
       const { data } = await apiClient.get<BuildingOverview>(`/public/buildings/${buildingId}/overview`, {
         timeout: 30_000,
       })
-      return data
+      return toPercentOverview(data)
     }
     throw error
   }

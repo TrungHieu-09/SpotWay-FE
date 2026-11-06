@@ -1,102 +1,142 @@
-import axios, { type InternalAxiosRequestConfig } from 'axios'
+import axios, { type InternalAxiosRequestConfig } from "axios";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api'
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 type TokenPair = {
-  accessToken: string
-  refreshToken: string
-}
+  accessToken: string;
+  refreshToken: string;
+};
 
-type RetriableRequest = InternalAxiosRequestConfig & { _spotwayRetried?: boolean }
+type RetriableRequest = InternalAxiosRequestConfig & {
+  _spotwayRetried?: boolean;
+};
 
 /** Error thrown by every API call: keeps the HTTP status and BE error code so callers can tell a wrong password from a system fault. */
 export class ApiError extends Error {
-  status?: number
-  code?: string
+  status?: number;
+  code?: string;
 }
 
 export function toApiError(message: string, status?: number, code?: string) {
-  const error = new ApiError(message)
-  error.status = status
-  error.code = code
-  return error
+  const error = new ApiError(message);
+  error.status = status;
+  error.code = code;
+  return error;
 }
 
-let refreshInFlight: Promise<TokenPair> | null = null
+let refreshInFlight: Promise<TokenPair> | null = null;
 
 function clearSession() {
-  window.localStorage.removeItem('spotway.accessToken')
-  window.localStorage.removeItem('spotway.refreshToken')
-  window.localStorage.removeItem('spotway.role')
-  window.localStorage.removeItem('auth:token')
-  window.localStorage.removeItem('spotway.user')
+  window.localStorage.removeItem("spotway.accessToken");
+  window.localStorage.removeItem("spotway.refreshToken");
+  window.localStorage.removeItem("spotway.role");
+  window.localStorage.removeItem("auth:token");
+  window.localStorage.removeItem("spotway.user");
 }
 
 async function refreshAccessToken() {
-  const refreshToken = window.localStorage.getItem('spotway.refreshToken')
+  const refreshToken = window.localStorage.getItem("spotway.refreshToken");
   if (!refreshToken) {
-    throw new Error('Phiên đăng nhập đã hết hạn')
+    throw new Error("Phiên đăng nhập đã hết hạn");
   }
 
   if (!refreshInFlight) {
     refreshInFlight = axios
-      .post<{ success?: boolean; data?: TokenPair }>(`${apiBaseUrl}/auth/refresh`, {
-        refreshToken,
-      })
+      .post<{ success?: boolean; data?: TokenPair }>(
+        `${apiBaseUrl}/auth/refresh`,
+        {
+          refreshToken,
+        },
+      )
       .then((response) => {
-        const tokens = response.data.data
-        if (!response.data.success || !tokens?.accessToken || !tokens.refreshToken) {
-          throw new Error('Không thể làm mới phiên đăng nhập')
+        const tokens = response.data.data;
+        if (
+          !response.data.success ||
+          !tokens?.accessToken ||
+          !tokens.refreshToken
+        ) {
+          throw new Error("Không thể làm mới phiên đăng nhập");
         }
-        window.localStorage.setItem('spotway.accessToken', tokens.accessToken)
-        window.localStorage.setItem('spotway.refreshToken', tokens.refreshToken)
-        return tokens
+        window.localStorage.setItem("spotway.accessToken", tokens.accessToken);
+        window.localStorage.setItem(
+          "spotway.refreshToken",
+          tokens.refreshToken,
+        );
+        return tokens;
       })
       .finally(() => {
-        refreshInFlight = null
-      })
+        refreshInFlight = null;
+      });
   }
 
-  return refreshInFlight
+  return refreshInFlight;
 }
 
 export const apiClient = axios.create({
   baseURL: apiBaseUrl,
   timeout: 30_000,
-})
+});
 
 apiClient.interceptors.request.use((config) => {
   const token =
-    window.localStorage.getItem('spotway.accessToken') ||
-    window.localStorage.getItem('auth:token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  return config
-})
+    window.localStorage.getItem("spotway.accessToken") ||
+    window.localStorage.getItem("auth:token");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
 
 apiClient.interceptors.response.use(
   (response) => {
-    const body = response.data as { success?: boolean; data?: unknown; error?: { message?: string } }
-    if (body.success === true) return { ...response, data: body.data }
-    return response
+    const body = response.data as {
+      success?: boolean;
+      data?: unknown;
+      error?: { message?: string };
+    };
+    if (body.success === true) return { ...response, data: body.data };
+    return response;
   },
   async (error) => {
-    const request = error.config as RetriableRequest | undefined
+    const request = error.config as RetriableRequest | undefined;
     // A 401 from login/refresh means bad credentials / dead session, not an expired access token: never try to refresh.
-    const isRefreshRequest = request?.url?.includes('/auth/refresh') || request?.url?.includes('/auth/login')
+    const isRefreshRequest =
+      request?.url?.includes("/auth/refresh") ||
+      request?.url?.includes("/auth/login");
 
-    if (error.response?.status === 401 && request && !request._spotwayRetried && !isRefreshRequest) {
-      request._spotwayRetried = true
+    if (
+      error.response?.status === 401 &&
+      request &&
+      !request._spotwayRetried &&
+      !isRefreshRequest
+    ) {
+      request._spotwayRetried = true;
       try {
-        const tokens = await refreshAccessToken()
-        request.headers.Authorization = `Bearer ${tokens.accessToken}`
-        return apiClient.request(request)
+        const tokens = await refreshAccessToken();
+        request.headers.Authorization = `Bearer ${tokens.accessToken}`;
+        return apiClient.request(request);
       } catch {
-        clearSession()
-        if (window.location.pathname !== '/login') window.location.assign('/login')
+        clearSession();
+        if (window.location.pathname !== "/login")
+          window.location.assign("/login");
       }
     }
-    const message = error.response?.data?.error?.message ?? error.response?.data?.message ?? error.message ?? 'Request failed'
-    return Promise.reject(toApiError(message, error.response?.status, error.response?.data?.error?.code))
+    const rawMessage =
+      error.response?.data?.error?.message ??
+      error.response?.data?.message ??
+      error.message ??
+      "Request failed";
+    // Express/Nest trả "Cannot GET /api/..." khi route chưa tồn tại: báo dễ hiểu thay vì lộ nguyên văn.
+    const isMissingEndpoint =
+      error.response?.status === 404 &&
+      typeof rawMessage === "string" &&
+      /^Cannot (GET|POST|PUT|PATCH|DELETE) \//.test(rawMessage);
+    const message = isMissingEndpoint
+      ? "Tính năng này chưa được máy chủ hỗ trợ"
+      : rawMessage;
+    return Promise.reject(
+      Object.assign(new Error(message), {
+        status: error.response?.status as number | undefined,
+        isMissingEndpoint,
+      }),
+    );
   },
-)
-
+);
