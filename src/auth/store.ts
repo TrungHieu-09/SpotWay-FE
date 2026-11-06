@@ -6,10 +6,9 @@ import {
   register as registerRequest,
   verifyEmail as verifyEmailRequest,
   logout as logoutRequest,
-  createWorkspace as createWorkspaceRequest,
-  type CreateWorkspaceResult,
 } from './api'
 import type { AuthUser, RegisterResponse, Role } from '../types/auth'
+import type { AuthSession } from '../types/billing'
 
 export const AUTH_TOKEN_KEY = 'auth:token'
 
@@ -25,7 +24,8 @@ type AuthState = {
   verifyEmail: (email: string, code: string) => Promise<void>
   logout: () => Promise<void>
   changePassword: (currentPassword: string | undefined, newPassword: string) => Promise<void>
-  createWorkspace: (name: string, subdomain: string, orgType?: string) => Promise<CreateWorkspaceResult>
+  /** Store the session returned when a paid order provisioned the user's workspace. */
+  applySession: (session: AuthSession) => void
   clearSession: () => void
 }
 
@@ -176,22 +176,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user })
   },
 
-  async createWorkspace(name, subdomain, orgType) {
-    set({ isLoading: true, error: null })
-    try {
-      const result = await createWorkspaceRequest({ name, subdomain, orgType })
-      const token = result.accessToken || window.localStorage.getItem(AUTH_TOKEN_KEY) || window.localStorage.getItem('spotway.accessToken')
-      const user = result.user
-      saveToken(token, user.role, user)
-      set({ user, token, error: null })
-      return result
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Tạo workspace thất bại'
-      set({ error: message })
-      throw error
-    } finally {
-      set({ isLoading: false })
-    }
+  applySession(session) {
+    const token = session.accessToken || window.localStorage.getItem(AUTH_TOKEN_KEY)
+    if (session.refreshToken) window.localStorage.setItem('spotway.refreshToken', session.refreshToken)
+    saveToken(token, session.user.role, session.user)
+    set({ user: session.user, token, error: null })
   },
 
   clearSession() {

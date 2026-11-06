@@ -38,15 +38,16 @@ export function PricingPage() {
     return '/account'
   }
 
-  const handlePlanAction = () => {
-    if (user) {
-      if (user.role === 'building_owner' && user.tenantId) {
-        navigate('/owner/subscription')
-      } else {
-        navigate(getDashboardPath(user))
-      }
+  const handlePlanAction = (planId: 'STARTER' | 'PRO') => {
+    const onboardingPath = `/onboarding?plan=${planId}`
+    if (!user) {
+      navigate(`/login?redirect=${encodeURIComponent(onboardingPath)}`)
+    } else if (user.role === 'building_owner' && user.tenantId) {
+      navigate('/owner/subscription')
+    } else if (!user.tenantId && user.role !== 'admin') {
+      navigate(onboardingPath)
     } else {
-      navigate('/login')
+      navigate(getDashboardPath(user))
     }
   }
 
@@ -145,8 +146,8 @@ export function PricingPage() {
               </div>
             </div>
 
-            <button type="button" onClick={handlePlanAction} className="pricing-card-btn">
-              Bắt đầu dùng thử miễn phí
+            <button type="button" onClick={() => handlePlanAction('STARTER')} className="pricing-card-btn">
+              Mua gói Khởi đầu
             </button>
           </div>
 
@@ -208,7 +209,7 @@ export function PricingPage() {
               </div>
             </div>
 
-            <button type="button" onClick={handlePlanAction} className="pricing-card-btn-featured">
+            <button type="button" onClick={() => handlePlanAction('PRO')} className="pricing-card-btn-featured">
               <span>Đăng ký gói Chuyên nghiệp</span>
               <span className="material-symbols-outlined text-[18px]">bolt</span>
             </button>

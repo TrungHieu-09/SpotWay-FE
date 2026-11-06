@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { App as AntApp } from 'antd'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { ApiError } from '../../api/client'
 import { useAuthStore } from '../../auth/store'
 import './LoginPage.css'
 
@@ -15,6 +16,28 @@ function homeForRole(user?: { role?: string; tenantId?: string | null; tenant?: 
   return '/account'
 }
 
+/** Wrong credentials, a locked workspace and a system fault each get their own message. */
+function describeLoginError(err: unknown, lang: 'EN' | 'VI') {
+  const vi = lang === 'VI'
+  const status = err instanceof ApiError ? err.status : undefined
+  const code = err instanceof ApiError ? err.code : undefined
+
+  if (code === 'INVALID_CREDENTIALS' || status === 401) {
+    return vi ? 'Sai email hoặc mật khẩu.' : 'Incorrect email or password.'
+  }
+  if (code === 'TENANT_SUSPENDED') {
+    return vi
+      ? 'Không gian làm việc của bạn đang bị tạm khóa. Vui lòng liên hệ quản trị viên.'
+      : 'Your workspace is suspended. Please contact your administrator.'
+  }
+  if (!status || status >= 500) {
+    return vi
+      ? 'Hệ thống đang gặp sự cố. Vui lòng thử lại sau.'
+      : 'Something went wrong on our side. Please try again later.'
+  }
+  return err instanceof Error ? err.message : vi ? 'Đăng nhập thất bại.' : 'Sign-in failed.'
+}
+
 export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -22,7 +45,6 @@ export function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [loginError, setLoginError] = useState<string | null>(null)
-  const [attemptsRemaining, setAttemptsRemaining] = useState<number>(5)
   const [activeFloor, setActiveFloor] = useState<'1F' | '2F' | '3F'>('2F')
   const [lang, setLang] = useState<'EN' | 'VI'>('VI')
 
@@ -57,16 +79,7 @@ export function LoginPage() {
       message.success(lang === 'EN' ? 'Signed in successfully' : 'Đăng nhập thành công')
       navigate(targetRoute, { replace: true })
     } catch (err) {
-      const remaining = Math.max(0, attemptsRemaining - 1)
-      setAttemptsRemaining(remaining)
-      const errorMsg =
-        err instanceof Error ? err.message : lang === 'EN' ? 'Incorrect email or password.' : 'Sai email hoặc mật khẩu.'
-      
-      setLoginError(
-        lang === 'EN'
-          ? `${errorMsg} ${remaining > 0 ? `${remaining} attempts remaining.` : 'Account temporarily locked.'}`
-          : `${errorMsg} ${remaining > 0 ? `Còn ${remaining} lần thử.` : 'Tài khoản tạm khóa.'}`
-      )
+      setLoginError(describeLoginError(err, lang))
     } finally {
       setSubmitting(false)
     }

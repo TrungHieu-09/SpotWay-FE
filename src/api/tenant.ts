@@ -1,6 +1,7 @@
 import { apiClient } from './client'
 import type { TenantOverview, Invoice, User, Plan } from '../types/auth'
 import type { Area } from '../types/area'
+import type { PlanOrder } from '../types/billing'
 
 export type CreateStaffPayload = {
   name: string
@@ -47,7 +48,7 @@ export async function deleteTenantUser(userId: string) {
 }
 
 export async function renewTenantSubscription(planId: string, months: number) {
-  const { data } = await apiClient.post<TenantOverview>('/tenant/subscription/renew', { planId, months })
+  const { data } = await apiClient.post<PlanOrder>('/tenant/subscription/renew', { planId, months })
   return data
 }
 

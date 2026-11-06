@@ -44,6 +44,12 @@ const ProfilePage = lazy(() =>
   })),
 )
 
+const CheckoutPage = lazy(() =>
+  import('../pages/Auth/CheckoutPage').then((module) => ({
+    default: module.CheckoutPage,
+  })),
+)
+
 const PricingPage = lazy(() =>
   import('../pages/Pricing/PricingPage').then((module) => ({
     default: module.PricingPage,
@@ -162,6 +168,7 @@ export const router = createBrowserRouter([
   { path: 'onboarding', element: lazyElement(<WorkspaceOnboardingPage />) },
   { path: 'workspace-setup', element: lazyElement(<WorkspaceOnboardingPage />) },
   { path: 'workspace-ready', element: lazyElement(<WorkspaceOnboardingPage showReadyInitially={true} />) },
+  { path: 'checkout/:orderId', element: lazyElement(<CheckoutPage />) },
   { path: 'account', element: lazyElement(<AccountHomePage />) },
   { path: 'workspace/choose', element: lazyElement(<AccountHomePage />) },
   { path: 'profile', element: lazyElement(<ProfilePage />) },

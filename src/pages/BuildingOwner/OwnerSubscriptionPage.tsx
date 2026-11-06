@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { App as AntApp, Button, Form, InputNumber, Modal, Select, Spin } from 'antd'
 import {
@@ -27,6 +27,7 @@ export function OwnerSubscriptionPage() {
   const [submitting, setSubmitting] = useState(false)
   const [form] = Form.useForm<{ planId: string; months: number }>()
   const { message } = AntApp.useApp()
+  const navigate = useNavigate()
 
   async function reload() {
     try {
@@ -50,10 +51,9 @@ export function OwnerSubscriptionPage() {
   async function submit(values: { planId: string; months: number }) {
     setSubmitting(true)
     try {
-      await renewTenantSubscription(values.planId, values.months)
-      message.success('✅ Đã gia hạn gói dịch vụ thành công!')
+      const order = await renewTenantSubscription(values.planId, values.months)
       setOpen(false)
-      await reload()
+      navigate(`/checkout/${order.id}`)
     } catch (error) {
       message.error((error as Error).message)
     } finally {
@@ -219,7 +219,7 @@ export function OwnerSubscriptionPage() {
         open={open}
         onCancel={() => setOpen(false)}
         onOk={() => form.submit()}
-        okText="Xác nhận thanh toán"
+        okText="Tiếp tục thanh toán"
         cancelText="Hủy"
         confirmLoading={submitting}
         width={480}

@@ -9,6 +9,19 @@ type TokenPair = {
 
 type RetriableRequest = InternalAxiosRequestConfig & { _spotwayRetried?: boolean }
 
+/** Error thrown by every API call: keeps the HTTP status and BE error code so callers can tell a wrong password from a system fault. */
+export class ApiError extends Error {
+  status?: number
+  code?: string
+}
+
+export function toApiError(message: string, status?: number, code?: string) {
+  const error = new ApiError(message)
+  error.status = status
+  error.code = code
+  return error
+}
+
 let refreshInFlight: Promise<TokenPair> | null = null
 
 function clearSession() {
@@ -68,7 +81,8 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const request = error.config as RetriableRequest | undefined
-    const isRefreshRequest = request?.url?.includes('/auth/refresh')
+    // A 401 from login/refresh means bad credentials / dead session, not an expired access token: never try to refresh.
+    const isRefreshRequest = request?.url?.includes('/auth/refresh') || request?.url?.includes('/auth/login')
 
     if (error.response?.status === 401 && request && !request._spotwayRetried && !isRefreshRequest) {
       request._spotwayRetried = true
@@ -82,7 +96,7 @@ apiClient.interceptors.response.use(
       }
     }
     const message = error.response?.data?.error?.message ?? error.response?.data?.message ?? error.message ?? 'Request failed'
-    return Promise.reject(new Error(message))
+    return Promise.reject(toApiError(message, error.response?.status, error.response?.data?.error?.code))
   },
 )
 

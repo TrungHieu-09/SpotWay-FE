@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { App as AntApp } from 'antd'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../auth/store'
+import { createWorkspaceOrder, getBillingPlans } from '../../api/billing'
+import type { BillingPlan } from '../../types/billing'
 import '../../components/layout/SpotWayNavbar.css'
 import './WorkspaceOnboardingPage.css'
 
@@ -10,6 +12,10 @@ interface OrgTypeOption {
   label: string
   icon: string
 }
+
+const MONTH_OPTIONS = [1, 6, 12, 24]
+
+const formatVnd = (value: number) => `${value.toLocaleString('vi-VN')} ₫`
 
 const ORG_TYPES: OrgTypeOption[] = [
   { id: 'airport', label: 'Sân bay', icon: 'flight_takeoff' },
@@ -32,6 +38,9 @@ export function WorkspaceOnboardingPage({ showReadyInitially = false }: { showRe
   const [region, setRegion] = useState('vn')
   const [submitting, setSubmitting] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [plans, setPlans] = useState<BillingPlan[]>([])
+  const [planId, setPlanId] = useState(searchParams.get('plan')?.toUpperCase() || 'STARTER')
+  const [months, setMonths] = useState(12)
 
   const [createdWorkspace, setCreatedWorkspace] = useState<{
     name: string
@@ -42,7 +51,20 @@ export function WorkspaceOnboardingPage({ showReadyInitially = false }: { showRe
   const { message } = AntApp.useApp()
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
-  const createWorkspace = useAuthStore((state) => state.createWorkspace)
+
+  useEffect(() => {
+    getBillingPlans()
+      .then((list) => {
+        setPlans(list)
+        setPlanId((current) => (list.some((p) => p.id === current) ? current : list[0]?.id ?? current))
+      })
+      .catch((err: Error) => message.error(err.message))
+  }, [message])
+
+  const selectedPlan = plans.find((p) => p.id === planId)
+  const totalVnd = selectedPlan
+    ? (months >= 12 ? selectedPlan.priceVnd : selectedPlan.monthlyPriceVnd) * months
+    : 0
 
   const userEmail = user?.email || 'user@spotway.vn'
   const userInitial = (user?.name || (user?.email ? user.email.slice(0, 1) : 'U')).slice(0, 2).toUpperCase()
@@ -91,17 +113,23 @@ export function WorkspaceOnboardingPage({ showReadyInitially = false }: { showRe
       return
     }
 
+    if (!selectedPlan) {
+      message.error('Vui lòng chọn gói dịch vụ.')
+      return
+    }
+
     setSubmitting(true)
     try {
-      const res = await createWorkspace(orgName.trim(), cleanSubdomain, selectedType)
-      setCreatedWorkspace({
-        name: res.tenant.name,
-        subdomain: res.tenant.subdomain,
+      // The workspace is only created once the order is paid (see CheckoutPage).
+      const order = await createWorkspaceOrder({
+        planId,
+        months,
+        workspaceName: orgName.trim(),
+        subdomain: cleanSubdomain,
       })
-      message.success(`Đã khởi tạo Workspace "${res.tenant.name}" thành công vào hệ thống!`)
-      setStep('ready')
+      navigate(`/checkout/${order.id}`)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Khởi tạo Workspace thất bại'
+      const msg = err instanceof Error ? err.message : 'Không thể tạo đơn hàng'
       message.error(msg)
     } finally {
       setSubmitting(false)
@@ -249,7 +277,11 @@ export function WorkspaceOnboardingPage({ showReadyInitially = false }: { showRe
             {/* Trial Notice */}
             <div className="wbr-trial-notice">
               <span className="material-symbols-outlined wbr-trial-icon">verified</span>
-              <span>14-day free trial started. No credit card required.</span>
+              <span>
+                {user?.tenant?.planExpiresAt
+                  ? `Gói ${user.tenant.planId} đã kích hoạt — hiệu lực đến ${new Intl.DateTimeFormat('vi-VN').format(new Date(user.tenant.planExpiresAt))}.`
+                  : 'Thanh toán thành công. Gói dịch vụ đã được kích hoạt.'}
+              </span>
             </div>
 
             {/* Rapid Provision Summary Chips */}
@@ -402,7 +434,7 @@ export function WorkspaceOnboardingPage({ showReadyInitially = false }: { showRe
 
             <div className="wob-step-pill wob-step-pill--inactive">
               <span className="wob-step-dot--inactive" />
-              <span>2. Kích hoạt &amp; Sẵn sàng</span>
+              <span>2. Thanh toán &amp; Kích hoạt</span>
             </div>
           </div>
 
@@ -527,6 +559,58 @@ export function WorkspaceOnboardingPage({ showReadyInitially = false }: { showRe
               </div>
             </div>
 
+            {/* Plan purchase: the workspace is created after payment */}
+            <div className="wob-dropdowns-row">
+              <div className="wob-field">
+                <label className="wob-label" htmlFor="wob-plan">Gói dịch vụ</label>
+                <div className="wob-select-wrapper">
+                  <select
+                    id="wob-plan"
+                    className="wob-select"
+                    value={planId}
+                    onChange={(e) => setPlanId(e.target.value)}
+                  >
+                    {plans.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} — từ {formatVnd(p.priceVnd)}/tháng
+                      </option>
+                    ))}
+                  </select>
+                  <span className="wob-select-chevron">
+                    <span className="material-symbols-outlined">expand_more</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="wob-field">
+                <label className="wob-label" htmlFor="wob-months">Thời hạn</label>
+                <div className="wob-select-wrapper">
+                  <select
+                    id="wob-months"
+                    className="wob-select"
+                    value={months}
+                    onChange={(e) => setMonths(Number(e.target.value))}
+                  >
+                    {MONTH_OPTIONS.map((m) => (
+                      <option key={m} value={m}>{m} tháng</option>
+                    ))}
+                  </select>
+                  <span className="wob-select-chevron">
+                    <span className="material-symbols-outlined">expand_more</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {selectedPlan && (
+              <div className="wob-security-pill">
+                <span className="material-symbols-outlined">payments</span>
+                <p className="wob-security-text">
+                  Tổng thanh toán: <strong>{formatVnd(totalVnd)}</strong>. Workspace sẽ được tạo ngay sau khi thanh toán thành công.
+                </p>
+              </div>
+            )}
+
             {/* Security Reassurance Pill */}
             <div className="wob-security-pill">
               <span className="material-symbols-outlined">lock</span>
@@ -549,9 +633,9 @@ export function WorkspaceOnboardingPage({ showReadyInitially = false }: { showRe
               <button
                 type="submit"
                 className="wob-btn-continue"
-                disabled={submitting}
+                disabled={submitting || !selectedPlan}
               >
-                <span>{submitting ? 'Đang khởi tạo vào DB...' : 'Tiếp tục'}</span>
+                <span>{submitting ? 'Đang tạo đơn hàng...' : 'Tiếp tục thanh toán'}</span>
                 <span className="material-symbols-outlined">arrow_forward</span>
               </button>
             </div>
