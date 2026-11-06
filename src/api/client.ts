@@ -81,8 +81,11 @@ apiClient.interceptors.response.use(
         if (window.location.pathname !== '/login') window.location.assign('/login')
       }
     }
-    const message = error.response?.data?.error?.message ?? error.response?.data?.message ?? error.message ?? 'Request failed'
-    return Promise.reject(new Error(message))
+    const rawMessage = error.response?.data?.error?.message ?? error.response?.data?.message ?? error.message ?? 'Request failed'
+    // Express/Nest trả "Cannot GET /api/..." khi route chưa tồn tại: báo dễ hiểu thay vì lộ nguyên văn.
+    const isMissingEndpoint = error.response?.status === 404 && typeof rawMessage === 'string' && /^Cannot (GET|POST|PUT|PATCH|DELETE) \//.test(rawMessage)
+    const message = isMissingEndpoint ? 'Tính năng này chưa được máy chủ hỗ trợ (BE chưa có endpoint).' : rawMessage
+    return Promise.reject(Object.assign(new Error(message), { status: error.response?.status as number | undefined, isMissingEndpoint }))
   },
 )
 
