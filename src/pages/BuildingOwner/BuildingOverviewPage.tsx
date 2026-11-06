@@ -329,7 +329,7 @@ export function BuildingOverviewPage() {
                     fontWeight: 600,
                   }}
                 >
-                  {selectedFloorId === 'all' ? 'Phân tích mặt bằng tất cả tầng' : 'Phân tích mặt bằng tầng đang chọn'}
+                  {selectedFloorId === 'all' ? 'Phân tích tất cả tầng' : 'Phân tích tầng này'}
                 </Button>
               </div>
             </aside>
@@ -467,7 +467,7 @@ export function BuildingOverviewPage() {
                   </div>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#ffffff' }}>
+                      <span className="floating-route-banner__title" style={{ fontSize: 12, fontWeight: 700, color: '#ffffff' }}>
                         Mô phỏng tuyến 3D
                       </span>
                       <Tag color={isSimulatingRoute ? 'green' : 'default'} style={{ fontSize: 10, margin: 0 }}>
@@ -475,11 +475,9 @@ export function BuildingOverviewPage() {
                       </Tag>
                     </div>
                     <div style={{ fontSize: 11, color: '#cbd5e1', marginTop: 2 }}>
-                      {overview?.floors && overview.floors.length >= 2
-                        ? `${overview.floors[0].name} ➔ Trục liên kết đa tầng ➔ ${overview.floors[1].name}`
-                        : overview?.floors?.[0]
-                          ? `Lộ trình di chuyển trong ${overview.floors[0].name}`
-                          : 'Lộ trình định vị trong nhà'}
+                      {isSimulatingRoute && simulatedRouteSteps
+                        ? `${simulatedRouteSteps.length} điểm trên tuyến mẫu (lấy từ node thật)`
+                        : 'Bấm "Tạo tuyến" để xem tuyến mẫu từ các node đã vẽ'}
                     </div>
                   </div>
                 </div>
