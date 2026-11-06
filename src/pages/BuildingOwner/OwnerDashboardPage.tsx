@@ -45,7 +45,7 @@ export function OwnerDashboardPage() {
       ])
       setOverview(nextOverview)
     } catch (reason: any) {
-      setError(reason?.message || 'Không thể tải dữ liệu không gian làm việc')
+      setError(reason?.message || 'Không thể tải dữ liệu không gian doanh nghiệp')
     } finally {
       setIsLoading(false)
     }
@@ -62,42 +62,62 @@ export function OwnerDashboardPage() {
   const totalStores = overview?.usage.stores ?? 0
   const activePromos = overview?.usage.activePromotions ?? 0
 
-  // Checklist milestones calculation
+  // Checklist milestones calculation with clear, professional Vietnamese
   const milestoneList = [
     {
       id: 'ws',
-      title: 'Khởi tạo Không gian làm việc',
-      description: `Định danh ${overview?.tenant?.subdomain ? overview.tenant.subdomain + '.spotway.app' : 'hoàn tất'}`,
+      stepNumber: 1,
+      title: 'Khởi tạo không gian',
+      description: overview?.tenant?.subdomain
+        ? `Đã liên kết ${overview.tenant.subdomain}.spotway.app`
+        : 'Không gian làm việc đã được kích hoạt thành công',
       completed: true,
+      actionLabel: 'Đã hoàn tất',
     },
     {
       id: 'bldg',
-      title: 'Tạo tòa nhà trung tâm đầu tiên',
-      description: totalBuildings > 0 ? `Đã có ${totalBuildings} tòa nhà trong hệ thống` : 'Chưa có tòa nhà nào',
+      stepNumber: 2,
+      title: 'Thêm tòa nhà đầu tiên',
+      description:
+        totalBuildings > 0
+          ? `Đã cấu hình ${totalBuildings} tòa nhà trung tâm`
+          : 'Khai báo cơ sở hạ tầng trung tâm để bắt đầu quản lý',
       completed: totalBuildings > 0,
       action: totalBuildings === 0 ? () => setIsCreateModalOpen(true) : undefined,
-      actionLabel: '+ Tạo tòa nhà',
+      actionLabel: '+ Thêm tòa nhà',
     },
     {
       id: 'floor',
-      title: 'Tải sơ đồ kiến trúc mặt sàn',
-      description: totalFloors > 0 ? `Đã số hóa ${totalFloors} mặt sàn` : 'Cần tải ảnh sơ đồ 2D để gắn tọa độ',
+      stepNumber: 3,
+      title: 'Tải sơ đồ mặt sàn',
+      description:
+        totalFloors > 0
+          ? `Đã số hóa ${totalFloors} mặt sàn kiến trúc`
+          : 'Tải lên bản vẽ mặt bằng 2D để thiết lập tọa độ',
       completed: totalFloors > 0,
       link: totalBuildings > 0 ? `/owner/buildings/${buildings[0].id}` : '/owner/buildings',
       actionLabel: 'Quản lý tầng',
     },
     {
       id: 'manager',
-      title: 'Phân quyền Quản lý khu vực',
-      description: totalManagers > 0 ? `Đã chỉ định ${totalManagers} nhân sự vận hành` : 'Chưa thêm quản lý cho các khu vực',
+      stepNumber: 4,
+      title: 'Phân quyền quản lý',
+      description:
+        totalManagers > 0
+          ? `Đã chỉ định ${totalManagers} nhân sự vận hành`
+          : 'Chỉ định nhân sự giám sát và vận hành khu vực',
       completed: totalManagers > 0,
       link: '/owner/managers',
-      actionLabel: 'Thêm nhân sự',
+      actionLabel: 'Thêm quản lý',
     },
     {
       id: 'nav',
-      title: 'Xuất bản Lưới dẫn đường 3D',
-      description: publishedFloors > 0 ? `${publishedFloors} tầng sẵn sàng dẫn đường khách` : 'Chưa xuất bản bản đồ không gian',
+      stepNumber: 5,
+      title: 'Kích hoạt dẫn đường 3D',
+      description:
+        publishedFloors > 0
+          ? `${publishedFloors} tầng đã sẵn sàng phục vụ dẫn đường`
+          : 'Xuất bản bản đồ và mạng lưới lộ trình di chuyển 3D',
       completed: publishedFloors > 0,
       link: totalBuildings > 0 ? `/owner/buildings/${buildings[0].id}` : '/owner/buildings',
       actionLabel: 'Xuất bản',
@@ -107,13 +127,16 @@ export function OwnerDashboardPage() {
   const completedMilestones = milestoneList.filter((m) => m.completed).length
   const progressPercent = Math.round((completedMilestones / milestoneList.length) * 100)
 
+  // Plan name cleaner
+  const cleanPlanName = overview?.plan.name?.replace(/\(Legacy\)/gi, '').trim() || 'Gói Dùng Thử Miễn Phí'
+
   return (
     <main className="workspace odp-workspace">
       {/* ── Top Header ── */}
       <section className="odp-header">
-        <div>
+        <div className="odp-header__main">
           <div className="odp-header__tag-row">
-            <span className="odp-header__eyebrow">KHÔNG GIAN LÀM VIỆC // SPOTWAY SPATIAL OS</span>
+            <span className="odp-header__eyebrow">KHÔNG GIAN DOANH NGHIỆP</span>
             <span className="odp-header__live-pill">
               <span className="odp-header__live-dot" />
               Trực tuyến
@@ -123,7 +146,7 @@ export function OwnerDashboardPage() {
             {overview?.tenant?.name || user?.tenant?.name || 'Không gian doanh nghiệp'}
           </h1>
           <p className="odp-header__sub">
-            Trung tâm kiểm soát không gian số hóa, quản lý mặt sàn và hạ tầng viễn trắc trong nhà.
+            Trung tâm điều hành không gian số, quản lý mặt sàn và hệ thống dẫn đường thông minh.
           </p>
         </div>
 
@@ -141,7 +164,7 @@ export function OwnerDashboardPage() {
             className="odp-create-btn"
             onClick={() => setIsCreateModalOpen(true)}
           >
-            Tạo tòa nhà mới
+            Thêm tòa nhà mới
           </Button>
         </div>
       </section>
@@ -167,32 +190,32 @@ export function OwnerDashboardPage() {
           <div className="odp-stats-grid">
             <StatCard
               icon={<ApartmentOutlined />}
-              label="Tòa nhà vận hành"
+              label="Tòa nhà quản lý"
               value={totalBuildings}
               max={overview?.plan.maxBuildings}
-              sub={`${totalBuildings} đang hoạt động trong hệ thống`}
+              sub={totalBuildings > 0 ? `${totalBuildings} tòa nhà đang hoạt động` : 'Chưa có tòa nhà nào trong hệ thống'}
               accent="violet"
             />
             <StatCard
               icon={<AppstoreOutlined />}
-              label="Bản đồ mặt sàn số hóa"
+              label="Mặt sàn số hóa"
               value={totalFloors}
-              sub={`${publishedFloors} tầng đã xuất bản dẫn đường`}
+              sub={publishedFloors > 0 ? `${publishedFloors} tầng đã kích hoạt dẫn đường` : 'Chưa xuất bản bản đồ dẫn đường'}
               accent="cyan"
             />
             <StatCard
               icon={<TeamOutlined />}
-              label="Nhân sự & Quản lý"
+              label="Đội ngũ quản lý"
               value={totalManagers}
               max={overview?.plan.maxManagers}
-              sub={`${totalManagers} quản lý khu vực được cấp quyền`}
+              sub={totalManagers > 0 ? `${totalManagers} quản lý khu vực được chỉ định` : 'Chưa chỉ định quản lý khu vực'}
               accent="green"
             />
             <StatCard
               icon={<ShopOutlined />}
-              label="Gian hàng & Điểm dịch vụ"
+              label="Gian hàng & Dịch vụ"
               value={totalStores}
-              sub={`${activePromos} chương trình ưu đãi đang chạy`}
+              sub={activePromos > 0 ? `${activePromos} chương trình ưu đãi đang áp dụng` : 'Chưa có chương trình ưu đãi'}
               accent="fuchsia"
             />
           </div>
@@ -202,16 +225,16 @@ export function OwnerDashboardPage() {
             <GlassCard className="odp-roadmap-card">
               <div className="odp-roadmap__header">
                 <div>
-                  <div className="odp-roadmap__eyebrow">LỘ TRÌNH KHỞI TẠO</div>
-                  <h3 className="odp-roadmap__title">Các bước chuẩn bị Không gian số hóa</h3>
+                  <div className="odp-roadmap__eyebrow">HƯỚNG DẪN THIẾT LẬP</div>
+                  <h3 className="odp-roadmap__title">Quy trình số hóa không gian</h3>
                   <p className="odp-roadmap__desc">
-                    Hoàn thiện các mốc thiết lập để kích hoạt toàn diện hạ tầng bản đồ 3D và định vị UWB/QR.
+                    Hoàn tất các bước thiết lập dưới đây để kích hoạt sơ đồ 3D và hệ thống dẫn đường thông minh.
                   </p>
                 </div>
                 <div className="odp-roadmap__progress-box">
                   <div className="odp-roadmap__progress-text">
                     <span>Tiến độ thiết lập</span>
-                    <strong>{completedMilestones} / {milestoneList.length}</strong>
+                    <strong>{completedMilestones} / {milestoneList.length} bước</strong>
                   </div>
                   <div className="odp-roadmap__progress-bar">
                     <div
@@ -223,35 +246,58 @@ export function OwnerDashboardPage() {
               </div>
 
               <div className="odp-milestones-grid">
-                {milestoneList.map((item, idx) => (
+                {milestoneList.map((item) => (
                   <div
                     key={item.id}
                     className={`odp-milestone ${item.completed ? 'odp-milestone--done' : 'odp-milestone--pending'}`}
                   >
-                    <div className="odp-milestone__status">
-                      {item.completed ? (
-                        <CheckCircleFilled className="odp-milestone__check-icon" />
-                      ) : (
-                        <span className="odp-milestone__index">{idx + 1}</span>
-                      )}
+                    <div className="odp-milestone__top">
+                      <div className="odp-milestone__badge">
+                        {item.completed ? (
+                          <span className="odp-milestone__badge-done">
+                            <CheckCircleFilled className="odp-milestone__check-icon" />
+                            <span>Bước {item.stepNumber}</span>
+                          </span>
+                        ) : (
+                          <span className="odp-milestone__badge-pending">
+                            <span className="odp-milestone__step-dot" />
+                            <span>Bước {item.stepNumber}</span>
+                          </span>
+                        )}
+                      </div>
+                      <span className={`odp-milestone__status-pill ${item.completed ? 'is-done' : 'is-pending'}`}>
+                        {item.completed ? 'Đã xong' : 'Chờ làm'}
+                      </span>
                     </div>
+
                     <div className="odp-milestone__content">
                       <h4 className="odp-milestone__title">{item.title}</h4>
                       <p className="odp-milestone__desc">{item.description}</p>
                     </div>
-                    {!item.completed && (
-                      <div className="odp-milestone__action">
-                        {item.action ? (
-                          <Button size="small" type="primary" onClick={item.action}>
+
+                    <div className="odp-milestone__action">
+                      {item.completed ? (
+                        <div className="odp-milestone__done-btn">
+                          <CheckCircleFilled />
+                          <span>Đã hoàn thành</span>
+                        </div>
+                      ) : item.action ? (
+                        <Button
+                          size="middle"
+                          type="primary"
+                          className="odp-milestone__btn odp-milestone__btn--primary"
+                          onClick={item.action}
+                        >
+                          {item.actionLabel}
+                        </Button>
+                      ) : item.link ? (
+                        <Link to={item.link} className="odp-milestone__btn-link">
+                          <Button size="middle" className="odp-milestone__btn">
                             {item.actionLabel}
                           </Button>
-                        ) : item.link ? (
-                          <Link to={item.link}>
-                            <Button size="small">{item.actionLabel}</Button>
-                          </Link>
-                        ) : null}
-                      </div>
-                    )}
+                        </Link>
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -263,31 +309,36 @@ export function OwnerDashboardPage() {
             <div className="odp-section-header">
               <div>
                 <h3 className="odp-section-title">Danh sách Tòa nhà ({totalBuildings})</h3>
-                <p className="odp-section-desc">Quản lý các cơ sở hạ tầng, sơ đồ tầng và điểm neo trong tòa nhà.</p>
+                <p className="odp-section-desc">Quản lý cơ sở hạ tầng, sơ đồ mặt sàn và hệ thống điểm dẫn đường.</p>
               </div>
               <div className="odp-section-actions">
                 <Link to="/owner/buildings">
-                  <Button icon={<ApartmentOutlined />}>Tất cả tòa nhà ({totalBuildings})</Button>
+                  <Button icon={<ApartmentOutlined />} className="odp-view-all-btn">
+                    Tất cả tòa nhà ({totalBuildings})
+                  </Button>
                 </Link>
               </div>
             </div>
 
             {totalBuildings === 0 ? (
               <GlassCard className="odp-empty-buildings">
-                <div className="odp-empty-buildings__icon">
-                  <ApartmentOutlined />
+                <div className="odp-empty-buildings__icon-wrap">
+                  <div className="odp-empty-buildings__icon">
+                    <ApartmentOutlined />
+                  </div>
                 </div>
-                <h4 className="odp-empty-buildings__title">Chưa có tòa nhà nào được tạo</h4>
+                <h4 className="odp-empty-buildings__title">Chưa có tòa nhà nào trong không gian</h4>
                 <p className="odp-empty-buildings__sub">
-                  Hãy thêm tòa nhà đầu tiên của bạn để bắt đầu tải lên bản đồ mặt sàn và cấu hình điểm dẫn đường.
+                  Hãy thêm tòa nhà đầu tiên để bắt đầu tải lên bản đồ mặt sàn, thiết lập điểm dịch vụ và kích hoạt dẫn đường 3D.
                 </p>
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
                   size="large"
+                  className="odp-create-btn"
                   onClick={() => setIsCreateModalOpen(true)}
                 >
-                  Tạo tòa nhà đầu tiên
+                  Thêm tòa nhà đầu tiên
                 </Button>
               </GlassCard>
             ) : (
@@ -303,14 +354,14 @@ export function OwnerDashboardPage() {
           <div className="odp-bottom-grid">
             {/* Service Package Card */}
             {overview && (
-              <GlassCard className="odp-plan-card" title="Gói dịch vụ & Giới hạn tài nguyên" accent>
+              <GlassCard className="odp-plan-card" title="Gói dịch vụ & Tài nguyên" accent>
                 <div className="odp-plan__header">
                   <div className="odp-plan__badge">
                     <TrophyOutlined className="odp-plan__icon" />
-                    <span>{overview.plan.name}</span>
+                    <span>{cleanPlanName}</span>
                   </div>
                   <span className="odp-plan__expires">
-                    Hạn dùng:{' '}
+                    Hạn sử dụng:{' '}
                     <strong>
                       {new Intl.DateTimeFormat('vi-VN').format(new Date(overview.tenant.planExpiresAt))}
                     </strong>
@@ -347,34 +398,34 @@ export function OwnerDashboardPage() {
             )}
 
             {/* Quick Access Grid */}
-            <GlassCard className="odp-quicklinks-card" title="Phím tắt quản trị">
+            <GlassCard className="odp-quicklinks-card" title="Thao tác nhanh">
               <div className="odp-quicklinks">
                 <QuickLink
                   to="/owner/buildings"
                   icon={<ApartmentOutlined />}
-                  title="Quản lý Tòa nhà"
-                  desc="Cấu hình tầng, bản đồ 2D/3D & điểm neo"
+                  title="Cấu hình tòa nhà & mặt sàn"
+                  desc="Quản lý bản đồ 2D/3D, lối đi và điểm neo dẫn đường"
                   color="violet"
                 />
                 <QuickLink
                   to="/owner/managers"
                   icon={<TeamOutlined />}
-                  title="Đội ngũ Quản lý"
-                  desc="Phân quyền quản lý cho từng khu vực"
+                  title="Phân quyền quản lý khu vực"
+                  desc="Chỉ định và quản lý quyền hạn của đội ngũ vận hành"
                   color="cyan"
                 />
                 <QuickLink
                   to="/owner/store-owners"
                   icon={<ShopOutlined />}
-                  title="Gian hàng & Điểm thuê"
-                  desc="Tạo gian hàng và phê duyệt chủ điểm"
+                  title="Quản lý gian hàng & dịch vụ"
+                  desc="Thiết lập vị trí gian hàng, kiosk và chương trình ưu đãi"
                   color="fuchsia"
                 />
                 <QuickLink
                   to="/owner/subscription"
                   icon={<CloudOutlined />}
                   title="Gói dịch vụ & Hóa đơn"
-                  desc="Xem tài nguyên và lịch sử gia hạn"
+                  desc="Theo dõi dung lượng tài nguyên và nâng cấp gói dịch vụ"
                   color="green"
                 />
               </div>
@@ -491,7 +542,7 @@ function PlanMeter({
       <div className="odp-meter__header">
         <span className="odp-meter__label">{label}</span>
         <span className="odp-meter__count">
-          {used}/{max}
+          <strong>{used}</strong> / {max}
         </span>
       </div>
       <div className="odp-meter__track">

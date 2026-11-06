@@ -1,14 +1,14 @@
 /* ============================================================
-   SpotWay Spatial OS — Owner Dashboard Styles
+   SpotWay Spatial OS — Owner Dashboard Styles (Refined & Balanced)
    ============================================================ */
 
 .odp-workspace {
   display: flex;
   flex-direction: column;
   gap: 32px;
-  max-width: 1400px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 8px 0 40px;
+  padding: 12px 24px 48px;
 }
 
 /* ── Top Header ── */
@@ -20,6 +20,11 @@
   flex-wrap: wrap;
 }
 
+.odp-header__main {
+  flex: 1;
+  min-width: 320px;
+}
+
 .odp-header__tag-row {
   display: flex;
   align-items: center;
@@ -29,7 +34,7 @@
 
 .odp-header__eyebrow {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
   letter-spacing: 0.12em;
   color: #a078ff;
@@ -68,9 +73,9 @@
 .odp-header__title {
   margin: 0 0 8px;
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 34px;
+  font-size: 32px;
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.2;
   letter-spacing: -0.02em;
   background: linear-gradient(135deg, #ffffff 0%, #d0bcff 50%, #5de6ff 100%);
   -webkit-background-clip: text;
@@ -83,7 +88,7 @@
   color: #9490a6;
   font-size: 14px;
   max-width: 680px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .odp-header__actions {
@@ -97,8 +102,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  border: 1px solid rgba(93, 230, 255, 0.3);
+  padding: 9px 18px;
+  border: 1px solid rgba(93, 230, 255, 0.28);
   border-radius: 99px;
   background: rgba(93, 230, 255, 0.06);
   backdrop-filter: blur(12px);
@@ -106,7 +111,7 @@
   font-size: 13px;
   font-weight: 500;
   color: #5de6ff;
-  box-shadow: 0 0 16px rgba(93, 230, 255, 0.1);
+  box-shadow: 0 0 16px rgba(93, 230, 255, 0.08);
 }
 
 .odp-domain-badge__dot {
@@ -124,9 +129,10 @@
   font-weight: 600 !important;
   font-family: 'Space Grotesk', sans-serif !important;
   height: 42px !important;
-  padding: 0 20px !important;
+  padding: 0 22px !important;
   border-radius: 12px !important;
   transition: all 0.2s ease !important;
+  color: #ffffff !important;
 }
 
 .odp-create-btn:hover {
@@ -186,7 +192,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  opacity: 0;
+  opacity: 0.5;
   transition: opacity 0.25s ease;
 }
 
@@ -225,14 +231,15 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .odp-stat-box__val {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 700;
   color: #ffffff;
-  line-height: 1;
+  line-height: 1.1;
   letter-spacing: -0.02em;
 }
 
@@ -240,24 +247,26 @@
   font-size: 15px;
   font-weight: 400;
   color: #716c87;
-  margin-left: 2px;
+  margin-left: 3px;
 }
 
 .odp-stat-box__label {
   font-size: 14px;
   font-weight: 600;
   color: #e3e0f6;
+  white-space: nowrap;
 }
 
 .odp-stat-box__sub {
   font-size: 12px;
   color: #9490a6;
   margin-top: 2px;
+  line-height: 1.4;
 }
 
 /* ── Roadmap Card ── */
 .odp-roadmap-card {
-  padding: 24px 28px !important;
+  padding: 26px 28px !important;
 }
 
 .odp-roadmap__header {
@@ -274,8 +283,9 @@
   font-size: 11px;
   font-weight: 600;
   color: #5de6ff;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   margin-bottom: 4px;
+  text-transform: uppercase;
 }
 
 .odp-roadmap__title {
@@ -289,11 +299,12 @@
 .odp-roadmap__desc {
   margin: 0;
   color: #9490a6;
-  font-size: 13px;
+  font-size: 13.5px;
+  line-height: 1.5;
 }
 
 .odp-roadmap__progress-box {
-  min-width: 200px;
+  min-width: 220px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -310,6 +321,7 @@
 .odp-roadmap__progress-text strong {
   font-family: 'JetBrains Mono', monospace;
   color: #5de6ff;
+  font-weight: 600;
 }
 
 .odp-roadmap__progress-bar {
@@ -327,76 +339,195 @@
   box-shadow: 0 0 10px rgba(93, 230, 255, 0.5);
 }
 
+/* ── 5 Milestones Grid (Fixed Layout Proportions) ── */
 .odp-milestones-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .odp-milestone {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: all 0.2s ease;
+  flex-direction: column;
+  min-height: 220px;
+  padding: 18px 16px;
+  border-radius: 16px;
+  background: rgba(18, 18, 38, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.odp-milestone:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
 }
 
 .odp-milestone--done {
-  background: rgba(16, 185, 129, 0.06);
-  border-color: rgba(16, 185, 129, 0.2);
+  background: rgba(16, 185, 129, 0.05);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.odp-milestone--done:hover {
+  border-color: rgba(16, 185, 129, 0.45);
+  box-shadow: 0 12px 28px rgba(16, 185, 129, 0.12);
 }
 
 .odp-milestone--pending {
   border-color: rgba(255, 255, 255, 0.08);
 }
 
-.odp-milestone__status {
-  flex-shrink: 0;
-  margin-top: 2px;
+/* Milestone Card Header */
+.odp-milestone__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.odp-milestone__badge-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #34d399;
 }
 
 .odp-milestone__check-icon {
-  font-size: 20px;
+  font-size: 15px;
   color: #10b981;
 }
 
-.odp-milestone__index {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  color: #9490a6;
-  font-size: 11px;
-  font-weight: 700;
-  display: flex;
+.odp-milestone__badge-pending {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #a078ff;
 }
 
+.odp-milestone__step-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #a078ff;
+  box-shadow: 0 0 6px #a078ff;
+}
+
+.odp-milestone__status-pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.odp-milestone__status-pill.is-done {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.odp-milestone__status-pill.is-pending {
+  background: rgba(255, 255, 255, 0.05);
+  color: #716c87;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Milestone Content */
 .odp-milestone__content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
   flex: 1;
-  min-width: 0;
 }
 
 .odp-milestone__title {
-  margin: 0 0 4px;
-  font-size: 13px;
-  font-weight: 600;
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
   color: #ffffff;
+  line-height: 1.35;
 }
 
 .odp-milestone__desc {
   margin: 0;
   font-size: 12px;
   color: #9490a6;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
+/* Milestone Actions (Stretched nicely at the bottom) */
 .odp-milestone__action {
-  margin-top: 6px;
+  margin-top: auto;
+  width: 100%;
+}
+
+.odp-milestone__btn-link {
+  display: block;
+  width: 100%;
+  text-decoration: none;
+}
+
+.odp-milestone__btn {
+  width: 100% !important;
+  height: 36px !important;
+  border-radius: 10px !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #e3e0f6 !important;
+  transition: all 0.2s ease !important;
+}
+
+.odp-milestone__btn:hover {
+  background: rgba(160, 120, 255, 0.2) !important;
+  border-color: rgba(160, 120, 255, 0.45) !important;
+  color: #ffffff !important;
+}
+
+.odp-milestone__btn--primary {
+  background: linear-gradient(135deg, #a078ff 0%, #7b2cbf 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(160, 120, 255, 0.3) !important;
+}
+
+.odp-milestone__btn--primary:hover {
+  box-shadow: 0 6px 20px rgba(160, 120, 255, 0.5) !important;
+  transform: translateY(-1px);
+}
+
+.odp-milestone__done-btn {
+  width: 100%;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  color: #34d399;
+  font-size: 12.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 /* ── Buildings Section ── */
@@ -411,7 +542,7 @@
 
 .odp-section-title {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: #ffffff;
   margin: 0 0 4px;
@@ -420,7 +551,25 @@
 .odp-section-desc {
   margin: 0;
   color: #9490a6;
-  font-size: 13px;
+  font-size: 13.5px;
+}
+
+.odp-view-all-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #cbc3d7 !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  height: 36px !important;
+  transition: all 0.2s ease !important;
+}
+
+.odp-view-all-btn:hover {
+  background: rgba(160, 120, 255, 0.15) !important;
+  border-color: rgba(160, 120, 255, 0.4) !important;
+  color: #ffffff !important;
 }
 
 .odp-empty-buildings {
@@ -429,16 +578,24 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
+}
+
+.odp-empty-buildings__icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(160, 120, 255, 0.2), rgba(93, 230, 255, 0.1));
+  border: 1px solid rgba(160, 120, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 24px rgba(160, 120, 255, 0.2);
 }
 
 .odp-empty-buildings__icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 20px;
-  background: rgba(160, 120, 255, 0.1);
-  color: #a078ff;
-  font-size: 32px;
+  color: #c084fc;
+  font-size: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -456,8 +613,8 @@
   margin: 0;
   color: #9490a6;
   font-size: 14px;
-  max-width: 440px;
-  line-height: 1.5;
+  max-width: 480px;
+  line-height: 1.6;
 }
 
 .odp-buildings-grid {
@@ -587,7 +744,7 @@
 /* ── Bottom Grid (Plan & Quick links) ── */
 .odp-bottom-grid {
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
+  grid-template-columns: 1.05fr 1fr;
   gap: 24px;
 }
 
@@ -595,7 +752,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .odp-plan__badge {
@@ -603,7 +762,7 @@
   align-items: center;
   gap: 8px;
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   color: #ffffff;
 }
@@ -614,7 +773,7 @@
 }
 
 .odp-plan__expires {
-  font-size: 12px;
+  font-size: 12.5px;
   color: #9490a6;
 }
 
@@ -625,34 +784,35 @@
 .odp-plan-meters {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-bottom: 22px;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
 .odp-meter__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 7px;
 }
 
 .odp-meter__label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: #9490a6;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  color: #cbc3d7;
 }
 
 .odp-meter__count {
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
-  font-weight: 600;
+  color: #716c87;
+}
+
+.odp-meter__count strong {
   color: #ffffff;
 }
 
 .odp-meter__track {
-  height: 6px;
+  height: 7px;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 99px;
   overflow: hidden;
@@ -661,7 +821,7 @@
 .odp-meter__fill {
   height: 100%;
   border-radius: 99px;
-  transition: width 0.6s ease;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .odp-meter__fill--violet  { background: linear-gradient(90deg, #a078ff, #c084fc); box-shadow: 0 0 8px rgba(160, 120, 255, 0.5); }
@@ -681,11 +841,12 @@
   font-family: 'Space Grotesk', sans-serif;
   text-decoration: none;
   transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(160, 120, 255, 0.3);
 }
 
 .odp-plan__cta:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(160, 120, 255, 0.4);
+  box-shadow: 0 6px 22px rgba(160, 120, 255, 0.5);
   color: #ffffff;
 }
 
@@ -693,14 +854,14 @@
 .odp-quicklinks {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .odp-quickitem {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 12px 16px;
+  padding: 13px 16px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -715,8 +876,8 @@
 }
 
 .odp-quickitem__icon {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -725,15 +886,15 @@
   flex-shrink: 0;
 }
 
-.odp-quickitem--violet .odp-quickitem__icon { background: rgba(160, 120, 255, 0.15); color: #c084fc; }
-.odp-quickitem--cyan .odp-quickitem__icon   { background: rgba(93, 230, 255, 0.15); color: #5de6ff; }
-.odp-quickitem--fuchsia .odp-quickitem__icon{ background: rgba(244, 114, 182, 0.15); color: #f472b6; }
-.odp-quickitem--green .odp-quickitem__icon  { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+.odp-quickitem--violet .odp-quickitem__icon { background: rgba(160, 120, 255, 0.15); color: #c084fc; border: 1px solid rgba(160, 120, 255, 0.3); }
+.odp-quickitem--cyan .odp-quickitem__icon   { background: rgba(93, 230, 255, 0.15); color: #5de6ff; border: 1px solid rgba(93, 230, 255, 0.3); }
+.odp-quickitem--fuchsia .odp-quickitem__icon{ background: rgba(244, 114, 182, 0.15); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.3); }
+.odp-quickitem--green .odp-quickitem__icon  { background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
 
 .odp-quickitem__text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   flex: 1;
 }
 
@@ -747,6 +908,7 @@
 .odp-quickitem__desc {
   font-size: 12px;
   color: #9490a6;
+  line-height: 1.4;
 }
 
 .odp-quickitem__arrow {
@@ -761,7 +923,13 @@
 }
 
 /* ── Responsive Breakpoints ── */
-@media (max-width: 1200px) {
+@media (max-width: 1280px) {
+  .odp-milestones-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
   .odp-stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -770,8 +938,17 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 820px) {
+  .odp-milestones-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
   .odp-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .odp-milestones-grid {
     grid-template-columns: 1fr;
   }
   .odp-header {
