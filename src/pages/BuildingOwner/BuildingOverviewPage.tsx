@@ -22,7 +22,6 @@ import {
   LoadingOutlined,
   PictureOutlined,
   ReloadOutlined,
-  RightCircleOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -42,6 +41,7 @@ export function BuildingOverviewPage() {
 
   const [overview, setOverview] = useState<BuildingOverview>()
   const [error, setError] = useState<string>()
+  const [scanError, setScanError] = useState<string>()
   const [isLoading, setIsLoading] = useState(true)
 
   // Interactive 3D Controls
@@ -97,6 +97,7 @@ export function BuildingOverviewPage() {
   // The analysis is server-side and stored as a revision; 3D never trusts browser-local wall data.
   const handleTriggerExtrusionScan = async () => {
     setIsScanning(true)
+    setScanError(undefined)
     try {
       const floors = (selectedFloorId === 'all'
         ? overview?.floors
@@ -109,7 +110,12 @@ export function BuildingOverviewPage() {
       setVisibleLayers((prev) => ({ ...prev, walls: true }))
       setExtrusionVersion((version) => version + 1)
     } catch (reason) {
-      setError((reason as Error).message)
+      const text = (reason as Error).message
+      setScanError(
+        /intelligence service|did not respond|ECONNREFUSED/i.test(text)
+          ? 'Dịch vụ phân tích mặt bằng (Floor-plan intelligence) chưa chạy hoặc không phản hồi. Mô hình 2.5D hiện có vẫn xem được; hãy khởi động dịch vụ rồi thử phân tích lại.'
+          : text,
+      )
     } finally {
       setIsScanning(false)
     }
@@ -192,17 +198,6 @@ export function BuildingOverviewPage() {
         </div>
 
         <Space>
-          {buildingId && (
-            <Button
-              type="primary"
-              icon={<EnvironmentOutlined />}
-              onClick={() => navigate(`/navigate/${buildingId}`)}
-              style={{ background: '#2563eb' }}
-            >
-              Mở bản đồ điều hướng
-            </Button>
-          )}
-
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate(`/owner/buildings/${buildingId}`)}
@@ -235,6 +230,18 @@ export function BuildingOverviewPage() {
           <Spin size="large" />
         </div>
       ) : overview.floors.length ? (
+        <>
+        {scanError && (
+          <Alert
+            type="warning"
+            showIcon
+            closable
+            message="Không thể phân tích mặt bằng"
+            description={scanError}
+            onClose={() => setScanError(undefined)}
+            style={{ marginBottom: 12 }}
+          />
+        )}
         <Card className="overview-card">
           <div className="overview-main-layout">
             {/* ── LEFT SIDEBAR: FLOORS QUEUE (3D STACK) ── */}
@@ -484,15 +491,6 @@ export function BuildingOverviewPage() {
 
                 <Space>
                   <Button
-                    type="primary"
-                    size="small"
-                    icon={<RightCircleOutlined />}
-                    onClick={() => navigate(`/navigate/${buildingId}`)}
-                    style={{ background: '#2563eb' }}
-                  >
-                    Mở bản đồ điều hướng
-                  </Button>
-                  <Button
                     size="small"
                     onClick={() => setIsSimulatingRoute(!isSimulatingRoute)}
                   >
@@ -589,6 +587,7 @@ export function BuildingOverviewPage() {
             ]}
           />
         </Card>
+        </>
       ) : (
         <Empty description="Tòa nhà chưa có tầng nào">
           <Button type="primary" onClick={() => navigate(`/owner/buildings/${buildingId}`)}>

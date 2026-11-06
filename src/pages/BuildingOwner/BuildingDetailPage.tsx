@@ -14,12 +14,10 @@ import {
   CalendarOutlined,
   CheckCircleOutlined,
   CloudUploadOutlined,
-  CompassOutlined,
   DeleteOutlined,
   EyeOutlined,
   PictureOutlined,
   PlusOutlined,
-  ShopOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -29,7 +27,6 @@ import type { Floor } from '../../types/floor'
 import { GlassCard, StatusPill } from '../../components/ui'
 import { CreateFloorModal } from './CreateFloorModal'
 import { UploadFloorPlanModal } from './UploadFloorPlanModal'
-import { CreateStoreModal } from './CreateStoreModal'
 import { AssignManagerModal } from './AssignManagerModal'
 import { AreaManagementPanel } from './AreaManagementPanel'
 import './BuildingDetailPage.css'
@@ -42,7 +39,6 @@ export function BuildingDetailPage() {
   const [hasLoadedBuildings, setHasLoadedBuildings] = useState(false)
   const [createFloorOpen, setCreateFloorOpen] = useState(false)
   const [editingFloor, setEditingFloor] = useState<Floor | null>(null)
-  const [createStoreOpen, setCreateStoreOpen] = useState(false)
   const [assignManagerOpen, setAssignManagerOpen] = useState(false)
   const loadBuildings = useBuildingStore((state) => state.loadBuildings)
   const isBuildingLoading = useBuildingStore((state) => state.isLoading)
@@ -102,7 +98,6 @@ export function BuildingDetailPage() {
           Danh sách
         </Button>
         <div className="bdp-header__text">
-          <span className="bdp-header__eyebrow">Chủ tòa nhà</span>
           <h1 className="bdp-header__title">
             {building?.name ?? 'Chi tiết tòa nhà'}
           </h1>
@@ -111,20 +106,6 @@ export function BuildingDetailPage() {
           {buildingId && (
             <Button icon={<TeamOutlined />} onClick={() => setAssignManagerOpen(true)}>
               Gán Quản lý
-            </Button>
-          )}
-          {buildingId && (
-            <Button icon={<ShopOutlined />} onClick={() => setCreateStoreOpen(true)}>
-              Tạo điểm đến
-            </Button>
-          )}
-          {buildingId && (
-            <Button
-              type="primary"
-              icon={<CompassOutlined />}
-              onClick={() => navigate(`/navigate/${buildingId}`)}
-            >
-              Mở chỉ đường khách
             </Button>
           )}
           {buildingId && (
@@ -341,7 +322,6 @@ export function BuildingDetailPage() {
               )
             }}
           />
-          <CreateStoreModal floors={floors} open={createStoreOpen} onClose={() => setCreateStoreOpen(false)} />
           <AssignManagerModal buildingId={buildingId} open={assignManagerOpen} onClose={() => setAssignManagerOpen(false)} />
         </>
       )}
