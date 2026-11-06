@@ -9,7 +9,6 @@ import { promotions } from './data/promotions.mock'
 import { maintenanceZones } from './data/maintenance.mock'
 import { qrCodes } from './data/qr.mock'
 import {
-  invoices,
   plans,
   tenants,
   users,
@@ -1095,38 +1094,6 @@ export const handlers = [
     users.splice(index, 1)
     saveToStorage(MOCK_STORAGE_KEYS.users, users)
     return new HttpResponse(null, { status: 204 })
-  }),
-
-  http.post(endpoint('/tenant/subscription/renew'), async ({ request }) => {
-    const access = requireAccess(request, ['building_owner'])
-    if ('response' in access) return access.response
-    const tenant = tenants.find((item) => item.id === access.auth.user.tenantId)
-    if (!tenant) return apiError('NOT_FOUND', 'Không tìm thấy doanh nghiệp.', 404)
-    const payload = (await request.json()) as { planId: string; months: number }
-    const plan = plans.find((item) => item.id === payload.planId)
-    if (!plan) return apiError('NOT_FOUND', 'Không tìm thấy gói dịch vụ.', 404)
-    const months = Math.max(1, Math.floor(payload.months))
-    const currentExpiry = new Date(tenant.planExpiresAt).getTime() > Date.now() ? new Date(tenant.planExpiresAt) : new Date()
-    currentExpiry.setMonth(currentExpiry.getMonth() + months)
-    tenant.planId = plan.id
-    tenant.status = 'active'
-    tenant.planExpiresAt = currentExpiry.toISOString()
-    invoices.push({ id: `invoice-${crypto.randomUUID()}`, tenantId: tenant.id, planId: plan.id, amountVnd: plan.priceVnd * months, months, paidAt: new Date().toISOString(), status: 'paid' })
-    saveToStorage(MOCK_STORAGE_KEYS.tenants, tenants)
-    saveToStorage(MOCK_STORAGE_KEYS.invoices, invoices)
-    return HttpResponse.json(tenantOverview(tenant.id))
-  }),
-
-  http.get(endpoint('/tenant/invoices'), async ({ request }) => {
-    const access = requireAccess(request, ['building_owner'])
-    if ('response' in access) return access.response
-    return HttpResponse.json(invoices.filter((invoice) => invoice.tenantId === access.auth.user.tenantId))
-  }),
-
-  http.get(endpoint('/tenant/plans'), async ({ request }) => {
-    const access = requireAccess(request, ['building_owner'])
-    if ('response' in access) return access.response
-    return HttpResponse.json(plans)
   }),
 
   http.get(endpoint('/buildings'), async ({ request }) => {

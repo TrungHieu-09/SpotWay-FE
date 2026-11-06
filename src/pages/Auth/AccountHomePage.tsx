@@ -213,7 +213,6 @@ export function AccountHomePage() {
           <div className="ah-footer-links">
             <Link to="/#features">3D Mapping Engine</Link>
             <Link to="/guest">Indoor Telemetry</Link>
-            <Link to="/pricing">Pricing</Link>
             <a href="#privacy" onClick={(e) => { e.preventDefault(); message.info('SpotWay Privacy Policy') }}>Privacy Policy</a>
             <a href="#terms" onClick={(e) => { e.preventDefault(); message.info('SpotWay Terms of Service') }}>Terms of Service</a>
           </div>

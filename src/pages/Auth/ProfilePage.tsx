@@ -452,7 +452,6 @@ export function ProfilePage() {
           </div>
           <div className="ah-footer-links">
             <Link to="/guest" className="ah-footer-link">3D Mapping Engine</Link>
-            <Link to="/pricing" className="ah-footer-link">Pricing</Link>
             <span className="ah-footer-link">Privacy Policy</span>
             <span className="ah-footer-link">Terms of Service</span>
           </div>

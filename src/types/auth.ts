@@ -1,6 +1,6 @@
 import type { Area } from './area'
 
-export type Role = 'admin' | 'building_owner' | 'building_manager' | 'store_owner' | 'guest'
+export type Role = 'admin' | 'building_owner' | 'building_manager' | 'store_owner'
 
 export type UserStatus = 'active' | 'locked'
 
@@ -35,18 +35,7 @@ export type Plan = {
   maxBuildings: number
   maxManagers: number
   maxStoreOwners: number
-  priceVnd: number
   durationMonths: number
-}
-
-export type Invoice = {
-  id: string
-  tenantId: string
-  planId: string
-  amountVnd: number
-  months: number
-  paidAt: string
-  status: 'paid'
 }
 
 export type AuthUser = Omit<User, 'status'> & {

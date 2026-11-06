@@ -10,8 +10,6 @@ const { Content, Header } = Layout
 
 const ADMIN_NAV_ITEMS = [
   { path: '/admin', label: 'Tổng quan' },
-  { path: '/admin/tenants', label: 'Doanh nghiệp' },
-  { path: '/admin/plans', label: 'Gói dịch vụ' },
   { path: '/admin/accounts', label: 'Tài khoản' },
 ]
 

@@ -62,7 +62,6 @@ export function roleLabel(role: Role) {
     building_owner: 'Chủ tòa nhà',
     building_manager: 'Quản lý tòa nhà',
     store_owner: 'Chủ gian hàng',
-    guest: 'Khách / Người dùng mới',
   }[role]
 }
 

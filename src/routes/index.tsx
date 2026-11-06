@@ -24,18 +24,6 @@ const ProfilePage = lazy(() =>
   })),
 )
 
-const CheckoutPage = lazy(() =>
-  import('../pages/Auth/CheckoutPage').then((module) => ({
-    default: module.CheckoutPage,
-  })),
-)
-
-const PricingPage = lazy(() =>
-  import('../pages/Pricing/PricingPage').then((module) => ({
-    default: module.PricingPage,
-  })),
-)
-
 const HomePage = lazy(() =>
   import('../pages/Home/HomePage').then((module) => ({
     default: module.HomePage,
@@ -63,12 +51,6 @@ const OwnerStaffPage = lazy(() =>
     default: module.OwnerStaffPage,
   })),
 )
-const OwnerSubscriptionPage = lazy(() =>
-  import('../pages/BuildingOwner/OwnerSubscriptionPage').then((module) => ({
-    default: module.OwnerSubscriptionPage,
-  })),
-)
-
 // ── Building Manager pages ──
 const ManagerLayout = lazy(() =>
   import('../pages/BuildingManager/ManagerLayout').then((module) => ({
@@ -106,16 +88,6 @@ const AdminOverviewPage = lazy(() =>
     default: module.AdminOverviewPage,
   })),
 )
-const AdminTenantsPage = lazy(() =>
-  import('../pages/Admin/AdminTenantsPage').then((module) => ({
-    default: module.AdminTenantsPage,
-  })),
-)
-const AdminPlansPage = lazy(() =>
-  import('../pages/Admin/AdminPlansPage').then((module) => ({
-    default: module.AdminPlansPage,
-  })),
-)
 const AdminAccountsPage = lazy(() =>
   import('../pages/Admin/AdminAccountsPage').then((module) => ({
     default: module.AdminAccountsPage,
@@ -139,9 +111,7 @@ function lazyElement(element: ReactNode) {
 export const router = createBrowserRouter([
   // ── SpotWay Premium Landing Page & Auth ──
   { path: '/', element: <LandingPage /> },
-  { path: 'pricing', element: lazyElement(<PricingPage />) },
   { path: 'login', element: <LoginPage /> },
-  { path: 'checkout/:orderId', element: lazyElement(<CheckoutPage />) },
   { path: 'account', element: lazyElement(<AccountHomePage />) },
   { path: 'workspace/choose', element: lazyElement(<AccountHomePage />) },
   { path: 'profile', element: lazyElement(<ProfilePage />) },
@@ -159,7 +129,6 @@ export const router = createBrowserRouter([
           { path: 'owner/staff', element: lazyElement(<OwnerStaffPage />) },
           { path: 'owner/managers', element: lazyElement(<OwnerStaffPage />) },
           { path: 'owner/store-owners', element: lazyElement(<OwnerStaffPage />) },
-          { path: 'owner/subscription', element: lazyElement(<OwnerSubscriptionPage />) },
         ],
       },
     ],
@@ -203,8 +172,6 @@ export const router = createBrowserRouter([
         element: <AdminLayout />,
         children: [
           { path: 'admin', element: lazyElement(<AdminOverviewPage />) },
-          { path: 'admin/tenants', element: lazyElement(<AdminTenantsPage />) },
-          { path: 'admin/plans', element: lazyElement(<AdminPlansPage />) },
           { path: 'admin/accounts', element: lazyElement(<AdminAccountsPage />) },
         ],
       },

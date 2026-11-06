@@ -5,7 +5,7 @@ import type { AuthUser } from '../../types/auth'
 import './SpotWayNavbar.css'
 
 interface SpotWayNavbarProps {
-  activeTab?: 'home' | 'features' | 'solutions' | 'analytics' | 'explore' | 'pricing' | 'account'
+  activeTab?: 'home' | 'features' | 'solutions' | 'analytics' | 'explore' | 'account'
   lang?: 'VI' | 'EN'
   onLanguageChange?: (lang: 'VI' | 'EN') => void
   showNavLinks?: boolean
@@ -127,12 +127,6 @@ export function SpotWayNavbar({
                 </span>
                 <span>Khám phá 3D</span>
                 {activeTab === 'explore' && <span className="spw-dot-active" />}
-              </Link>
-            </li>
-            <li>
-              <Link to="/pricing" className={activeTab === 'pricing' ? 'active' : ''}>
-                <span>Bảng giá</span>
-                {activeTab === 'pricing' && <span className="spw-dot-active" />}
               </Link>
             </li>
           </ul>

@@ -741,113 +741,11 @@
   color: #5de6ff;
 }
 
-/* ── Bottom Grid (Plan & Quick links) ── */
+/* ── Bottom Grid (Quick links) ── */
 .odp-bottom-grid {
   display: grid;
-  grid-template-columns: 1.05fr 1fr;
+  grid-template-columns: 1fr;
   gap: 24px;
-}
-
-.odp-plan__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 22px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.odp-plan__badge {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 17px;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.odp-plan__icon {
-  font-size: 20px;
-  color: #a078ff;
-}
-
-.odp-plan__expires {
-  font-size: 12.5px;
-  color: #9490a6;
-}
-
-.odp-plan__expires strong {
-  color: #e3e0f6;
-}
-
-.odp-plan-meters {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.odp-meter__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 7px;
-}
-
-.odp-meter__label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #cbc3d7;
-}
-
-.odp-meter__count {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  color: #716c87;
-}
-
-.odp-meter__count strong {
-  color: #ffffff;
-}
-
-.odp-meter__track {
-  height: 7px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 99px;
-  overflow: hidden;
-}
-
-.odp-meter__fill {
-  height: 100%;
-  border-radius: 99px;
-  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.odp-meter__fill--violet  { background: linear-gradient(90deg, #a078ff, #c084fc); box-shadow: 0 0 8px rgba(160, 120, 255, 0.5); }
-.odp-meter__fill--cyan    { background: linear-gradient(90deg, #5de6ff, #38bdf8); box-shadow: 0 0 8px rgba(93, 230, 255, 0.5); }
-.odp-meter__fill--fuchsia { background: linear-gradient(90deg, #f472b6, #e879f9); box-shadow: 0 0 8px rgba(244, 114, 182, 0.5); }
-
-.odp-plan__cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #a078ff, #7b2cbf);
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 600;
-  font-family: 'Space Grotesk', sans-serif;
-  text-decoration: none;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 16px rgba(160, 120, 255, 0.3);
-}
-
-.odp-plan__cta:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 22px rgba(160, 120, 255, 0.5);
-  color: #ffffff;
 }
 
 /* ── Quick Links ── */

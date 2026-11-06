@@ -1,17 +1,26 @@
-import type { Plan, Tenant, User } from './auth'
-import type { Building } from './building'
+import type { Role, User } from './auth'
 
 export type AdminOverview = {
-  tenants: { total: number; active: number; suspended: number }
+  users: {
+    total: number
+    admin: number
+    buildingOwner: number
+    buildingManager: number
+    storeOwner: number
+  }
   buildings: number
-  users: number
-  plans: Array<{ planId: string; planName: string; count: number }>
 }
 
-export type TenantDetail = Tenant & {
-  plan: Plan
-  buildings: Building[]
-  users: User[]
-}
-
+/** `tenantName` is the Building Owner an account belongs to (null for admins). */
 export type AdminUser = User & { tenantName: string | null }
+
+/** Roles an admin can hand out. */
+export type AssignableRole = Extract<Role, 'building_owner' | 'building_manager' | 'store_owner'>
+
+export type CreateAdminUserPayload = {
+  email: string
+  password: string
+  role: AssignableRole
+  /** Required for building_manager / store_owner: the Building Owner they belong to. */
+  ownerId?: string
+}

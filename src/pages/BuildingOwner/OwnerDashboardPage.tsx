@@ -5,15 +5,12 @@ import {
   AppstoreOutlined,
   CheckCircleFilled,
   ClockCircleOutlined,
-  CloudOutlined,
   CompassOutlined,
   EnvironmentOutlined,
   PlusOutlined,
   RightOutlined,
   ShopOutlined,
   TeamOutlined,
-  ThunderboltOutlined,
-  TrophyOutlined,
 } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
 import { getTenantOverview } from '../../api/tenant'
@@ -127,9 +124,6 @@ export function OwnerDashboardPage() {
   const completedMilestones = milestoneList.filter((m) => m.completed).length
   const progressPercent = Math.round((completedMilestones / milestoneList.length) * 100)
 
-  // Plan name cleaner
-  const cleanPlanName = overview?.plan.name?.replace(/\(Legacy\)/gi, '').trim() || 'Gói Dùng Thử Miễn Phí'
-
   return (
     <main className="workspace odp-workspace">
       {/* ── Top Header ── */}
@@ -192,7 +186,6 @@ export function OwnerDashboardPage() {
               icon={<ApartmentOutlined />}
               label="Tòa nhà quản lý"
               value={totalBuildings}
-              max={overview?.plan.maxBuildings}
               sub={totalBuildings > 0 ? `${totalBuildings} tòa nhà đang hoạt động` : 'Chưa có tòa nhà nào trong hệ thống'}
               accent="violet"
             />
@@ -207,7 +200,6 @@ export function OwnerDashboardPage() {
               icon={<TeamOutlined />}
               label="Đội ngũ quản lý"
               value={totalManagers}
-              max={overview?.plan.maxManagers}
               sub={totalManagers > 0 ? `${totalManagers} quản lý khu vực được chỉ định` : 'Chưa chỉ định quản lý khu vực'}
               accent="green"
             />
@@ -350,53 +342,8 @@ export function OwnerDashboardPage() {
             )}
           </section>
 
-          {/* ── Bottom Section: Service Package & Quick Links ── */}
+          {/* ── Bottom Section: Quick Links ── */}
           <div className="odp-bottom-grid">
-            {/* Service Package Card */}
-            {overview && (
-              <GlassCard className="odp-plan-card" title="Gói dịch vụ & Tài nguyên" accent>
-                <div className="odp-plan__header">
-                  <div className="odp-plan__badge">
-                    <TrophyOutlined className="odp-plan__icon" />
-                    <span>{cleanPlanName}</span>
-                  </div>
-                  <span className="odp-plan__expires">
-                    Hạn sử dụng:{' '}
-                    <strong>
-                      {new Intl.DateTimeFormat('vi-VN').format(new Date(overview.tenant.planExpiresAt))}
-                    </strong>
-                  </span>
-                </div>
-
-                <div className="odp-plan-meters">
-                  <PlanMeter
-                    label="Tòa nhà"
-                    used={totalBuildings}
-                    max={overview.plan.maxBuildings}
-                    accent="violet"
-                  />
-                  <PlanMeter
-                    label="Quản lý khu vực"
-                    used={totalManagers}
-                    max={overview.plan.maxManagers}
-                    accent="cyan"
-                  />
-                  <PlanMeter
-                    label="Chủ gian hàng"
-                    used={overview.usage.storeOwners}
-                    max={overview.plan.maxStoreOwners}
-                    accent="fuchsia"
-                  />
-                </div>
-
-                <div className="odp-plan__footer">
-                  <Link to="/owner/subscription" className="odp-plan__cta">
-                    <ThunderboltOutlined /> Nâng cấp / Quản lý gói
-                  </Link>
-                </div>
-              </GlassCard>
-            )}
-
             {/* Quick Access Grid */}
             <GlassCard className="odp-quicklinks-card" title="Thao tác nhanh">
               <div className="odp-quicklinks">
@@ -420,13 +367,6 @@ export function OwnerDashboardPage() {
                   title="Quản lý gian hàng & dịch vụ"
                   desc="Thiết lập vị trí gian hàng, kiosk và chương trình ưu đãi"
                   color="fuchsia"
-                />
-                <QuickLink
-                  to="/owner/subscription"
-                  icon={<CloudOutlined />}
-                  title="Gói dịch vụ & Hóa đơn"
-                  desc="Theo dõi dung lượng tài nguyên và nâng cấp gói dịch vụ"
-                  color="green"
                 />
               </div>
             </GlassCard>
@@ -497,14 +437,12 @@ function StatCard({
   icon,
   label,
   value,
-  max,
   sub,
   accent,
 }: {
   icon: React.ReactNode
   label: string
   value: number
-  max?: number
   sub?: string
   accent: 'violet' | 'cyan' | 'fuchsia' | 'green'
 }) {
@@ -514,42 +452,9 @@ function StatCard({
       <div className="odp-stat-box__content">
         <div className="odp-stat-box__val">
           {value}
-          {max !== undefined && <span className="odp-stat-box__max">/{max}</span>}
         </div>
         <div className="odp-stat-box__label">{label}</div>
         {sub && <div className="odp-stat-box__sub">{sub}</div>}
-      </div>
-    </div>
-  )
-}
-
-/* ── Plan Meter Component ──────────────────────────────── */
-
-function PlanMeter({
-  label,
-  used,
-  max,
-  accent,
-}: {
-  label: string
-  used: number
-  max: number
-  accent: 'violet' | 'cyan' | 'fuchsia'
-}) {
-  const pct = Math.min(100, Math.round((used / Math.max(max, 1)) * 100))
-  return (
-    <div className="odp-meter">
-      <div className="odp-meter__header">
-        <span className="odp-meter__label">{label}</span>
-        <span className="odp-meter__count">
-          <strong>{used}</strong> / {max}
-        </span>
-      </div>
-      <div className="odp-meter__track">
-        <div
-          className={`odp-meter__fill odp-meter__fill--${accent}`}
-          style={{ width: `${pct}%` }}
-        />
       </div>
     </div>
   )

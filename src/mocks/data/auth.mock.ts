@@ -1,4 +1,4 @@
-import type { Invoice, Plan, Tenant, User } from '../../types/auth'
+import type { Plan, Tenant, User } from '../../types/auth'
 import { loadFromStorage, MOCK_STORAGE_KEYS, saveToStorage } from '../persist'
 
 export const initialPlansSeed: Plan[] = [
@@ -8,7 +8,6 @@ export const initialPlansSeed: Plan[] = [
     maxBuildings: 2,
     maxManagers: 3,
     maxStoreOwners: 20,
-    priceVnd: 1_990_000,
     durationMonths: 1,
   },
   {
@@ -17,7 +16,6 @@ export const initialPlansSeed: Plan[] = [
     maxBuildings: 5,
     maxManagers: 6,
     maxStoreOwners: 100,
-    priceVnd: 4_990_000,
     durationMonths: 1,
   },
   {
@@ -26,7 +24,6 @@ export const initialPlansSeed: Plan[] = [
     maxBuildings: 9999,
     maxManagers: 9999,
     maxStoreOwners: 9999,
-    priceVnd: 14_990_000,
     durationMonths: 1,
   },
 ]
@@ -64,11 +61,6 @@ export const initialUsersSeed: Array<User & { password: string }> = [
   { id: 'user-manager-2', tenantId: 'tenant-2', role: 'building_manager', name: 'Quản lý Hà Nội', email: 'manager2@demo.vn', password: 'Demo@123', areaIds: ['area-office'], createdByUserId: 'user-owner-2', mustChangePassword: false, status: 'active', createdAt: '2026-09-01T09:00:00.000Z' },
 ]
 
-export const initialInvoicesSeed: Invoice[] = [
-  { id: 'invoice-1', tenantId: 'tenant-1', planId: 'plan-pro', amountVnd: 49_900_000, months: 12, paidAt: '2026-09-01T08:00:00.000Z', status: 'paid' },
-  { id: 'invoice-2', tenantId: 'tenant-2', planId: 'plan-basic', amountVnd: 23_880_000, months: 12, paidAt: '2026-09-02T08:00:00.000Z', status: 'paid' },
-]
-
 const storedPlans = loadFromStorage(MOCK_STORAGE_KEYS.plans, initialPlansSeed)
 export const plans = Array.isArray(storedPlans) && storedPlans.length > 0 ? storedPlans : initialPlansSeed
 
@@ -98,10 +90,6 @@ const mergedUsers =
 const extraUsers = validStoredUsers.filter((u) => !seedIds.has(u.id))
 export const users = [...mergedUsers, ...extraUsers.filter((u) => !mergedUsers.find((m) => m.id === u.id))]
 
-const storedInvoices = loadFromStorage(MOCK_STORAGE_KEYS.invoices, initialInvoicesSeed)
-export const invoices = Array.isArray(storedInvoices) && storedInvoices.length > 0 ? storedInvoices : initialInvoicesSeed
-
 saveToStorage(MOCK_STORAGE_KEYS.plans, plans)
 saveToStorage(MOCK_STORAGE_KEYS.tenants, tenants)
 saveToStorage(MOCK_STORAGE_KEYS.users, users)
-saveToStorage(MOCK_STORAGE_KEYS.invoices, invoices)

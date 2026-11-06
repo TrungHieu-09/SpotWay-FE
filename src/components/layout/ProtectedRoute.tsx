@@ -3,24 +3,8 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../auth/store'
 import type { Role } from '../../types/auth'
 
-export type AppRole =
-  | 'guest'
-  | 'store_owner'
-  | 'building_manager'
-  | 'building_owner'
-  | 'admin'
-
-export function getDemoRole(): AppRole {
-  const storedRole = window.localStorage.getItem('spotway.role') as AppRole | null
-  return (
-    storedRole ??
-    (import.meta.env.VITE_DEMO_ROLE as AppRole | undefined) ??
-    'guest'
-  )
-}
-
 type ProtectedRouteProps = {
-  allowedRoles: (Role | AppRole)[]
+  allowedRoles: Role[]
 }
 
 export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
@@ -61,8 +45,8 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
     if (user.role === 'admin') {
       return <Navigate to="/admin" replace />
     }
-    // If user has 0 workspace or is a guest, send them to /account empty state instead of 403
-    if (user.role === 'guest' || !user.tenantId) {
+    // An account that is not attached to a Building Owner yet lands on /account instead of 403
+    if (!user.tenantId) {
       return <Navigate to="/account" replace />
     }
     return <Navigate to="/403" replace />

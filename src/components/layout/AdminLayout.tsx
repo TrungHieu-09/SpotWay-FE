@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   BarChartOutlined,
-  BankOutlined,
-  CrownOutlined,
   TeamOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -13,6 +11,7 @@ import {
 import { useAuthStore } from '../../auth/store'
 import './SpotWayNavbar.css'
 import './AdminLayout.css'
+import '../../pages/Admin/AdminPages.css'
 
 interface NavItem {
   path: string
@@ -29,19 +28,9 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
     exactMatch: true,
   },
   {
-    path: '/admin/tenants',
-    icon: <BankOutlined />,
-    label: 'Doanh nghiệp',
-  },
-  {
-    path: '/admin/plans',
-    icon: <CrownOutlined />,
-    label: 'Gói dịch vụ',
-  },
-  {
     path: '/admin/accounts',
     icon: <TeamOutlined />,
-    label: 'Tài khoản',
+    label: 'Quản lý tài khoản',
   },
 ]
 
@@ -79,7 +68,12 @@ export function AdminLayout() {
       <aside className={`adm-sidebar ${collapsed ? 'adm-sidebar--collapsed' : ''}`}>
         {/* Sidebar Header */}
         <div className="adm-sidebar__header">
-          <Link to="/" className="spw-brand group" title="Về trang chủ SpotWay" style={{ textDecoration: 'none' }}>
+          <Link
+            to="/"
+            className={`spw-brand group ${collapsed ? 'spw-brand--centered' : ''}`}
+            title="Về trang chủ SpotWay"
+            style={{ textDecoration: 'none' }}
+          >
             <div className="spw-brand-icon">
               <div className="spw-brand-icon-inner">
                 <span className="material-symbols-outlined">near_me</span>
@@ -99,6 +93,7 @@ export function AdminLayout() {
             className="adm-collapse-btn"
             onClick={() => setCollapsed((c) => !c)}
             title={collapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'}
+            aria-label={collapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'}
             type="button"
           >
             {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -107,9 +102,11 @@ export function AdminLayout() {
 
         {/* Nav Items */}
         <nav className="adm-nav" aria-label="Admin Navigation">
-          <div className="adm-nav__section-label">
-            {!collapsed && <span>ĐIỀU HƯỚNG</span>}
-          </div>
+          {!collapsed && (
+            <div className="adm-nav__section-label">
+              <span>ĐIỀU HƯỚNG</span>
+            </div>
+          )}
           {ADMIN_NAV_ITEMS.map((item) => {
             const active = isActive(item, location.pathname)
             return (
@@ -121,7 +118,7 @@ export function AdminLayout() {
               >
                 <span className="adm-nav-item__icon">{item.icon}</span>
                 {!collapsed && <span className="adm-nav-item__label">{item.label}</span>}
-                {active && <span className="adm-nav-item__indicator" />}
+                {active && !collapsed && <span className="adm-nav-item__indicator" />}
               </NavLink>
             )
           })}

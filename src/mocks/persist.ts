@@ -5,9 +5,7 @@ export const MOCK_STORAGE_KEYS = {
   floors: `${MOCK_STORAGE_PREFIX}floors`,
   plans: `${MOCK_STORAGE_PREFIX}plans`,
   tenants: `${MOCK_STORAGE_PREFIX}tenants`,
-  users: `${MOCK_STORAGE_PREFIX}users`,
-  invoices: `${MOCK_STORAGE_PREFIX}invoices`,
-  areas: `${MOCK_STORAGE_PREFIX}areas`,
+  users: `${MOCK_STORAGE_PREFIX}users`,  areas: `${MOCK_STORAGE_PREFIX}areas`,
   stores: `${MOCK_STORAGE_PREFIX}stores`,
 } as const
 

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   ApartmentOutlined,
-  CloudOutlined,
   DashboardOutlined,
   HomeOutlined,
   LogoutOutlined,
@@ -47,12 +46,6 @@ const NAV_ITEMS: NavItem[] = [
     icon: <ShopOutlined />,
     label: 'Chủ gian hàng',
     matchPrefixes: ['/owner/store-owners'],
-  },
-  {
-    path: '/owner/subscription',
-    icon: <CloudOutlined />,
-    label: 'Gói dịch vụ',
-    matchPrefixes: ['/owner/subscription'],
   },
 ]
 
@@ -104,7 +97,12 @@ export function OwnerLayout() {
       <aside className={`ol-sidebar ${collapsed ? 'ol-sidebar--collapsed' : ''}`}>
         {/* Sidebar Header */}
         <div className="ol-sidebar__header">
-          <Link to="/" className="spw-brand group" title="Về trang chủ SpotWay" style={{ textDecoration: 'none' }}>
+          <Link
+            to="/"
+            className={`spw-brand group ${collapsed ? 'spw-brand--centered' : ''}`}
+            title="Về trang chủ SpotWay"
+            style={{ textDecoration: 'none' }}
+          >
             <div className="spw-brand-icon">
               <div className="spw-brand-icon-inner">
                 <span className="material-symbols-outlined">near_me</span>
@@ -113,14 +111,14 @@ export function OwnerLayout() {
               <span className="spw-brand-ping" />
             </div>
             {!collapsed && (
-              <div className="flex flex-col">
-                <div className="flex items-baseline gap-1">
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-baseline gap-1.5">
                   <span className="spw-brand-text">SpotWay</span>
                   <span className="spw-brand-sub">Spatial OS</span>
                 </div>
                 {user?.tenant?.name && (
                   <span
-                    className="text-[11px] font-mono truncate max-w-[140px]"
+                    className="text-[11px] font-mono truncate max-w-[130px] opacity-75"
                     style={{ color: '#5de6ff', marginTop: '-2px' }}
                     title={user.tenant.name}
                   >
@@ -135,6 +133,7 @@ export function OwnerLayout() {
             className="ol-collapse-btn"
             onClick={() => setCollapsed((c) => !c)}
             title={collapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'}
+            aria-label={collapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'}
             type="button"
           >
             {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -143,9 +142,11 @@ export function OwnerLayout() {
 
         {/* Navigation Items */}
         <nav className="ol-nav" aria-label="Owner Navigation">
-          <div className="ol-nav__section-label">
-            {!collapsed && <span>ĐIỀU HƯỚNG</span>}
-          </div>
+          {!collapsed && (
+            <div className="ol-nav__section-label">
+              <span>ĐIỀU HƯỚNG</span>
+            </div>
+          )}
           {NAV_ITEMS.map((item) => {
             const active = isNavItemActive(item, location.pathname)
             return (
@@ -157,7 +158,7 @@ export function OwnerLayout() {
               >
                 <span className="ol-nav-item__icon">{item.icon}</span>
                 {!collapsed && <span className="ol-nav-item__label">{item.label}</span>}
-                {active && <span className="ol-nav-item__indicator" />}
+                {active && !collapsed && <span className="ol-nav-item__indicator" />}
               </NavLink>
             )
           })}
