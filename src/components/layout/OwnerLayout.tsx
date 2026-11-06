@@ -2,11 +2,14 @@ import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   ApartmentOutlined,
+  CloudOutlined,
   DashboardOutlined,
   HomeOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  ShopOutlined,
+  TeamOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../../auth/store'
 import './SpotWayNavbar.css'
@@ -32,6 +35,24 @@ const NAV_ITEMS: NavItem[] = [
     icon: <ApartmentOutlined />,
     label: 'Tòa nhà',
     matchPrefixes: ['/owner/buildings'],
+  },
+  {
+    path: '/owner/managers',
+    icon: <TeamOutlined />,
+    label: 'Quản lý khu vực',
+    matchPrefixes: ['/owner/managers', '/owner/staff'],
+  },
+  {
+    path: '/owner/store-owners',
+    icon: <ShopOutlined />,
+    label: 'Chủ gian hàng',
+    matchPrefixes: ['/owner/store-owners'],
+  },
+  {
+    path: '/owner/subscription',
+    icon: <CloudOutlined />,
+    label: 'Gói dịch vụ',
+    matchPrefixes: ['/owner/subscription'],
   },
 ]
 

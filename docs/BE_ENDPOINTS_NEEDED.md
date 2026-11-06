@@ -1,17 +1,15 @@
 # Trạng thái endpoint FE <-> BE (SpotWay-BE)
 
-Phía Owner hiện chỉ giữ các tính năng BE đã hỗ trợ (giống nhánh `refactor/node-poi-graph-v2`):
-danh sách/chi tiết toà nhà, tầng, tải ảnh sơ đồ, tổng quan 2.5D, gán manager theo toà nhà.
-Dashboard tính từ `/buildings` + `/buildings/:id/floors`.
+Các trang Owner (Dashboard, Nhân sự, Gói dịch vụ, Khu vực) vẫn được giữ trong FE và sẽ báo lỗi
+("Cannot GET ...") cho tới khi BE bổ sung các endpoint dưới đây. Xử lý sau.
 
-## Chưa có ở BE (đã tạm gỡ khỏi FE, làm lại khi BE bổ sung)
-| Tính năng | FE từng gọi |
-| --- | --- |
-| Gói dịch vụ, hạn mức, hoá đơn, gia hạn | `/tenant/overview`, `/tenant/plans`, `/tenant/invoices`, `/tenant/subscription/renew` (đồng đội đang có `plan_orders` ở DB, cần thống nhất thiết kế) |
-| Danh sách / tạo nhân sự, chủ gian hàng | `/tenant/users`, `/store-owners` |
-| Khu vực | `/tenant/areas`, `/buildings/:id/areas` |
-| Admin | `/admin/*` (BE chỉ có `/tenants`) |
-| Gian hàng | `GET /floors/:id/stores`, `POST /stores`, `PUT /stores/:id` |
-| Tenant trong `/auth/me` | hiện `tenant: null` |
+| Tính năng | FE gọi | Ghi chú |
+| --- | --- | --- |
+| Dashboard, gói, hoá đơn, gia hạn | `/tenant/overview`, `/tenant/plans`, `/tenant/invoices`, `/tenant/subscription/renew` | Đồng đội đã có `plan_orders` ở DB, cần thống nhất thiết kế. |
+| Nhân sự, chủ gian hàng | `/tenant/users`, `/store-owners` | BE chỉ có gán manager theo toà nhà. |
+| Khu vực | `/tenant/areas`, `/buildings/:id/areas` | BE phân quyền theo toà nhà. |
+| Admin | `/admin/*` | BE chỉ có `/tenants`. |
+| Gian hàng | `GET /floors/:id/stores`, `POST /stores`, `PUT /stores/:id` | BE chỉ có GET/PATCH/DELETE `/stores/:id`. |
+| Tenant trong `/auth/me` | — | Hiện `tenant: null`. |
 
-Bản thử API workspace (tổng quan, gói, nhân sự, khu vực) nằm ở nhánh BE cục bộ `wip/workspace-api`, chưa áp migration.
+Bản thử API workspace nằm ở nhánh BE cục bộ `wip/workspace-api` (chưa merge, chưa áp migration).
