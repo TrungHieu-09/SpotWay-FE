@@ -12,10 +12,10 @@ describe('guestTestCases', () => {
 
   it('case có scenario mở /guest với ?scenario=, case QR cần token', () => {
     const h1 = GUEST_TEST_CASES.find((item) => item.id === 'H1')!
-    assert.equal(guestCaseUrl(h1, 'b1'), '/guest/b1?scenario=same-floor-shortest')
+    assert.equal(guestCaseUrl(h1, 'b1'), '/guest/b1/map?scenario=same-floor-shortest')
     const q1 = GUEST_TEST_CASES.find((item) => item.id === 'Q1')!
     assert.equal(guestCaseUrl(q1, 'b1'), undefined)
-    assert.equal(guestCaseUrl(q1, 'b1', 'abc def'), '/guest/b1?qr=abc%20def')
+    assert.equal(guestCaseUrl(q1, 'b1', 'abc def'), '/guest/b1/map?qr=abc%20def')
   })
 
   it('tổng hợp kết quả và biên bản', () => {

@@ -7,6 +7,7 @@ import {
   Drawer,
   Empty,
   Input,
+  Modal,
   Segmented,
   Select,
   Skeleton,
@@ -35,6 +36,10 @@ import { RouteFloorsOverview } from '../../components/navigation/RouteFloorsOver
 import { QrScanModal } from '../../components/navigation/QrScanModal'
 import { RouteMap } from '../../components/navigation/RouteMap'
 import { useNavigationStore, type DemoScenarioId } from '../../store/useNavigationStore'
+import { useGuestPrefsStore } from '../../store/useGuestPrefsStore'
+import { useAuthStore } from '../../auth/store'
+import { useTranslation } from 'react-i18next'
+import '../../utils/i18n'
 import type { Maneuver, PublicQrResolution, RouteStep, VerticalLinkKind } from '../../types/navigation'
 import type { PercentPoint } from '../../types/geometry'
 import { findNearestNode } from '../../utils/graphGeometry'
@@ -81,6 +86,11 @@ export function NavigationPage() {
   const { buildingId: routeBuildingId } = useParams<{ buildingId: string }>()
   const [searchParams] = useSearchParams()
   const { pathname } = useLocation()
+  const { t } = useTranslation()
+  const priority = useGuestPrefsStore((state) => state.priority)
+  const demoMode = useGuestPrefsStore((state) => state.demoMode)
+  const authRole = useAuthStore((state) => state.user?.role)
+  const isStaff = authRole === 'building_owner' || authRole === 'building_manager'
   const navigate = useNavigate()
   const qrToken = searchParams.get('qr')
   const paramFromNodeId = searchParams.get('fromNodeId') ?? undefined
@@ -89,7 +99,7 @@ export function NavigationPage() {
   // Thanh kịch bản demo chỉ hiện khi vào chế độ kiểm thử: ?demo=1, trang /test hoặc /manager/navigation-test.
   const paramScenario = searchParams.get('scenario') ?? undefined
   const demoEnabled =
-    searchParams.get('demo') === '1' || Boolean(paramScenario) || pathname.includes('/test') || pathname.startsWith('/manager/navigation-test')
+    demoMode || searchParams.get('demo') === '1' || Boolean(paramScenario) || pathname.includes('/test') || pathname.startsWith('/manager/navigation-test')
   const [qr, setQr] = useState<PublicQrResolution>()
   const [qrLoading, setQrLoading] = useState(Boolean(qrToken))
   const [qrError, setQrError] = useState<string>()
@@ -118,12 +128,15 @@ export function NavigationPage() {
     activeFireNodeIds,
     interactiveFireMode,
     toggleFireNode,
+    emergencyMode,
+    triggerFireAlarm,
+    resetSimulation,
   } = useNavigationStore()
 
   const [selectedFloorId, setSelectedFloorId] = useState<string>()
   const [fromNodeId, setFromNodeId] = useState<string>()
   const [destinationId, setDestinationId] = useState<string>()
-  const [wheelchairMode, setWheelchairMode] = useState(false)
+  const [wheelchairMode, setWheelchairMode] = useState(priority === 'AVOID_STEPS')
   const [stepIndex, setStepIndex] = useState(0)
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile')
   const [stepsDrawerOpen, setStepsDrawerOpen] = useState(false)
@@ -132,7 +145,7 @@ export function NavigationPage() {
   const [scanOpen, setScanOpen] = useState(false)
   const [walkSpeed, setWalkSpeed] = useState(1)
   // Loại thang dùng khi đổi tầng; mặc định tự chọn đường rẻ nhất (thường là thang bộ khi hai tầng liền nhau).
-  const [transitionPref, setTransitionPref] = useState<'AUTO' | VerticalLinkKind>('AUTO')
+  const [transitionPref, setTransitionPref] = useState<'AUTO' | VerticalLinkKind>(priority === 'AUTO' ? 'AUTO' : 'ELEVATOR')
   const [trackedRoute, setTrackedRoute] = useState(route)
 
   // Tuyến mới (tìm đường, demo, tái định tuyến khi cháy) luôn bắt đầu lại từ bước đầu
@@ -310,6 +323,29 @@ export function NavigationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paramToStoreId, isLoading, effectiveFromNodeId, destinations])
 
+  // ?scan=1 (từ màn chào): mở trình quét QR ngay một lần
+  useEffect(() => {
+    if (searchParams.get('scan') === '1') setScanOpen(true)
+    // chỉ cần chạy khi vừa vào trang
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Sơ tán khẩn cấp: dẫn tới lối thoát an toàn gần nhất từ vị trí hiện tại (cấm thang máy)
+  function handleEvacuate() {
+    if (!effectiveFromNodeId) {
+      message.warning(t('evac.needStart'))
+      return
+    }
+    Modal.confirm({
+      title: t('evac.confirmTitle'),
+      content: t('evac.confirmMsg'),
+      okText: t('evac.confirmGo'),
+      okButtonProps: { danger: true },
+      cancelText: t('common.cancel'),
+      onOk: () => triggerFireAlarm(undefined, effectiveFromNodeId),
+    })
+  }
+
   // Deep-link ?scenario=<id> (từ bảng kiểm thử): chạy đúng kịch bản demo một lần khi đã nạp dữ liệu
   useEffect(() => {
     if (scenarioRanRef.current || !paramScenario || isLoading || floors.length === 0) return
@@ -408,26 +444,33 @@ export function NavigationPage() {
       {/* Page Header */}
       <header className="navigation-page__header">
         <div>
-          <Space>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate(`/owner/buildings/${buildingId}`)}
-            >
-              Tòa nhà
-            </Button>
-            <Button
-              icon={<FundProjectionScreenOutlined />}
-              onClick={() => navigate(`/owner/buildings/${buildingId}/overview`)}
-            >
-              Xem Mô hình 3D Xuyên tầng
-            </Button>
-          </Space>
+          {isStaff ? (
+            <Space>
+              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/owner/buildings/${buildingId}`)}>
+                Tòa nhà
+              </Button>
+              <Button icon={<FundProjectionScreenOutlined />} onClick={() => navigate(`/owner/buildings/${buildingId}/overview`)}>
+                Xem Mô hình 3D Xuyên tầng
+              </Button>
+            </Space>
+          ) : (
+            buildingId && (
+              <Space wrap>
+                <Button onClick={() => navigate(`/guest/${buildingId}/search`)}>{t('tab.search')}</Button>
+                <Button onClick={() => navigate(`/guest/${buildingId}/building`)}>{t('tab.building')}</Button>
+                <Button onClick={() => navigate(`/guest/${buildingId}/accessibility`)}>{t('tab.access')}</Button>
+              </Space>
+            )
+          )}
           <Typography.Title level={2} style={{ marginTop: 8 }}>
             Indoor Navigation · Chỉ đường trong tòa nhà
           </Typography.Title>
         </div>
 
         <Space wrap>
+          <Button danger type={emergencyMode === 'FIRE' ? 'primary' : 'default'} onClick={handleEvacuate} disabled={emergencyMode === 'FIRE'}>
+            🚨 {t('evac.button')}
+          </Button>
           <Segmented
             value={viewMode}
             onChange={(val) => setViewMode(val as 'mobile' | 'desktop')}
@@ -475,6 +518,15 @@ export function NavigationPage() {
 
       {demoEnabled && <DemoSimulationToolbar currentNodeId={currentStep?.nodeId} startNodeId={fromNodeId ?? qr?.nodeId} />}
 
+      {emergencyMode === 'FIRE' && (
+        <Alert
+          type="error"
+          showIcon
+          message={t('evac.banner')}
+          action={<Button size="small" danger onClick={resetSimulation}>{t('evac.stop')}</Button>}
+          style={{ marginBottom: 16 }}
+        />
+      )}
       {routeWarning && (
         <Alert
           type={routeWarning.severity === 'CRITICAL' ? 'error' : 'warning'}

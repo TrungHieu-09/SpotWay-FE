@@ -51,7 +51,7 @@ export const GUEST_TEST_CASES: GuestTestCase[] = [
 
 /** Link mở trang Guest cho một case. */
 export function guestCaseUrl(testCase: GuestTestCase, buildingId: string, qrToken?: string) {
-  const base = `/guest/${buildingId}`
+  const base = `/guest/${buildingId}/map`
   if (testCase.scenario) return `${base}?scenario=${encodeURIComponent(testCase.scenario)}`
   if (testCase.needsQrToken) return qrToken ? `${base}?qr=${encodeURIComponent(qrToken)}` : undefined
   return testCase.manualQuery ? `${base}?${testCase.manualQuery}` : base

@@ -36,6 +36,26 @@ const BuildingListPage = lazy(() =>
     default: module.BuildingListPage,
   })),
 )
+const GuestWelcomePage = lazy(() =>
+  import('../pages/Guest/GuestWelcomePage').then((module) => ({
+    default: module.GuestWelcomePage,
+  })),
+)
+const GuestBuildingPage = lazy(() =>
+  import('../pages/Guest/GuestBuildingPage').then((module) => ({
+    default: module.GuestBuildingPage,
+  })),
+)
+const GuestSearchPage = lazy(() =>
+  import('../pages/Guest/GuestSearchPage').then((module) => ({
+    default: module.GuestSearchPage,
+  })),
+)
+const GuestAccessibilityPage = lazy(() =>
+  import('../pages/Guest/GuestAccessibilityPage').then((module) => ({
+    default: module.GuestAccessibilityPage,
+  })),
+)
 const GuestTestPage = lazy(() =>
   import('../pages/Guest/GuestTestPage').then((module) => ({
     default: module.GuestTestPage,
@@ -138,7 +158,11 @@ export const router = createBrowserRouter([
   { path: 'profile', element: lazyElement(<ProfilePage />) },
   { path: 'navigate', element: lazyElement(<NavigationPage />) },
   { path: 'navigate/:buildingId', element: lazyElement(<NavigationPage />) },
-  { path: 'guest/:buildingId', element: lazyElement(<NavigationPage />) },
+  { path: 'guest/:buildingId', element: lazyElement(<GuestWelcomePage />) },
+  { path: 'guest/:buildingId/map', element: lazyElement(<NavigationPage />) },
+  { path: 'guest/:buildingId/search', element: lazyElement(<GuestSearchPage />) },
+  { path: 'guest/:buildingId/building', element: lazyElement(<GuestBuildingPage />) },
+  { path: 'guest/:buildingId/accessibility', element: lazyElement(<GuestAccessibilityPage />) },
   { path: 'guest/:buildingId/test', element: lazyElement(<GuestTestPage />) },
 
   // ── Building Owner section with sidebar ──
