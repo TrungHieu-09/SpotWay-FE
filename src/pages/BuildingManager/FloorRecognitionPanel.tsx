@@ -58,7 +58,6 @@ const { Text: AntText } = Typography
 type FloorRecognitionPanelProps = {
   onDirtyChange?: (isDirty: boolean) => void
   autoRecognizeRequestId?: number
-  onView3D?: () => void
   readOnly?: boolean
 }
 
@@ -208,7 +207,6 @@ function makeGeometryDraft(
 export function FloorRecognitionPanel({
   onDirtyChange,
   autoRecognizeRequestId = 0,
-  onView3D,
   readOnly = false,
 }: FloorRecognitionPanelProps) {
   const [stageHostRef, stageHostSize] = useElementSize<HTMLDivElement>()
@@ -713,9 +711,6 @@ export function FloorRecognitionPanel({
             >
               Xác nhận và lưu
             </Button>
-            {draftGeometry && !isDirty && draftGeometry.status === 'confirmed' ? (
-              <Button onClick={onView3D}>Xem 3D</Button>
-            ) : null}
           </Space>
           <Space>
             <Tag color={isDirty || draftGeometry?.status === 'draft' ? 'gold' : 'green'}>

@@ -83,6 +83,7 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
   const clearConnectors = useGraphStore((state) => state.clearConnectors)
   const createConnector = useGraphStore((state) => state.createConnector)
   const deleteConnector = useGraphStore((state) => state.deleteConnector)
+  const updateConnector = useGraphStore((state) => state.updateConnector)
   const [connectorModalOpen, setConnectorModalOpen] = useState(false)
   const [suggestModalOpen, setSuggestModalOpen] = useState(false)
   const [isPromoting, setIsPromoting] = useState(false)
@@ -537,6 +538,8 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
         onDeleteCrossingEdges={handleDeleteCrossingEdges}
         onCreateConnector={() => setConnectorModalOpen(true)}
         onSuggestConnectors={() => setSuggestModalOpen(true)}
+        onUpdateConnector={(connectorId, patch) => buildingId && updateConnector(buildingId, connectorId, patch)}
+        readOnly={readOnly}
         onDeleteConnector={(connectorId) => buildingId && deleteConnector(buildingId, connectorId)}
         onDeletePoi={(poiId) => deletePoi(selectedFloor.id, poiId)}
         onDeleteAllNodes={() => void handleDeleteAllNodes()}

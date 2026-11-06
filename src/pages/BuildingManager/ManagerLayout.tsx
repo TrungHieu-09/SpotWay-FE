@@ -3,10 +3,7 @@ import { App as AntApp, Select, Tabs, Typography } from 'antd'
 import { ApartmentOutlined } from '@ant-design/icons'
 import { FloorSelector } from './FloorSelector'
 import { CanvasBoard } from './CanvasBoard'
-import { ConnectorPanel } from './ConnectorPanel'
 import { FloorRecognitionPanel } from './FloorRecognitionPanel'
-import { Manager3DPanel } from './Manager3DPanel'
-import { StoreListPanel } from './StoreListPanel'
 import { MaintenancePanel } from './MaintenancePanel'
 import { EditorShell } from '../../components/ui/EditorShell'
 import { useBuildingStore } from '../../store/useBuildingStore'
@@ -152,30 +149,14 @@ export function ManagerLayout() {
                   children: <CanvasBoard readOnly={isReadOnly} />,
                 },
                 {
-                  key: 'stores',
-                  label: 'Danh sách gian hàng',
-                  children: <StoreListPanel readOnly={isReadOnly} />,
-                },
-                {
                   key: 'recognition',
                   label: 'Nhận diện sơ đồ',
                   children: (
                     <FloorRecognitionPanel
                       onDirtyChange={setIsRecognitionDirty}
-                      onView3D={() => setActiveTab('map-3d')}
                       readOnly={isReadOnly}
                     />
                   ),
-                },
-                {
-                  key: 'map-3d',
-                  label: 'Xem 3D',
-                  children: <Manager3DPanel />,
-                },
-                {
-                  key: 'elevator-links',
-                  label: 'Thang & connector',
-                  children: <ConnectorPanel readOnly={isReadOnly} />,
                 },
                 {
                   key: 'maintenance',

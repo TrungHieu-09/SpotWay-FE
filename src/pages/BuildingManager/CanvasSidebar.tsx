@@ -1,4 +1,4 @@
-import { Button, Card, List, Popconfirm, Space, Tabs, Tag, Typography } from 'antd'
+import { Button, Card, List, Popconfirm, Space, Switch, Tabs, Tag, Typography } from 'antd'
 import { ApartmentOutlined, ClearOutlined, DeleteOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { CONNECTOR_STYLE } from '../../components/canvas/ConnectorsLayer'
 import type { Connector, GraphEdge, GraphNode } from '../../types/graph'
@@ -45,7 +45,10 @@ type CanvasSidebarProps = {
   onDeleteCrossingEdges: () => void
   onCreateConnector: () => void
   onSuggestConnectors: () => void
+  onUpdateConnector: (connectorId: string, patch: { name?: string; accessible?: boolean }) => void
   onDeleteConnector: (connectorId: string) => void
+  /** Chỉ xem: khoá sửa connector. */
+  readOnly?: boolean
   onDeletePoi: (poiId: string) => void
   onDeleteAllNodes: () => void
   onDeleteAllPois: () => void
@@ -71,7 +74,9 @@ export function CanvasSidebar({
   onDeleteCrossingEdges,
   onCreateConnector,
   onSuggestConnectors,
+  onUpdateConnector,
   onDeleteConnector,
+  readOnly = false,
   onDeletePoi,
   onDeleteAllNodes,
   onDeleteAllPois,
@@ -263,10 +268,30 @@ export function CanvasSidebar({
                     <Space orientation="vertical" size={1}>
                       <Space>
                         <Tag color={CONNECTOR_STYLE[connector.kind].color}>{CONNECTOR_STYLE[connector.kind].label}</Tag>
-                        <AntText strong style={{ fontSize: 12 }}>
+                        <AntText
+                          strong
+                          style={{ fontSize: 12 }}
+                          editable={
+                            readOnly
+                              ? false
+                              : {
+                                  onChange: (value) => {
+                                    const name = value.trim()
+                                    if (name && name !== connector.name) onUpdateConnector(connector.id, { name })
+                                  },
+                                }
+                          }
+                        >
                           {connector.name}
                         </AntText>
-                        {!connector.accessible && <Tag>Không xe lăn</Tag>}
+                        <Switch
+                          size="small"
+                          checked={connector.accessible}
+                          disabled={readOnly}
+                          checkedChildren="Xe lăn"
+                          unCheckedChildren="Không"
+                          onChange={(accessible) => onUpdateConnector(connector.id, { accessible })}
+                        />
                       </Space>
                       <AntText type="secondary" style={{ fontSize: 11 }}>
                         Nối: {connector.stops.map((stop) => floorNameById.get(stop.floorId) ?? '?').join(' ↔ ')}
