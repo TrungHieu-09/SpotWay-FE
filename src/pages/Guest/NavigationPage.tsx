@@ -27,14 +27,14 @@ import {
   SwapOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { resolvePublicQrToken } from '../../api/publicNavigation'
 import { DemoSimulationToolbar } from '../../components/navigation/DemoSimulationToolbar'
 import { publicMapSize, toRouteMapData } from '../../api/graphMapper'
 import { RouteFloorsOverview } from '../../components/navigation/RouteFloorsOverview'
 import { QrScanModal } from '../../components/navigation/QrScanModal'
 import { RouteMap } from '../../components/navigation/RouteMap'
-import { useNavigationStore } from '../../store/useNavigationStore'
+import { useNavigationStore, type DemoScenarioId } from '../../store/useNavigationStore'
 import type { Maneuver, PublicQrResolution, RouteStep, VerticalLinkKind } from '../../types/navigation'
 import type { PercentPoint } from '../../types/geometry'
 import { findNearestNode } from '../../utils/graphGeometry'
@@ -80,15 +80,21 @@ function getTurnArrow(instruction: string, transition?: string, maneuver?: Maneu
 export function NavigationPage() {
   const { buildingId: routeBuildingId } = useParams<{ buildingId: string }>()
   const [searchParams] = useSearchParams()
+  const { pathname } = useLocation()
   const navigate = useNavigate()
   const qrToken = searchParams.get('qr')
   const paramFromNodeId = searchParams.get('fromNodeId') ?? undefined
   const paramFloorId = searchParams.get('floorId') ?? undefined
   const paramToStoreId = searchParams.get('toStoreId') ?? undefined
+  // Thanh kịch bản demo chỉ hiện khi vào chế độ kiểm thử: ?demo=1, trang /test hoặc /manager/navigation-test.
+  const paramScenario = searchParams.get('scenario') ?? undefined
+  const demoEnabled =
+    searchParams.get('demo') === '1' || Boolean(paramScenario) || pathname.includes('/test') || pathname.startsWith('/manager/navigation-test')
   const [qr, setQr] = useState<PublicQrResolution>()
   const [qrLoading, setQrLoading] = useState(Boolean(qrToken))
   const [qrError, setQrError] = useState<string>()
   const [qrLocked, setQrLocked] = useState(true)
+  const scenarioRanRef = useRef(false)
   const autoRoutedRef = useRef(false)
   const resumedForQrRef = useRef<string | undefined>(undefined)
   const stageRef = useRef<HTMLDivElement>(null)
@@ -304,6 +310,13 @@ export function NavigationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paramToStoreId, isLoading, effectiveFromNodeId, destinations])
 
+  // Deep-link ?scenario=<id> (từ bảng kiểm thử): chạy đúng kịch bản demo một lần khi đã nạp dữ liệu
+  useEffect(() => {
+    if (scenarioRanRef.current || !paramScenario || isLoading || floors.length === 0) return
+    scenarioRanRef.current = true
+    void useNavigationStore.getState().runDemoScenario(paramScenario as DemoScenarioId, effectiveFromNodeId)
+  }, [paramScenario, isLoading, floors.length, effectiveFromNodeId])
+
   // Quét mã QR khác giữa đường (trang tải lại): tiếp tục tới điểm đến đã chọn, tính lại từ vị trí mới
   useEffect(() => {
     if (!qr || !qrToken || paramToStoreId || isLoading || resumedForQrRef.current === qrToken) return
@@ -460,7 +473,7 @@ export function NavigationPage() {
         />
       )}
 
-      <DemoSimulationToolbar currentNodeId={currentStep?.nodeId} startNodeId={fromNodeId ?? qr?.nodeId} />
+      {demoEnabled && <DemoSimulationToolbar currentNodeId={currentStep?.nodeId} startNodeId={fromNodeId ?? qr?.nodeId} />}
 
       {routeWarning && (
         <Alert

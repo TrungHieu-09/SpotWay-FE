@@ -36,6 +36,11 @@ const BuildingListPage = lazy(() =>
     default: module.BuildingListPage,
   })),
 )
+const GuestTestPage = lazy(() =>
+  import('../pages/Guest/GuestTestPage').then((module) => ({
+    default: module.GuestTestPage,
+  })),
+)
 const Building2DViewerPage = lazy(() =>
   import('../pages/BuildingOwner/Building2DViewerPage').then((module) => ({
     default: module.Building2DViewerPage,
@@ -133,6 +138,8 @@ export const router = createBrowserRouter([
   { path: 'profile', element: lazyElement(<ProfilePage />) },
   { path: 'navigate', element: lazyElement(<NavigationPage />) },
   { path: 'navigate/:buildingId', element: lazyElement(<NavigationPage />) },
+  { path: 'guest/:buildingId', element: lazyElement(<NavigationPage />) },
+  { path: 'guest/:buildingId/test', element: lazyElement(<GuestTestPage />) },
 
   // ── Building Owner section with sidebar ──
   {
