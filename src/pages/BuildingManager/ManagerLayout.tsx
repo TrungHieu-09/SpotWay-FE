@@ -8,7 +8,6 @@ import { FloorRecognitionPanel } from './FloorRecognitionPanel'
 import { Manager3DPanel } from './Manager3DPanel'
 import { StoreListPanel } from './StoreListPanel'
 import { MaintenancePanel } from './MaintenancePanel'
-import { QrCodePanel } from './QrCodePanel'
 import { EditorShell } from '../../components/ui/EditorShell'
 import { useBuildingStore } from '../../store/useBuildingStore'
 import { useFloorStore } from '../../store/useFloorStore'
@@ -246,11 +245,6 @@ export function ManagerLayout() {
                   key: 'maintenance',
                   label: 'Bảo trì lối đi',
                   children: <MaintenancePanel readOnly={isReadOnly} />,
-                },
-                {
-                  key: 'qr-codes',
-                  label: 'Mã QR định vị',
-                  children: <QrCodePanel readOnly={isReadOnly} />,
                 },
               ]}
             />

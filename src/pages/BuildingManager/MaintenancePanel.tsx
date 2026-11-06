@@ -3,7 +3,9 @@ import { Alert, App as AntApp, Button, Card, Empty, List, Popconfirm, Space, Spi
 import { StopOutlined, UnlockOutlined } from '@ant-design/icons'
 import { useFloorStore } from '../../store/useFloorStore'
 import { usePermissions } from '../../auth/usePermissions'
-import { getGraph, type GraphEdge, type GraphNode } from '../../api/graph'
+import { useGraphStore } from '../../store/useGraphStore'
+import { useLoadFloorData } from '../../hooks/useLoadFloorData'
+import type { GraphEdge, GraphNode } from '../../types/graph'
 import {
   blockMaintenance,
   getMaintenanceReport,
@@ -14,11 +16,16 @@ import { AppSelect as Select } from '../../components/ui/AppSelect'
 
 const { Text, Title } = Typography
 
+const NO_NODES: GraphNode[] = []
+const NO_EDGES: GraphEdge[] = []
+
 /** Bảo trì = chặn edge/node để định tuyến tránh; BE không có "vùng" chữ nhật. */
 export function MaintenancePanel({ readOnly = false }: { readOnly?: boolean }) {
   const floor = useFloorStore((state) => state.selectedFloor)
-  const [nodes, setNodes] = useState<GraphNode[]>([])
-  const [edges, setEdges] = useState<GraphEdge[]>([])
+  const nodes: GraphNode[] = useGraphStore((state) => (floor ? state.nodesByFloor[floor.id] : undefined)) ?? NO_NODES
+  const edges: GraphEdge[] = useGraphStore((state) => (floor ? state.edgesByFloor[floor.id] : undefined)) ?? NO_EDGES
+  const loadFloorGraph = useGraphStore((state) => state.loadFloorGraph)
+  useLoadFloorData(floor ? [floor] : [])
   const [report, setReport] = useState<MaintenanceReport | null>(null)
   const [pickedNodeIds, setPickedNodeIds] = useState<string[]>([])
   const [pickedEdgeIds, setPickedEdgeIds] = useState<string[]>([])
@@ -42,14 +49,14 @@ export function MaintenancePanel({ readOnly = false }: { readOnly?: boolean }) {
   )
 
   useEffect(() => {
-    setNodes([]); setEdges([]); setReport(null); setPickedNodeIds([]); setPickedEdgeIds([])
+    setReport(null); setPickedNodeIds([]); setPickedEdgeIds([])
     if (!floorId) return
     let cancelled = false
     setLoading(true)
-    Promise.all([getGraph(floorId), getMaintenanceReport(floorId)])
-      .then(([graph, nextReport]) => {
+    getMaintenanceReport(floorId)
+      .then((nextReport) => {
         if (cancelled) return
-        setNodes(graph.nodes); setEdges(graph.edges); setReport(nextReport)
+        setReport(nextReport)
       })
       .catch((error: Error) => { if (!cancelled) message.error(error.message) })
       .finally(() => { if (!cancelled) setLoading(false) })
@@ -64,8 +71,7 @@ export function MaintenancePanel({ readOnly = false }: { readOnly?: boolean }) {
     try {
       const next = await (action === 'block' ? blockMaintenance : unblockMaintenance)(currentFloorId, selection)
       setReport(next)
-      const graph = await getGraph(currentFloorId)
-      setNodes(graph.nodes); setEdges(graph.edges)
+      await loadFloorGraph(currentFloorId, { width: floor!.mapWidth, height: floor!.mapHeight })
       setPickedNodeIds([]); setPickedEdgeIds([])
       message.success(action === 'block' ? `Đã chặn ${next.changedEdges ?? 0} lối đi.` : `Đã mở lại ${next.changedEdges ?? 0} lối đi.`)
     } catch (error) {

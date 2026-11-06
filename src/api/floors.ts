@@ -4,7 +4,6 @@ import type {
   Floor,
   UpdateFloorPayload,
 } from '../types/floor'
-import { getPois } from './pois'
 
 type ApiFloor = { id: string; buildingId: string; floorNumber: number; name: string; mapImageUrl: string | null; mapWidth: number | null; mapHeight: number | null; metersPerPixel?: number | null; publishStatus: 'DRAFT' | 'PUBLISHED' }
 function toFloor(floor: any): Floor {
@@ -19,7 +18,6 @@ function toFloor(floor: any): Floor {
       mapWidth: floor.mapWidth ?? 1200,
       mapHeight: floor.mapHeight ?? 760,
       metersPerPixel: floor.metersPerPixel ?? null,
-      pois: floor.pois ?? [],
     }
   }
   return {
@@ -32,7 +30,6 @@ function toFloor(floor: any): Floor {
     mapWidth: floor?.mapWidth ?? 1200,
     mapHeight: floor?.mapHeight ?? 760,
     metersPerPixel: floor?.metersPerPixel ?? null,
-    pois: [],
   }
 }
 
@@ -45,8 +42,8 @@ export async function getFloors(buildingId: string) {
     : Array.isArray(data?.items)
       ? data.items
       : []
-  const floors = items.map(toFloor)
-  return Promise.all(floors.map(async (floor: Floor) => ({ ...floor, pois: await getPois(floor.id, floor).catch(() => []) })))
+  const floors: Floor[] = items.map(toFloor)
+  return floors
 }
 
 export async function createFloor(payload: CreateFloorPayload) {

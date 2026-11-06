@@ -1,5 +1,3 @@
-import type { Poi } from './poi'
-
 export type FloorPublishStatus = 'draft' | 'published'
 
 export type Floor = {
@@ -14,7 +12,6 @@ export type Floor = {
   mapHeight: number
   /** Tỉ lệ thực tế dùng để quy đổi độ dài đường đi và kiểm tra trước khi publish. */
   metersPerPixel?: number | null
-  pois: Poi[]
   nextPoiNumber?: number
 }
 

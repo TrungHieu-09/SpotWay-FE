@@ -1,52 +1,43 @@
-export type PoiType =
-  | 'entrance'
-  | 'shop'
-  | 'store'
-  | 'service'
-  | 'elevator'
-  | 'toilet'
-  | 'exit'
-  | 'custom'
+import type { PercentPoint } from './geometry'
 
-/** Khớp enum PoiCategory của BE. */
-export type PoiCategory = 'RESTROOM' | 'ELEVATOR' | 'EXIT' | 'INFO' | 'PARKING' | 'CUSTOM'
+/** Khớp enum `PoiCategory` của BE (viết thường). */
+export type PoiCategory = 'restroom' | 'elevator' | 'exit' | 'info' | 'parking' | 'custom'
 
-export type Poi = {
+/** POI là entity độc lập: có toạ độ riêng; `nearestNodeId` là điểm đồ thị dùng để dẫn đường tới nó. */
+export type Poi = PercentPoint & {
   id: string
   floorId: string
-  /** Node đồ thị mà POI được snap vào (BE tự chọn node gần nhất). */
-  nodeId?: string
   name: string
   category: PoiCategory
+  /** Khoá icon; null = dùng icon mặc định của category. */
   icon: string | null
-  /** Suy ra từ category, dùng cho render 2D/3D. */
-  type: PoiType
-  /** 0-100, percentage on the floor plan width. Not a pixel value. */
-  x: number
-  /** 0-100, percentage on the floor plan height. Not a pixel value. */
-  y: number
-  snapDistanceMeters?: number | null
+  nearestNodeId: string | null
 }
 
-export type NewPoiInput = { x: number; y: number; name: string; category: PoiCategory; icon?: string | null }
-export type PoiPatch = Partial<Pick<Poi, 'name' | 'category' | 'icon' | 'x' | 'y' | 'nodeId'>>
+export type NewPoi = Pick<Poi, 'x' | 'y' | 'name' | 'category' | 'icon'>
 
-export const POI_CATEGORY_LABEL: Record<PoiCategory, string> = {
-  RESTROOM: 'Nhà vệ sinh',
-  ELEVATOR: 'Thang máy',
-  EXIT: 'Lối ra',
-  INFO: 'Quầy thông tin',
-  PARKING: 'Bãi đỗ xe',
-  CUSTOM: 'Khác',
-}
+/** Trường người dùng sửa được mà không đổi vị trí. */
+export type PoiDetailsPatch = Partial<Pick<Poi, 'name' | 'category' | 'icon'>>
 
-export function poiTypeFromCategory(category: PoiCategory): PoiType {
+/** Loại hiển thị (màu/biểu tượng) trên bản đồ 2D/3D, suy ra từ category của BE. */
+export type PoiType = 'entrance' | 'shop' | 'store' | 'service' | 'elevator' | 'toilet' | 'exit' | 'custom'
+
+export function poiVisualType(category: PoiCategory): PoiType {
   switch (category) {
-    case 'RESTROOM': return 'toilet'
-    case 'ELEVATOR': return 'elevator'
-    case 'EXIT': return 'exit'
-    case 'INFO':
-    case 'PARKING': return 'service'
+    case 'restroom': return 'toilet'
+    case 'elevator': return 'elevator'
+    case 'exit': return 'exit'
+    case 'info':
+    case 'parking': return 'service'
     default: return 'custom'
   }
+}
+
+export const POI_CATEGORY_LABEL: Record<PoiCategory, string> = {
+  restroom: 'Nhà vệ sinh',
+  elevator: 'Thang máy',
+  exit: 'Lối ra',
+  info: 'Quầy thông tin',
+  parking: 'Bãi đỗ xe',
+  custom: 'Khác',
 }

@@ -2,12 +2,12 @@ import { create } from 'zustand'
 import {
   createFloor,
   calibrateFloor as calibrateFloorRequest,
+  type CalibrateFloorInput,
   deleteFloor as deleteFloorRequest,
   getFloors,
   updateFloor,
 } from '../api/floors'
 import type { Floor, FloorPublishStatus } from '../types/floor'
-import type { Poi } from '../types/poi'
 
 type NewFloorInput = {
   name: string
@@ -32,14 +32,7 @@ type FloorState = {
     floorId: string,
     patch: { mapImageUrl: string | null; mapWidth: number; mapHeight: number },
   ) => Promise<void>
-  calibrateFloor: (floorId: string, metersPerPixel: number) => Promise<number>
-  setFloorPois: (floorId: string, pois: Poi[]) => void
-}
-
-function syncFloorPois(floors: Floor[], floorId: string, pois: Poi[]) {
-  return floors.map((floor) =>
-    floor.id === floorId ? { ...floor, pois } : floor,
-  )
+  calibrateFloor: (floorId: string, input: CalibrateFloorInput) => Promise<number>
 }
 
 function sortFloorsByLevel(floors: Floor[]) {
@@ -138,8 +131,7 @@ export const useFloorStore = create<FloorState>((set, get) => ({
   async updateFloorStatus(floorId, publishStatus) {
     set({ isFloorLoading: true, error: null })
     try {
-      const previousFloor = get().floors.find((floor) => floor.id === floorId)
-      const updatedFloor = { ...(await updateFloor(floorId, { publishStatus })), pois: previousFloor?.pois ?? [] }
+      const updatedFloor = await updateFloor(floorId, { publishStatus })
       const floors = sortFloorsByLevel(
         get().floors.map((floor) =>
           floor.id === floorId ? updatedFloor : floor,
@@ -163,8 +155,7 @@ export const useFloorStore = create<FloorState>((set, get) => ({
   async updateFloorPlan(floorId, patch) {
     set({ isFloorLoading: true, error: null })
     try {
-      const previousFloor = get().floors.find((floor) => floor.id === floorId)
-      const updatedFloor = { ...(await updateFloor(floorId, patch)), pois: previousFloor?.pois ?? [] }
+      const updatedFloor = await updateFloor(floorId, patch)
       const floors = sortFloorsByLevel(
         get().floors.map((floor) =>
           floor.id === floorId ? updatedFloor : floor,
@@ -185,10 +176,10 @@ export const useFloorStore = create<FloorState>((set, get) => ({
     }
   },
 
-  async calibrateFloor(floorId, metersPerPixel) {
+  async calibrateFloor(floorId, input) {
     set({ isFloorLoading: true, error: null })
     try {
-      const result = await calibrateFloorRequest(floorId, { metersPerPixel })
+      const result = await calibrateFloorRequest(floorId, input)
       const update = (floor: Floor) => floor.id === floorId ? { ...floor, metersPerPixel: result.metersPerPixel } : floor
       const currentFloor = get().selectedFloor
       const selectedFloor = currentFloor?.id === floorId ? update(currentFloor) : currentFloor
@@ -200,15 +191,5 @@ export const useFloorStore = create<FloorState>((set, get) => ({
     } finally {
       set({ isFloorLoading: false })
     }
-  },
-
-  setFloorPois(floorId, pois) {
-    set((state) => ({
-      floors: syncFloorPois(state.floors, floorId, pois),
-      selectedFloor:
-        state.selectedFloor?.id === floorId
-          ? { ...state.selectedFloor, pois }
-          : state.selectedFloor,
-    }))
   },
 }))

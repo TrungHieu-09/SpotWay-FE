@@ -7,8 +7,8 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import * as THREE from 'three'
 import type { Floor } from '../../types/floor'
 import type { FloorGeometry, Point, Room } from '../../types/geometry'
-import type { Node } from '../../types/node'
-import type { Poi, PoiType } from '../../types/poi'
+import type { GraphNode } from '../../types/graph'
+import { poiVisualType, type Poi, type PoiType } from '../../types/poi'
 import type { RouteResult } from '../../types/route'
 import {
   logWorldCoordinateCheck,
@@ -29,7 +29,8 @@ type FocusTarget = {
 export type Map3DViewerProps = {
   floors: Floor[]
   geometriesByFloorId: Record<string, FloorGeometry>
-  nodesByFloorId?: Record<string, Node[]>
+  nodesByFloorId?: Record<string, GraphNode[]>
+  poisByFloorId?: Record<string, Poi[]>
   selectedFloorId?: string
   route: RouteResult | null
   focusTarget?: FocusTarget
@@ -44,7 +45,8 @@ type SceneProps = Map3DViewerProps & {
 type FloorSceneProps = {
   floor: Floor
   geometry: FloorGeometry
-  nodes: Node[]
+  nodes: GraphNode[]
+  pois: Poi[]
   route: RouteResult | null
   elevation: number
   isSelected: boolean
@@ -276,7 +278,7 @@ function PoiPin({ poi, geometry, elevation }: {
   const world = toWorld(poi.x, poi.y, geometry, elevation + 0.22)
 
   useFrame(() => {
-    setVisible(shouldShowPoi(poi.type, camera, world))
+    setVisible(shouldShowPoi(poiVisualType(poi.category), camera, world))
   })
 
   if (!visible) {
@@ -287,11 +289,11 @@ function PoiPin({ poi, geometry, elevation }: {
     <group position={[world.x, world.y, world.z]}>
       <mesh position={[0, 0.85, 0]} rotation={[Math.PI, 0, 0]}>
         <coneGeometry args={[0.24, 0.78, 18]} />
-        <meshStandardMaterial color={mapTokens.poi[poi.type]} />
+        <meshStandardMaterial color={mapTokens.poi[poiVisualType(poi.category)]} />
       </mesh>
       <mesh position={[0, 1.32, 0]}>
         <sphereGeometry args={[0.32, 24, 16]} />
-        <meshStandardMaterial color={mapTokens.poi[poi.type]} />
+        <meshStandardMaterial color={mapTokens.poi[poiVisualType(poi.category)]} />
       </mesh>
       <Html center distanceFactor={18} position={[0, 1.9, 0]}>
         <span className="map3d-label">{poi.name}</span>
@@ -301,18 +303,18 @@ function PoiPin({ poi, geometry, elevation }: {
 }
 
 function NodeMarker({ node, geometry, elevation }: {
-  node: Node
+  node: GraphNode
   geometry: FloorGeometry
   elevation: number
 }) {
   const world = toWorld(node.x, node.y, geometry, elevation + 0.08)
   return (
     <mesh position={[world.x, world.y, world.z]}>
-      <sphereGeometry args={[node.isElevatorLink ? 0.22 : 0.07, 16, 10]} />
+      <sphereGeometry args={[node.type === 'ELEVATOR' ? 0.22 : 0.07, 16, 10]} />
       <meshStandardMaterial
-        color={node.isElevatorLink ? designTokens.warning : designTokens.ink500}
+        color={node.type === 'ELEVATOR' ? designTokens.warning : designTokens.ink500}
         transparent
-        opacity={node.isElevatorLink ? 0.92 : 0.34}
+        opacity={node.type === 'ELEVATOR' ? 0.92 : 0.34}
       />
     </mesh>
   )
@@ -441,6 +443,7 @@ function FloorScene({
   floor,
   geometry,
   nodes,
+  pois,
   route,
   elevation,
   isSelected,
@@ -465,7 +468,7 @@ function FloorScene({
           elevation={elevation}
         />
       ))}
-      {floor.pois.map((poi) => (
+      {pois.map((poi) => (
         <PoiPin key={poi.id} poi={poi} geometry={geometry} elevation={elevation} />
       ))}
       {nodes.map((node) => (
@@ -568,6 +571,7 @@ function Map3DScene({
   floors,
   geometriesByFloorId,
   nodesByFloorId,
+  poisByFloorId,
   selectedFloorId,
   route,
   focusTarget,
@@ -592,9 +596,9 @@ function Map3DScene({
       return
     }
 
+    const floorPois = poisByFloorId?.[selectedFloor.id] ?? []
     const samplePoi =
-      selectedFloor.pois.find((poi) => poi.name === 'Main Entrance') ??
-      selectedFloor.pois[0]
+      floorPois.find((poi) => poi.name === 'Main Entrance') ?? floorPois[0]
     logWorldCoordinateCheck(
       selectedGeometry,
       samplePoi
@@ -631,6 +635,7 @@ function Map3DScene({
             floor={floor}
             geometry={geometry}
             nodes={nodesByFloorId?.[floor.id] ?? []}
+            pois={poisByFloorId?.[floor.id] ?? []}
             route={route}
             elevation={stacked ? (floorIndex - selectedIndex) * 5.8 : 0}
             isSelected={floor.id === selectedFloorId}
@@ -644,6 +649,7 @@ function Map3DScene({
 }
 
 export default function Map3DViewer({
+  poisByFloorId,
   floors,
   geometriesByFloorId,
   nodesByFloorId,
@@ -726,6 +732,7 @@ export default function Map3DViewer({
             floors={floors}
             geometriesByFloorId={geometriesByFloorId}
             nodesByFloorId={nodesByFloorId}
+            poisByFloorId={poisByFloorId}
             selectedFloorId={selectedFloorId}
             route={route}
             focusTarget={focusTarget}
