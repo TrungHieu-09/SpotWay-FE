@@ -147,7 +147,7 @@ export function BuildingDetailPage() {
                     <span className="bdp-info-row__icon"><AppstoreOutlined /></span>
                     <div>
                       <span className="bdp-info-row__label">Số tầng</span>
-                      <span className="bdp-info-row__value">{building.floorCount}</span>
+                      <span className="bdp-info-row__value">{floors.length || building.floorCount}</span>
                     </div>
                   </div>
                   <div className="bdp-info-row">
@@ -192,7 +192,7 @@ export function BuildingDetailPage() {
               extra={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span className="bdp-floor-count">
-                    {floors.length}/{building.floorCount} tầng
+                    {floors.length} tầng
                   </span>
                   <Button
                     type="primary"
