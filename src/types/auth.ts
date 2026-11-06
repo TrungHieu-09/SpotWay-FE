@@ -23,19 +23,8 @@ export type Tenant = {
   id: string
   name: string
   subdomain: string
-  planId: string
   status: TenantStatus
-  planExpiresAt: string
   createdAt: string
-}
-
-export type Plan = {
-  id: string
-  name: string
-  maxBuildings: number
-  maxManagers: number
-  maxStoreOwners: number
-  durationMonths: number
 }
 
 export type AuthUser = Omit<User, 'status'> & {
@@ -56,7 +45,6 @@ export type AuthErrorResponse = {
 
 export type TenantOverview = {
   tenant: Tenant
-  plan: Plan
   usage: {
     buildings: number
     areas: number

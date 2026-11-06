@@ -507,7 +507,7 @@ export function LandingPage() {
             { role: 'Khách tham quan', color: 'cyan', desc: 'Dẫn đường tức thì không cần cài app. Quét mã QR để xem vị trí, tìm kiếm cửa hàng và tiện ích ở mọi tầng.' },
             { role: 'Chủ gian hàng', color: 'violet', desc: 'Quản lý thông tin gian hàng, chương trình ưu đãi và theo dõi lưu lượng khách ghé thăm theo thời gian thực.' },
             { role: 'Ban Quản lý tòa nhà', color: 'fuchsia', desc: 'Cấu hình bản đồ tầng, nút POI, đồ thị dẫn đường và xuất bản cập nhật không gian không gián đoạn.' },
-            { role: 'Chủ tòa nhà', color: 'green', desc: 'Báo cáo số liệu toàn diện, quản lý gói dịch vụ, phân bổ gian hàng và tối ưu hóa doanh thu bất động sản.' },
+            { role: 'Chủ tòa nhà', color: 'green', desc: 'Báo cáo số liệu toàn diện, phân bổ gian hàng và tối ưu hóa doanh thu bất động sản.' },
             { role: 'Quản trị viên hệ thống', color: 'cyan', desc: 'Kiểm soát toàn bộ hạ tầng, cách ly khách thuê, định mức tài nguyên và giám sát toàn hệ thống.' },
           ].map((item, i) => (
             <div key={item.role} className={`lp-role-card lp-role-card--${item.color}`} data-reveal="scale-up" data-reveal-delay={String(i * 80)}>

@@ -32,7 +32,7 @@ const assignableRoleCards: Array<{
   {
     role: 'building_owner',
     title: 'Chủ tòa nhà',
-    desc: 'Sở hữu & quản lý tòa nhà, gói dịch vụ',
+    desc: 'Sở hữu & quản lý tòa nhà, mặt sàn và đội ngũ',
     icon: 'domain',
     activeClass: 'adm-role-card--active-owner',
     iconBg: 'rgba(16, 185, 129, 0.16)',

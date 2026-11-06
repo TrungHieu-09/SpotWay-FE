@@ -1,5 +1,17 @@
-import type { Plan, Tenant, User } from '../../types/auth'
+import type { Tenant, User } from '../../types/auth'
 import { loadFromStorage, MOCK_STORAGE_KEYS, saveToStorage } from '../persist'
+
+// Mock-only: the real BE no longer has plans, these keep the (unused) MSW handlers compiling.
+export type Plan = {
+  id: string
+  name: string
+  maxBuildings: number
+  maxManagers: number
+  maxStoreOwners: number
+  durationMonths: number
+}
+
+export type MockTenant = Tenant & { planId: string; planExpiresAt: string }
 
 export const initialPlansSeed: Plan[] = [
   {
@@ -28,7 +40,7 @@ export const initialPlansSeed: Plan[] = [
   },
 ]
 
-export const initialTenantsSeed: Tenant[] = [
+export const initialTenantsSeed: MockTenant[] = [
   {
     id: 'tenant-1',
     name: 'Saigon Retail Group',
