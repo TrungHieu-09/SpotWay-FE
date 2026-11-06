@@ -72,16 +72,6 @@ const OwnerDashboardPage = lazy(() =>
     default: module.OwnerDashboardPage,
   })),
 )
-const OwnerStaffPage = lazy(() =>
-  import('../pages/BuildingOwner/OwnerStaffPage').then((module) => ({
-    default: module.OwnerStaffPage,
-  })),
-)
-const OwnerSubscriptionPage = lazy(() =>
-  import('../pages/BuildingOwner/OwnerSubscriptionPage').then((module) => ({
-    default: module.OwnerSubscriptionPage,
-  })),
-)
 
 // ── Building Manager pages ──
 const ManagerLayout = lazy(() =>
@@ -183,10 +173,6 @@ export const router = createBrowserRouter([
           { path: 'owner/dashboard', element: lazyElement(<OwnerDashboardPage />) },
           { path: 'owner/buildings', element: lazyElement(<BuildingListPage />) },
           { path: 'owner/buildings/:buildingId', element: lazyElement(<BuildingDetailPage />) },
-          { path: 'owner/staff', element: lazyElement(<OwnerStaffPage />) },
-          { path: 'owner/managers', element: lazyElement(<OwnerStaffPage />) },
-          { path: 'owner/store-owners', element: lazyElement(<OwnerStaffPage />) },
-          { path: 'owner/subscription', element: lazyElement(<OwnerSubscriptionPage />) },
         ],
       },
     ],
