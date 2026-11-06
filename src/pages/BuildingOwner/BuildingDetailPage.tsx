@@ -31,6 +31,7 @@ import { CreateFloorModal } from './CreateFloorModal'
 import { UploadFloorPlanModal } from './UploadFloorPlanModal'
 import { CreateStoreModal } from './CreateStoreModal'
 import { AssignManagerModal } from './AssignManagerModal'
+import { AreaManagementPanel } from './AreaManagementPanel'
 import './BuildingDetailPage.css'
 
 export function BuildingDetailPage() {
@@ -307,6 +308,9 @@ export function BuildingDetailPage() {
                 )}
               </Spin>
             </GlassCard>
+
+            {/* ── Area Management ── */}
+            <AreaManagementPanel buildingId={building.id} />
           </>
         )}
       </Spin>

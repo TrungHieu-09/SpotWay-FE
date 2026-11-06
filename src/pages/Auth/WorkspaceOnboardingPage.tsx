@@ -65,7 +65,8 @@ export function WorkspaceOnboardingPage() {
     setTimeout(() => {
       setSubmitting(false)
       message.success(`Đã khởi tạo Workspace "${orgName}" thành công!`)
-      navigate('/owner/dashboard', { replace: true })
+      // Chuyển sang trang gói dịch vụ hoặc dashboard
+      navigate('/owner/subscription', { replace: true })
     }, 600)
   }
 

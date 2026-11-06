@@ -40,7 +40,11 @@ export function PricingPage() {
 
   const handlePlanAction = () => {
     if (user) {
-      navigate(getDashboardPath(user))
+      if (user.role === 'building_owner' && user.tenantId) {
+        navigate('/owner/subscription')
+      } else {
+        navigate(getDashboardPath(user))
+      }
     } else {
       navigate('/login')
     }
