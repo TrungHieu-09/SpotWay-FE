@@ -3,7 +3,6 @@ import { App as AntApp, Select, Tabs, Typography } from 'antd'
 import { ApartmentOutlined } from '@ant-design/icons'
 import { FloorSelector } from './FloorSelector'
 import { CanvasBoard } from './CanvasBoard'
-import { FloorRecognitionPanel } from './FloorRecognitionPanel'
 import { MaintenancePanel } from './MaintenancePanel'
 import { EditorShell } from '../../components/ui/EditorShell'
 import { useBuildingStore } from '../../store/useBuildingStore'
@@ -16,7 +15,6 @@ const { Text } = Typography
 export function ManagerLayout() {
   const [buildingId, setBuildingId] = useState<string>()
   const [activeTab, setActiveTab] = useState('canvas')
-  const [isRecognitionDirty, setIsRecognitionDirty] = useState(false)
   const buildings = useBuildingStore((state) => state.buildings)
   const isBuildingLoading = useBuildingStore((state) => state.isLoading)
   const loadBuildings = useBuildingStore((state) => state.loadBuildings)
@@ -24,13 +22,12 @@ export function ManagerLayout() {
   const floors = useFloorStore((state) => state.floors)
   const selectedFloor = useFloorStore((state) => state.selectedFloor)
   const selectFloor = useFloorStore((state) => state.selectFloor)
-  const { message, modal } = AntApp.useApp()
+  const { message } = AntApp.useApp()
   const permissions = usePermissions()
   const isReadOnly = Boolean(selectedFloor && !permissions.canEditFloor(selectedFloor))
 
   useEffect(() => {
     setActiveTab('canvas')
-    setIsRecognitionDirty(false)
   }, [buildingId, selectedFloor?.id])
 
   useEffect(() => {
@@ -128,35 +125,12 @@ export function ManagerLayout() {
             <Tabs
               activeKey={activeTab}
               moreIcon={null}
-              onChange={(nextTab) => {
-                if (activeTab === 'recognition' && isRecognitionDirty) {
-                  modal.confirm({
-                    title: 'Rời tab nhận diện sơ đồ?',
-                    content: 'Bạn có thay đổi chưa lưu. Rời tab sẽ giữ bản nháp trên màn hình nhưng chưa lưu vào dữ liệu demo.',
-                    okText: 'Rời tab',
-                    cancelText: 'Ở lại',
-                    onOk: () => setActiveTab(nextTab),
-                  })
-                  return
-                }
-
-                setActiveTab(nextTab)
-              }}
+              onChange={setActiveTab}
               items={[
                 {
                   key: 'canvas',
                   label: 'Bản đồ 2D',
                   children: <CanvasBoard readOnly={isReadOnly} />,
-                },
-                {
-                  key: 'recognition',
-                  label: 'Nhận diện sơ đồ',
-                  children: (
-                    <FloorRecognitionPanel
-                      onDirtyChange={setIsRecognitionDirty}
-                      readOnly={isReadOnly}
-                    />
-                  ),
                 },
                 {
                   key: 'maintenance',
