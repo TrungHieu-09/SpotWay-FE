@@ -5,37 +5,6 @@ import { useAuthStore } from '../../auth/store'
 import { SpotWayNavbar } from '../../components/layout/SpotWayNavbar'
 import './AccountHomePage.css'
 
-interface PendingInvite {
-  id: string
-  orgName: string
-  icon: string
-  iconColor: 'cyan' | 'tertiary'
-  roleAssigned: string
-  inviterName: string
-  expiresIn: string
-}
-
-const INITIAL_INVITES: PendingInvite[] = [
-  {
-    id: 'inv-1',
-    orgName: 'Metro Transit Authority',
-    icon: 'subway',
-    iconColor: 'cyan',
-    roleAssigned: 'Building Manager',
-    inviterName: 'Tran Minh',
-    expiresIn: 'Hết hạn sau 2 ngày',
-  },
-  {
-    id: 'inv-2',
-    orgName: 'Skyline International Terminal',
-    icon: 'flight_takeoff',
-    iconColor: 'tertiary',
-    roleAssigned: 'Wayfinding Specialist',
-    inviterName: 'Sarah Chen',
-    expiresIn: 'Hết hạn sau 5 ngày',
-  },
-]
-
 export function AccountHomePage() {
   const navigate = useNavigate()
   const { message } = AntApp.useApp()
@@ -48,73 +17,12 @@ export function AccountHomePage() {
     user?.name || (user?.email ? user.email.split('@')[0] : 'User'),
   )
 
-  // Pending invitations
-  const [invites, setInvites] = useState<PendingInvite[]>(INITIAL_INVITES)
-  const [isSimulatedEmpty, setIsSimulatedEmpty] = useState(false)
-
-  // Invite link modal
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
-  const [inviteLink, setInviteLink] = useState('')
-  const [submittingInvite, setSubmittingInvite] = useState(false)
-
   // Sync display name when user store updates
   useEffect(() => {
     if (user) {
       setDisplayName(user.name || (user.email ? user.email.split('@')[0] : 'User'))
     }
   }, [user])
-
-  const handleAcceptInvite = (inv: PendingInvite) => {
-    message.success(
-      lang === 'VI'
-        ? `Đã chấp nhận lời mời từ "${inv.orgName}"! Đang tải workspace...`
-        : `Accepted invitation from "${inv.orgName}"! Loading workspace...`,
-    )
-    setInvites((prev) => prev.filter((item) => item.id !== inv.id))
-    setTimeout(() => {
-      navigate('/owner/dashboard', { replace: true })
-    }, 900)
-  }
-
-  const handleDeclineInvite = (id: string) => {
-    setInvites((prev) => prev.filter((item) => item.id !== id))
-    message.info(lang === 'VI' ? 'Đã từ chối lời mời.' : 'Declined invitation.')
-  }
-
-  const handleJoinByLink = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!inviteLink.trim()) {
-      message.warning(lang === 'VI' ? 'Vui lòng nhập link hoặc mã mời.' : 'Please enter an invitation link or code.')
-      return
-    }
-    setSubmittingInvite(true)
-    setTimeout(() => {
-      setSubmittingInvite(false)
-      const clean = inviteLink.trim()
-      const newInv: PendingInvite = {
-        id: `inv-${Date.now()}`,
-        orgName: clean.toLowerCase().includes('metro')
-          ? 'Metro Transit Authority'
-          : 'Tổ hợp Saigon Innovation Plaza',
-        icon: 'apartment',
-        iconColor: 'cyan',
-        roleAssigned: 'Building Manager',
-        inviterName: 'Ban Quản Trị Tòa Nhà',
-        expiresIn: 'Vừa thêm',
-      }
-      setInvites((prev) => [newInv, ...prev])
-      setIsSimulatedEmpty(false)
-      setIsInviteModalOpen(false)
-      setInviteLink('')
-      message.success(
-        lang === 'VI'
-          ? `Đã tìm thấy lời mời từ "${newInv.orgName}"!`
-          : `Found invitation from "${newInv.orgName}"!`,
-      )
-    }, 600)
-  }
-
-  const activeInvites = isSimulatedEmpty ? [] : invites
 
   return (
     <div className="ah-page-root">
@@ -164,29 +72,9 @@ export function AccountHomePage() {
 
                 <p className="ah-hero-desc">
                   {lang === 'VI'
-                    ? 'Bạn chưa thuộc workspace nào. Hãy tạo workspace cho tổ chức của bạn, hoặc tham gia bằng liên kết mời.'
-                    : "You're not in a workspace yet. Create one for your organization, or join with an invitation."}
+                    ? 'Tài khoản của bạn chưa được gán vào workspace hoặc vai trò nào. Vui lòng liên hệ quản trị viên để được cấp quyền, sau đó đăng nhập lại.'
+                    : 'Your account has not been assigned to a workspace or role yet. Please contact your administrator, then sign in again.'}
                 </p>
-
-                <div className="ah-hero-actions">
-                  <button
-                    type="button"
-                    className="ah-btn-glow"
-                    onClick={() => navigate('/onboarding')}
-                  >
-                    <span className="material-symbols-outlined text-[20px]">add</span>
-                    <span>{lang === 'VI' ? 'Tạo workspace mới' : 'Create a workspace'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="ah-btn-outline"
-                    onClick={() => setIsInviteModalOpen(true)}
-                  >
-                    <span className="material-symbols-outlined text-[18px] text-[#22d3ee]">link</span>
-                    <span>{lang === 'VI' ? 'Nhập link mời' : 'Enter invitation link'}</span>
-                  </button>
-                </div>
 
                 {/* Quick link to Profile page */}
                 <div className="ah-hero-quick-links">
@@ -215,97 +103,6 @@ export function AccountHomePage() {
                 </div>
               </div>
             </div>
-          </section>
-
-          {/* ── 2. PENDING INVITATIONS ── */}
-          <section className="ah-glass-card ah-invites-card">
-            <div className="ah-card-header-row">
-              <div className="ah-card-title-group">
-                <h2 className="ah-card-title">
-                  {lang === 'VI' ? 'Lời mời tham gia' : 'Pending invitations'}
-                </h2>
-                <span className={`ah-badge-count ${activeInvites.length === 0 ? 'ah-badge-count--empty' : ''}`}>
-                  {activeInvites.length}
-                </span>
-              </div>
-
-              {/* Simulation Toggle */}
-              <button
-                type="button"
-                className="ah-btn-toggle-sim"
-                onClick={() => setIsSimulatedEmpty((prev) => !prev)}
-                title="Chuyển đổi thử trạng thái có lời mời hoặc 0 lời mời"
-              >
-                <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
-                <span>{isSimulatedEmpty ? 'Hiển thị lời mời (2)' : 'Mô phỏng 0 lời mời'}</span>
-              </button>
-            </div>
-
-            {activeInvites.length > 0 ? (
-              <div className="ah-invites-list">
-                {activeInvites.map((inv) => (
-                  <div key={inv.id} className="ah-invite-row">
-                    <div className="ah-invite-info">
-                      <div
-                        className={`ah-invite-icon-box ${
-                          inv.iconColor === 'tertiary'
-                            ? 'ah-invite-icon-box--purple'
-                            : 'ah-invite-icon-box--cyan'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[22px]">{inv.icon}</span>
-                      </div>
-                      <div>
-                        <div className="ah-invite-title-row">
-                          <h3 className="ah-invite-org">{inv.orgName}</h3>
-                          <span className="ah-invite-role-tag">{inv.roleAssigned}</span>
-                        </div>
-                        <p className="ah-invite-by">
-                          {lang === 'VI' ? 'Được mời bởi' : 'Invited by'}{' '}
-                          <span className="text-white font-medium">{inv.inviterName}</span>{' '}
-                          {lang === 'VI' ? 'với vai trò' : 'as'}{' '}
-                          <span className="text-[#22d3ee]">{inv.roleAssigned}</span>
-                        </p>
-                        <p className="ah-invite-exp">
-                          <span className="material-symbols-outlined text-[14px]">schedule</span>
-                          <span>{inv.expiresIn}</span>
-                        </p>
-                      </div>
-                    </div>
-                    <div className="ah-invite-actions">
-                      <button
-                        type="button"
-                        className="ah-btn-decline"
-                        onClick={() => handleDeclineInvite(inv.id)}
-                      >
-                        {lang === 'VI' ? 'Từ chối' : 'Decline'}
-                      </button>
-                      <button
-                        type="button"
-                        className="ah-btn-accept"
-                        onClick={() => handleAcceptInvite(inv)}
-                      >
-                        {lang === 'VI' ? 'Chấp nhận' : 'Accept'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="ah-invites-empty-box">
-                <div className="ah-empty-envelope-icon">
-                  <span className="material-symbols-outlined text-[26px]">mark_email_unread</span>
-                </div>
-                <h4 className="ah-empty-envelope-title">
-                  {lang === 'VI' ? 'Không có lời mời nào đang chờ' : 'No pending invitations'}
-                </h4>
-                <p className="ah-empty-envelope-desc">
-                  {lang === 'VI'
-                    ? 'Kiểm tra hòm thư của bạn để lấy liên kết mời, hoặc yêu cầu ban quản trị tổ hợp cấp quyền truy cập.'
-                    : 'Check your email for invite links, or request access from your facility administrator.'}
-                </p>
-              </div>
-            )}
           </section>
 
           {/* ── 3. EXPLORE AS GUEST ── */}
@@ -422,66 +219,6 @@ export function AccountHomePage() {
           </div>
         </div>
       </footer>
-
-      {/* ── MODAL: Invite Link ── */}
-      {isInviteModalOpen && (
-        <div className="ah-modal-backdrop" onClick={() => setIsInviteModalOpen(false)}>
-          <div className="ah-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="ah-modal-header">
-              <div className="flex items-center gap-2.5">
-                <div className="ah-modal-icon-badge">
-                  <span className="material-symbols-outlined text-[20px]">link</span>
-                </div>
-                <h3 className="ah-modal-heading">
-                  {lang === 'VI' ? 'Nhập liên kết / Mã mời' : 'Enter invitation link'}
-                </h3>
-              </div>
-              <button
-                type="button"
-                className="ah-modal-close-btn"
-                onClick={() => setIsInviteModalOpen(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-[#cbc3d7] text-[13px] mb-4 leading-relaxed">
-              {lang === 'VI'
-                ? 'Dán link mời hoặc mã mời được gửi từ quản trị viên tổ hợp để tham gia workspace:'
-                : 'Paste the invite link or code received from your facility administrator to join:'}
-            </p>
-
-            <form onSubmit={handleJoinByLink} className="space-y-4">
-              <input
-                type="text"
-                className="ah-modal-input"
-                placeholder="https://spotway.app/join/spw-metro hoặc SPW-9921"
-                value={inviteLink}
-                onChange={(e) => setInviteLink(e.target.value)}
-                autoFocus
-              />
-              <div className="ah-modal-footer">
-                <button
-                  type="button"
-                  className="ah-modal-btn-cancel"
-                  onClick={() => setIsInviteModalOpen(false)}
-                >
-                  {lang === 'VI' ? 'Hủy' : 'Cancel'}
-                </button>
-                <button
-                  type="submit"
-                  className="ah-modal-btn-submit"
-                  disabled={submittingInvite}
-                >
-                  {submittingInvite
-                    ? (lang === 'VI' ? 'Đang tìm...' : 'Searching...')
-                    : (lang === 'VI' ? 'Xác nhận tham gia' : 'Join workspace')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

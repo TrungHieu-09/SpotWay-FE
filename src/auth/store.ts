@@ -3,12 +3,9 @@ import {
   changePassword as changePasswordRequest,
   getCurrentUser,
   login as loginRequest,
-  register as registerRequest,
-  verifyEmail as verifyEmailRequest,
   logout as logoutRequest,
 } from './api'
-import type { AuthUser, RegisterResponse, Role } from '../types/auth'
-import type { AuthSession } from '../types/billing'
+import type { AuthUser, Role } from '../types/auth'
 
 export const AUTH_TOKEN_KEY = 'auth:token'
 
@@ -20,12 +17,8 @@ type AuthState = {
   error: string | null
   initialize: () => Promise<void>
   login: (email: string, password: string) => Promise<void>
-  register: (fullName: string, email: string, password: string) => Promise<RegisterResponse>
-  verifyEmail: (email: string, code: string) => Promise<void>
   logout: () => Promise<void>
   changePassword: (currentPassword: string | undefined, newPassword: string) => Promise<void>
-  /** Store the session returned when a paid order provisioned the user's workspace. */
-  applySession: (session: AuthSession) => void
   clearSession: () => void
 }
 
@@ -104,42 +97,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  async register(fullName, email, password) {
-    set({ isLoading: true, error: null })
-    try {
-      const result = await registerRequest(fullName, email, password)
-      return result
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Đăng ký thất bại'
-      set({ error: message })
-      throw error
-    } finally {
-      set({ isLoading: false })
-    }
-  },
-
-  async verifyEmail(email, code) {
-    set({ isLoading: true, error: null })
-    try {
-      const result = await verifyEmailRequest(email, code)
-      // Save token first so subsequent /auth/me call is authenticated
-      saveToken(result.token, null, null)
-      // Fetch full user profile (works with both MSW mock and real BE)
-      let user: AuthUser = result.user
-      if (!user?.id) {
-        user = await getCurrentUser()
-      }
-      saveToken(result.token, user.role, user)
-      set({ user, token: result.token, error: null })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Xác thực mã thất bại'
-      set({ error: message })
-      throw error
-    } finally {
-      set({ isLoading: false })
-    }
-  },
-
   async login(email, password) {
     set({ isLoading: true, error: null })
     try {
@@ -174,13 +131,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     const user = await changePasswordRequest({ currentPassword, newPassword })
     saveToken(window.localStorage.getItem('spotway.accessToken'), user.role, user)
     set({ user })
-  },
-
-  applySession(session) {
-    const token = session.accessToken || window.localStorage.getItem(AUTH_TOKEN_KEY)
-    if (session.refreshToken) window.localStorage.setItem('spotway.refreshToken', session.refreshToken)
-    saveToken(token, session.user.role, session.user)
-    set({ user: session.user, token, error: null })
   },
 
   clearSession() {

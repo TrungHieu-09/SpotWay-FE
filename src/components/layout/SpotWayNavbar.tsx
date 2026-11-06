@@ -172,7 +172,7 @@ export function SpotWayNavbar({
                   <div className="spw-user-meta hidden sm:flex">
                     <span className="spw-user-name">{userDisplayName}</span>
                     <span className="spw-user-role">
-                      {user.tenantId ? roleLabel(user.role) : 'Khách • Chưa có Workspace'}
+                      {user.tenantId ? roleLabel(user.role) : 'Chưa được gán quyền'}
                     </span>
                   </div>
                   <span
@@ -234,11 +234,8 @@ export function SpotWayNavbar({
             </>
           ) : (
             <>
-              <Link to="/login" className="spw-btn-ghost">
-                Đăng nhập
-              </Link>
-              <Link to="/register" className="spw-btn-primary">
-                <span>Bắt đầu ngay</span>
+              <Link to="/login" className="spw-btn-primary">
+                <span>Đăng nhập</span>
                 <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
               </Link>
             </>

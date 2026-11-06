@@ -11,26 +11,6 @@ import { LoginPage } from '../pages/Auth/LoginPage'
 import { ForbiddenPage } from '../pages/Auth/ForbiddenPage'
 import { NotFoundPage } from '../pages/Auth/NotFoundPage'
 import { ChangePasswordPage } from '../pages/Auth/ChangePasswordPage'
-import { ForgotPasswordPage } from '../pages/Auth/ForgotPasswordPage'
-import { ResetPasswordPage } from '../pages/Auth/ResetPasswordPage'
-
-const RegisterPage = lazy(() =>
-  import('../pages/Auth/RegisterPage').then((module) => ({
-    default: module.RegisterPage,
-  })),
-)
-
-const EmailVerifyPage = lazy(() =>
-  import('../pages/Auth/EmailVerifyPage').then((module) => ({
-    default: module.EmailVerifyPage,
-  })),
-)
-
-const WorkspaceOnboardingPage = lazy(() =>
-  import('../pages/Auth/WorkspaceOnboardingPage').then((module) => ({
-    default: module.WorkspaceOnboardingPage,
-  })),
-)
 
 const AccountHomePage = lazy(() =>
   import('../pages/Auth/AccountHomePage').then((module) => ({
@@ -161,13 +141,6 @@ export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
   { path: 'pricing', element: lazyElement(<PricingPage />) },
   { path: 'login', element: <LoginPage /> },
-  { path: 'register', element: lazyElement(<RegisterPage />) },
-  { path: 'signup', element: lazyElement(<RegisterPage />) },
-  { path: 'verify-email', element: lazyElement(<EmailVerifyPage />) },
-  { path: 'verify', element: lazyElement(<EmailVerifyPage />) },
-  { path: 'onboarding', element: lazyElement(<WorkspaceOnboardingPage />) },
-  { path: 'workspace-setup', element: lazyElement(<WorkspaceOnboardingPage />) },
-  { path: 'workspace-ready', element: lazyElement(<WorkspaceOnboardingPage showReadyInitially={true} />) },
   { path: 'checkout/:orderId', element: lazyElement(<CheckoutPage />) },
   { path: 'account', element: lazyElement(<AccountHomePage />) },
   { path: 'workspace/choose', element: lazyElement(<AccountHomePage />) },
@@ -197,8 +170,6 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { path: 'home', element: lazyElement(<HomePage />) },
-      { path: 'forgot-password', element: <ForgotPasswordPage /> },
-      { path: 'reset-password', element: <ResetPasswordPage /> },
       { path: '403', element: <ForbiddenPage /> },
       {
         element: <ProtectedRoute allowedRoles={['admin', 'building_owner', 'building_manager', 'store_owner']} />,

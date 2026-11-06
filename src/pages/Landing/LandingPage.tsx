@@ -122,7 +122,7 @@ export function LandingPage() {
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
                     rocket_launch
                   </span>
-                  Đăng ký dùng thử
+                  Đăng nhập hệ thống
                 </Link>
                 <Link to="/guest" className="lp-btn lp-btn--ghost lp-btn--lg">
                   <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#5de6ff' }}>
@@ -669,7 +669,7 @@ export function LandingPage() {
                 ))}
               </ul>
               <Link to="/owner/buildings" className={`lp-btn lp-btn--block ${plan.featured ? 'lp-btn--primary' : 'lp-btn--ghost'}`}>
-                {plan.price === 'Custom' ? 'Contact Sales' : 'Start Free Trial'}
+                {plan.price === 'Custom' ? 'Contact Sales' : 'Đăng nhập hệ thống'}
               </Link>
             </div>
           ))}
@@ -690,7 +690,7 @@ export function LandingPage() {
         <div className="lp-cta__actions" data-reveal="scale-up" data-reveal-delay="200">
           <Link to={user ? getPortalRoute(user) : '/login'} className="lp-btn lp-btn--primary lp-btn--lg">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-            {user ? (user.tenantId || user.tenant ? 'Vào hệ thống quản lý' : 'Mở trang tài khoản') : 'Đăng ký dùng thử'}
+            {user ? (user.tenantId || user.tenant ? 'Vào hệ thống quản lý' : 'Mở trang tài khoản') : 'Đăng nhập hệ thống'}
           </Link>
           <Link to="/guest" className="lp-btn lp-btn--ghost lp-btn--lg">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>

@@ -38,14 +38,12 @@ export function PricingPage() {
     return '/account'
   }
 
-  const handlePlanAction = (planId: 'STARTER' | 'PRO') => {
-    const onboardingPath = `/onboarding?plan=${planId}`
+  // Workspaces are created by an admin; only an existing Building Owner can buy/renew a plan.
+  const handlePlanAction = () => {
     if (!user) {
-      navigate(`/login?redirect=${encodeURIComponent(onboardingPath)}`)
+      navigate('/login?redirect=/owner/subscription')
     } else if (user.role === 'building_owner' && user.tenantId) {
       navigate('/owner/subscription')
-    } else if (!user.tenantId && user.role !== 'admin') {
-      navigate(onboardingPath)
     } else {
       navigate(getDashboardPath(user))
     }
@@ -146,7 +144,7 @@ export function PricingPage() {
               </div>
             </div>
 
-            <button type="button" onClick={() => handlePlanAction('STARTER')} className="pricing-card-btn">
+            <button type="button" onClick={() => handlePlanAction()} className="pricing-card-btn">
               Mua gói Khởi đầu
             </button>
           </div>
@@ -209,7 +207,7 @@ export function PricingPage() {
               </div>
             </div>
 
-            <button type="button" onClick={() => handlePlanAction('PRO')} className="pricing-card-btn-featured">
+            <button type="button" onClick={() => handlePlanAction()} className="pricing-card-btn-featured">
               <span>Đăng ký gói Chuyên nghiệp</span>
               <span className="material-symbols-outlined text-[18px]">bolt</span>
             </button>
@@ -574,7 +572,7 @@ export function PricingPage() {
               <button type="button" className="pricing-faq-btn" onClick={() => toggleFaq(1)}>
                 <span className="pricing-faq-question">
                   <span className="pricing-faq-num">01</span>
-                  <span>Chính sách dùng thử miễn phí 14 ngày hoạt động như thế nào?</span>
+                  <span>Tôi cần chuẩn bị gì để bắt đầu với SpotWay?</span>
                 </span>
                 <span className={`material-symbols-outlined pricing-faq-chevron ${openFaq === 1 ? 'rotate' : ''}`}>
                   expand_more
@@ -692,7 +690,7 @@ export function PricingPage() {
 
             <div className="pricing-cta-actions">
               <Link to="/login" className="pricing-cta-btn-primary">
-                <span>Dùng thử miễn phí 14 ngày</span>
+                <span>Đăng nhập hệ thống</span>
                 <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
               </Link>
               <button

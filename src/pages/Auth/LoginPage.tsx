@@ -664,7 +664,7 @@ export function LoginPage() {
                 )}
               </div>
 
-              {/* Checkbox & Forgot Password Controls Row */}
+              {/* Remember-me Controls Row */}
               <div className="form-controls-row">
                 <label className="checkbox-label">
                   <input
@@ -675,10 +675,6 @@ export function LoginPage() {
                   />
                   <span>Ghi nhớ đăng nhập trong 30 ngày</span>
                 </label>
-
-                <Link to="/forgot-password" className="forgot-password-link">
-                  Quên mật khẩu?
-                </Link>
               </div>
 
               {/* Primary Sign In Action Button */}
@@ -757,10 +753,7 @@ export function LoginPage() {
             {/* Secondary Guidance Links */}
             <div className="auth-secondary-links">
               <p className="demo-request-text">
-                Chưa có tài khoản SpotWay?{' '}
-                <Link to="/register" className="demo-request-link">
-                  Đăng ký ngay
-                </Link>
+                Tài khoản do quản trị viên cấp. Quên mật khẩu hoặc chưa có tài khoản? Vui lòng liên hệ quản trị viên.
               </p>
 
               <div>

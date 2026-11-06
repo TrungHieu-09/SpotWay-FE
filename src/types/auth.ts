@@ -60,11 +60,6 @@ export type LoginResponse = {
   user: AuthUser
 }
 
-export type RegisterResponse = {
-  message: string
-  email: string
-}
-
 export type AuthErrorResponse = {
   code: string
   message: string

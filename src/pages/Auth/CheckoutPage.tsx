@@ -5,7 +5,7 @@ import { cancelOrder, getOrder, payOrder } from '../../api/billing'
 import { useAuthStore } from '../../auth/store'
 import type { PlanOrder } from '../../types/billing'
 import '../../components/layout/SpotWayNavbar.css'
-import './WorkspaceOnboardingPage.css'
+import './CheckoutPage.css'
 
 const formatVnd = (value: number) => `${value.toLocaleString('vi-VN')} ₫`
 
@@ -15,14 +15,12 @@ export function CheckoutPage() {
   const { message } = AntApp.useApp()
   const user = useAuthStore((state) => state.user)
   const isInitializing = useAuthStore((state) => state.isInitializing)
-  const applySession = useAuthStore((state) => state.applySession)
 
   const [order, setOrder] = useState<PlanOrder | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const isNewWorkspace = order?.kind === 'NEW_WORKSPACE'
-  const backPath = order && !isNewWorkspace ? '/owner/subscription' : '/onboarding'
+  const backPath = '/owner/subscription'
 
   useEffect(() => {
     if (!user) return
@@ -46,15 +44,9 @@ export function CheckoutPage() {
     if (!order) return
     setBusy(true)
     try {
-      const result = await payOrder(order.id)
-      if (result.session) {
-        applySession(result.session)
-        message.success(`Đã thanh toán và khởi tạo workspace "${result.order.workspaceName}".`)
-        navigate('/workspace-ready', { replace: true })
-      } else {
-        message.success('Đã thanh toán và gia hạn gói dịch vụ thành công!')
-        navigate('/owner/subscription', { replace: true })
-      }
+      await payOrder(order.id)
+      message.success('Đã thanh toán và gia hạn gói dịch vụ thành công!')
+      navigate(backPath, { replace: true })
     } catch (err) {
       message.error(err instanceof Error ? err.message : 'Thanh toán thất bại')
     } finally {
@@ -82,11 +74,7 @@ export function CheckoutPage() {
         <div className="wob-card">
           <div className="wob-header">
             <h1 className="wob-title">Thanh toán gói dịch vụ</h1>
-            <p className="wob-subtitle">
-              {isNewWorkspace
-                ? 'Workspace sẽ được tạo ngay sau khi thanh toán thành công.'
-                : 'Gói dịch vụ sẽ được gia hạn ngay sau khi thanh toán thành công.'}
-            </p>
+            <p className="wob-subtitle">Gói dịch vụ sẽ được gia hạn ngay sau khi thanh toán thành công.</p>
           </div>
 
           {loadError && (
@@ -101,12 +89,6 @@ export function CheckoutPage() {
           {order && (
             <div className="wob-form">
               <dl>
-                {order.workspaceName && (
-                  <div className="wob-field">
-                    <dt className="wob-label">Workspace</dt>
-                    <dd>{order.workspaceName} ({order.subdomain}.spotway.app)</dd>
-                  </div>
-                )}
                 <div className="wob-field">
                   <dt className="wob-label">Gói dịch vụ</dt>
                   <dd>{order.planName} — {order.months} tháng</dd>

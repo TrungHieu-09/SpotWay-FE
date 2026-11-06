@@ -47,16 +47,6 @@ import type { QrCode } from '../types/qr'
 import { PERMISSIONS } from '../auth/permissions'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api'
-const resetTokens = new Map<string, string>()
-
-interface VerificationEntry {
-  code: string
-  fullName: string
-  email: string
-  password?: string
-  expires: number
-}
-const verificationCodes = new Map<string, VerificationEntry>()
 
 function endpoint(path: string) {
   return `${API_BASE}${path}`
@@ -758,112 +748,6 @@ export const handlers = [
     })
   }),
 
-  http.post(endpoint('/auth/register'), async ({ request }) => {
-    await delay(200)
-    const payload = (await request.json()) as { fullName?: string; email?: string; password?: string }
-    const emailToMatch = payload.email?.trim().toLowerCase()
-    if (!emailToMatch || !payload.password) {
-      return apiError('VALIDATION_ERROR', 'Vui lòng nhập đầy đủ email và mật khẩu.', 400)
-    }
-    const allUsers = [...users, ...initialUsersSeed]
-    const exists = allUsers.some((item) => item?.email && item.email.toLowerCase() === emailToMatch)
-    if (exists && !verificationCodes.has(emailToMatch)) {
-      return apiError('EMAIL_EXISTS', 'Email này đã được sử dụng. Vui lòng đăng nhập hoặc dùng email khác.', 400)
-    }
-
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
-    verificationCodes.set(emailToMatch, {
-      code,
-      fullName: payload.fullName?.trim() || 'Chủ tòa nhà mới',
-      email: emailToMatch,
-      password: payload.password,
-      expires: Date.now() + 15 * 60 * 1000,
-    })
-
-    return HttpResponse.json({
-      message: 'Mã xác thực đã được gửi tới email của bạn.',
-      email: emailToMatch,
-    })
-  }),
-
-  http.post(endpoint('/auth/verify-email'), async ({ request }) => {
-    await delay(200)
-    const payload = (await request.json()) as { email?: string; code?: string }
-    const emailToMatch = payload.email?.trim().toLowerCase()
-    const inputCode = payload.code?.trim()
-
-    if (!emailToMatch || !inputCode) {
-      return apiError('VALIDATION_ERROR', 'Vui lòng nhập đầy đủ email và mã xác thực.', 400)
-    }
-
-    const entry = verificationCodes.get(emailToMatch)
-    const isCodeValid = (entry && entry.code === inputCode) || inputCode === '123456'
-
-    if (!isCodeValid) {
-      return apiError('INVALID_CODE', 'Mã xác thực không chính xác. Vui lòng kiểm tra lại.', 400)
-    }
-
-    if (entry && Date.now() > entry.expires) {
-      verificationCodes.delete(emailToMatch)
-      return apiError('CODE_EXPIRED', 'Mã xác thực đã hết hạn. Vui lòng gửi lại mã mới.', 400)
-    }
-
-    if (entry) {
-      verificationCodes.delete(emailToMatch)
-    }
-
-    let user = users.find((u) => u.email.toLowerCase() === emailToMatch)
-    if (!user) {
-      user = {
-        id: `user-${crypto.randomUUID().slice(0, 8)}`,
-        name: entry?.fullName || 'Chủ tòa nhà mới',
-        email: emailToMatch,
-        password: entry?.password || 'SpatialGrid!2025#',
-        role: 'building_owner' as Role,
-        tenantId: null,
-        status: 'active' as const,
-        mustChangePassword: false,
-        createdAt: new Date().toISOString(),
-      }
-      users.push(user)
-      saveToStorage(MOCK_STORAGE_KEYS.users, users)
-    }
-
-    return HttpResponse.json({
-      token: makeToken(user.id, user.role, user.tenantId, user.areaIds ?? []),
-      user: authUser({
-        user,
-        tenant: null,
-      }),
-      message: 'Xác thực tài khoản thành công!',
-    })
-  }),
-
-  http.post(endpoint('/auth/resend-otp'), async ({ request }) => {
-    await delay(150)
-    const payload = (await request.json()) as { email?: string }
-    const emailToMatch = payload.email?.trim().toLowerCase()
-
-    if (!emailToMatch) {
-      return apiError('VALIDATION_ERROR', 'Vui lòng cung cấp email.', 400)
-    }
-
-    const existing = verificationCodes.get(emailToMatch)
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
-    verificationCodes.set(emailToMatch, {
-      code,
-      fullName: existing?.fullName || 'Chủ tòa nhà mới',
-      email: emailToMatch,
-      password: existing?.password,
-      expires: Date.now() + 15 * 60 * 1000,
-    })
-
-    return HttpResponse.json({
-      message: 'Mã xác thực mới đã được gửi tới email của bạn.',
-      email: emailToMatch,
-    })
-  }),
-
   http.get(endpoint('/auth/me'), async ({ request }) => {
     await delay(100)
     const access = requireAccess(request, ['admin', 'building_owner', 'building_manager', 'store_owner'])
@@ -889,29 +773,6 @@ export const handlers = [
     access.auth.user.mustChangePassword = false
     saveToStorage(MOCK_STORAGE_KEYS.users, users)
     return HttpResponse.json(authUser(access.auth))
-  }),
-
-  http.post(endpoint('/auth/forgot-password'), async ({ request }) => {
-    const payload = (await request.json()) as { email?: string }
-    const user = users.find((item) => item.email.toLowerCase() === payload.email?.trim().toLowerCase())
-    if (!user) return HttpResponse.json({ message: 'Nếu email tồn tại, mã đặt lại đã được tạo.' })
-    const token = `reset-${crypto.randomUUID()}`
-    resetTokens.set(token, user.id)
-    return HttpResponse.json({ message: 'Mã đặt lại đã được tạo trong chế độ demo.', resetToken: token })
-  }),
-
-  http.post(endpoint('/auth/reset-password'), async ({ request }) => {
-    const payload = (await request.json()) as { token?: string; newPassword?: string }
-    const userId = payload.token ? resetTokens.get(payload.token) : undefined
-    const user = users.find((item) => item.id === userId)
-    if (!user) return apiError('INVALID_RESET_TOKEN', 'Mã đặt lại không hợp lệ hoặc đã hết hạn.', 400)
-    const newPassword = payload.newPassword ?? ''
-    if (!isValidPassword(newPassword)) return apiError('INVALID_PASSWORD', 'Mật khẩu mới phải có tối thiểu 8 ký tự, gồm chữ và số.', 400)
-    user.password = newPassword
-    user.mustChangePassword = false
-    resetTokens.delete(payload.token ?? '')
-    saveToStorage(MOCK_STORAGE_KEYS.users, users)
-    return HttpResponse.json({ message: 'Đặt lại mật khẩu thành công.' })
   }),
 
   http.get(endpoint('/admin/overview'), async ({ request }) => {

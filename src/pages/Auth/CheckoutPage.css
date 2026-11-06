@@ -1,0 +1,189 @@
+/* CheckoutPage styles (renewal checkout). Trimmed from the former WorkspaceOnboardingPage stylesheet. */
+
+.wob-root {
+  min-height: 100vh;
+  width: 100vw;
+  background-color: #0B0B1A;
+  color: #e3e0f6;
+  position: relative;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.wob-grid {
+  position: fixed;
+  inset: 0;
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wob-main {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.wob-card {
+  width: 100%;
+  max-width: 630px;
+  border-radius: 24px;
+  background: rgba(13, 13, 28, 0.82);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 28px 24px;
+  box-shadow: 0 16px 48px -4px rgba(0, 0, 0, 0.65), 0 0 35px -5px rgba(139, 92, 246, 0.22);
+}
+
+@media (min-width: 640px) {
+  .wob-card {
+      padding: 36px 40px;
+    }
+}
+
+.wob-header {
+  margin-bottom: 24px;
+}
+
+.wob-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 26px;
+  line-height: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+}
+
+.wob-subtitle {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #cbc3d7;
+  margin: 0;
+}
+
+.wob-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.wob-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wob-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #e3e0f6;
+}
+
+.wob-security-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.wob-security-pill .material-symbols-outlined {
+  color: #22D3EE;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.wob-security-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: #cbc3d7;
+  margin: 0;
+}
+
+.wob-actions-row {
+  padding-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.wob-btn-skip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbc3d7;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 11px 24px;
+  border-radius: 12px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wob-btn-skip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.wob-btn-skip:active {
+  transform: scale(0.98);
+}
+
+.wob-btn-continue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 26px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(90deg, #8B5CF6, #6366F1, #22D3EE);
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 24px -2px rgba(139, 92, 246, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wob-btn-continue:hover {
+  box-shadow: 0 6px 30px 2px rgba(34, 211, 238, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.wob-btn-continue:active {
+  transform: scale(0.98);
+}
+
+.wob-btn-continue .material-symbols-outlined {
+  font-size: 18px;
+  transition: transform 0.2s ease;
+}
+
+.wob-btn-continue:hover .material-symbols-outlined {
+  transform: translateX(4px);
+}
