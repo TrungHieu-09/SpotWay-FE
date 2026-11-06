@@ -16,7 +16,6 @@ import {
   Switch,
   Tag,
   Typography,
-  Upload,
 } from 'antd'
 import { AppSelect as Select } from '../../components/ui/AppSelect'
 import {
@@ -24,7 +23,6 @@ import {
   DeleteOutlined,
   PlusOutlined,
   UndoOutlined,
-  UploadOutlined,
 } from '@ant-design/icons'
 import type Konva from 'konva'
 import {
@@ -46,7 +44,6 @@ import {
 } from '../../utils/canvasCoordinates'
 import {
   calculateRealHeightM,
-  compressPlanImageFile,
   recognizePlanInWorker,
   runSyntheticPlanRecognitionCheck,
   type PlanRecognitionParams,
@@ -241,7 +238,6 @@ export function FloorRecognitionPanel({
   )
   const recognizeGeometry = useGeometryStore((state) => state.recognizeGeometry)
   const saveGeometry = useGeometryStore((state) => state.saveGeometry)
-  const updateFloorPlan = useFloorStore((state) => state.updateFloorPlan)
   const mapImage = useImage(selectedFloor?.mapImageUrl ?? null)
   const wallMaskImage = useImage(wallMaskDataUrl)
   const { message } = AntApp.useApp()
@@ -453,26 +449,6 @@ export function FloorRecognitionPanel({
     await handleAutoRecognize(false)
   }
 
-  async function handleFloorPlanUpload(file: File) {
-    if (!selectedFloor || !canEdit) {
-      return
-    }
-
-    try {
-      const compressedImage = await compressPlanImageFile(file)
-      await updateFloorPlan(selectedFloor.id, {
-        mapImageUrl: compressedImage.dataUrl,
-        mapWidth: compressedImage.width,
-        mapHeight: compressedImage.height,
-      })
-      setWallMaskDataUrl(null)
-      setHasAutoRecognized(false)
-      message.success('Đã nén và lưu ảnh sơ đồ cho tầng')
-    } catch (uploadError) {
-      message.error((uploadError as Error).message)
-    }
-  }
-
   function handleRealWidthChange(value: number | null) {
     if (!canEdit) return
     const nextRealWidth = value ?? 20
@@ -673,17 +649,6 @@ export function FloorRecognitionPanel({
                 ? 'Chạy nhận diện'
                 : 'Chạy nhận diện mẫu'}
             </Button>
-            <Upload
-              accept="image/*"
-              showUploadList={false}
-              beforeUpload={(file) => {
-                void handleFloorPlanUpload(file)
-                return Upload.LIST_IGNORE
-              }}
-              disabled={!canEdit}
-            >
-              <Button icon={<UploadOutlined />}>Tải ảnh sơ đồ</Button>
-            </Upload>
             <Button
               icon={<PlusOutlined />}
               type={isAddingRoom ? 'default' : 'dashed'}
