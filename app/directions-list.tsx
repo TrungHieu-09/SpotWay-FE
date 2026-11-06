@@ -7,15 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/scaled-text';
 
-import { CURRENT_LOCATION_NODE, EVAC_START_NODE, FLOORS, WALK_SPEED_MPS, type Floor } from '@/data/mock-floor';
-import {
-  planEvacuation,
-  planTrip,
-  routeKey,
-  stepSummary,
-  type StepKind,
-} from '@/data/route-steps';
-import { useAccessibilityMode } from '@/hooks/use-accessibility-mode';
+import type { StepKind } from '@/data/venue/plan';
+import { routeKey, useTrip } from '@/hooks/use-trip';
 import { useActiveStep } from '@/hooks/use-active-step';
 
 
@@ -39,34 +32,22 @@ export default function DirectionsListScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
-  const { to, floor: floorParam, from, mode, leg, originFloor: originParam } = useLocalSearchParams<{
+  const { to, from, mode, leg } = useLocalSearchParams<{
     to?: string;
-    floor?: string;
     from?: string;
     mode?: string;
     leg?: string;
-    originFloor?: string;
   }>();
   const evac = mode === 'evac';
   const legIndex = Number(leg ?? 0);
-  const [accessible] = useAccessibilityMode();
   const destId = to ?? '';
-  const floor: Floor = FLOORS.includes(floorParam as Floor) ? (floorParam as Floor) : '1';
-
-  const originFloor: Floor = FLOORS.includes(originParam as Floor) ? (originParam as Floor) : floor;
-
-  const plan = useMemo(
-    () =>
-      (evac
-        ? planEvacuation(floor, EVAC_START_NODE)
-        : planTrip(originFloor, CURRENT_LOCATION_NODE, floor, destId, accessible))?.[legIndex] ?? null,
-    [evac, floor, originFloor, destId, accessible, legIndex],
-  );
-  const [active, setActive] = useActiveStep(routeKey(evac, originFloor, floor, destId, legIndex));
+  const { trip, startNodeId } = useTrip({ to: destId, from, evac });
+  const plan = trip?.legs[legIndex] ?? null;
+  const [active, setActive] = useActiveStep(routeKey(evac, startNodeId, destId, legIndex));
 
   const goToMap = () => {
     if (router.canGoBack()) router.back();
-    else router.replace({ pathname: '/directions', params: { to: destId, floor, from, originFloor } });
+    else router.replace({ pathname: '/directions', params: { to: destId, from, mode } });
   };
 
   if (!plan) {
@@ -80,8 +61,9 @@ export default function DirectionsListScreen() {
     );
   }
 
-  const { store, route } = plan;
-  const { steps } = route;
+  const { steps } = plan;
+  const destName = trip?.destName ?? '';
+  const WALK_SPEED_MPS = 1.2;
   const current = Math.min(active, steps.length - 1);
   const totalMeters = steps.reduce((sum, s) => sum + s.meters, 0);
   const minutes = Math.max(1, Math.ceil(totalMeters / WALK_SPEED_MPS / 60));
@@ -99,7 +81,7 @@ export default function DirectionsListScreen() {
         </Pressable>
         <View style={styles.topTitle}>
           <Text style={styles.title} numberOfLines={1}>
-            {store.name}
+            {destName}
           </Text>
           <Text style={styles.subtitle}>{t('dir.time', { minutes, meters: totalMeters })}</Text>
         </View>
@@ -150,7 +132,7 @@ export default function DirectionsListScreen() {
                   state === 'past' && styles.stepTextPast,
                 ]}
                 numberOfLines={2}>
-                {stepSummary(t, s, store.name)}
+                {s.kind === 'transfer' || s.kind === 'arrive' ? (s.kind === 'arrive' ? t('nav.arrive', { dest: destName }) : s.text) : s.text}
               </Text>
               {s.meters > 0 && (
                 <Text style={[styles.meters, state === 'past' && styles.stepTextPast]}>

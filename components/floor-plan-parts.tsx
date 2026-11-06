@@ -1,6 +1,6 @@
 import { G, Path } from 'react-native-svg';
 
-import type { StoreCategory } from '@/data/mock-floor';
+import type { StoreCategory } from '@/data/venue/places';
 import { useColors } from '@/hooks/use-colors';
 
 const EXIT_GREEN = '#2E9E5B';

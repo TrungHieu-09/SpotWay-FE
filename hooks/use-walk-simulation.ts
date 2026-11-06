@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { METERS_PER_UNIT, WALK_SPEED_MPS } from '@/data/mock-floor';
-import type { Point } from '@/data/route-steps';
+import type { Point } from '@/data/venue/plan';
+
+const WALK_SPEED_MPS = 1.2;
 
 /** Demo speed-up over real walking speed, so the whole route is watchable in seconds. */
 export const SIM_SPEED_FACTOR = 2.5;
-/** Default speed in graph units per second. */
-export const SIM_SPEED = (WALK_SPEED_MPS / METERS_PER_UNIT) * SIM_SPEED_FACTOR;
+/** Simulated walking speed in map pixels per second for a floor scale (metres per pixel). */
+export const simSpeed = (metersPerPixel: number) => (WALK_SPEED_MPS / metersPerPixel) * SIM_SPEED_FACTOR;
 
 const FRAME_MS = 33;
 
@@ -27,7 +28,7 @@ export type WalkSimulation = {
 };
 
 /** Moves a marker along a polyline at constant speed, so corners do not cause jumps. */
-export function useWalkSimulation(corners: Point[], speed: number = SIM_SPEED): WalkSimulation {
+export function useWalkSimulation(corners: Point[], speed: number): WalkSimulation {
   const [dist, setDist] = useState(0);
   const [playing, setPlaying] = useState(true);
 

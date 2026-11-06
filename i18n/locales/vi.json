@@ -184,5 +184,8 @@
   "access.theme": "Giao diện",
   "access.theme.system": "Theo hệ thống",
   "access.theme.light": "Sáng",
-  "access.theme.dark": "Tối"
+  "access.theme.dark": "Tối",
+  "error.loadFailed": "Không tải được dữ liệu toà nhà",
+  "error.retry": "Thử lại",
+  "map.category.poi": "Địa điểm"
 }

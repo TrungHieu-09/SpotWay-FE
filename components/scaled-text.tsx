@@ -15,7 +15,7 @@ export function Text({ style, ...props }: TextProps) {
   const [highContrast] = useHighContrast();
   const colors = useColors();
   const flat = StyleSheet.flatten(style) ?? {};
-  const next: TextStyle = { ...flat };
+  const next: { -readonly [K in keyof TextStyle]: TextStyle[K] } = { ...flat };
   if (scale !== 1) {
     const size = flat.fontSize ?? 14;
     next.fontSize = size * scale;

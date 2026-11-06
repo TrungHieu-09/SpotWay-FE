@@ -184,5 +184,8 @@
   "access.theme": "Appearance",
   "access.theme.system": "System",
   "access.theme.light": "Light",
-  "access.theme.dark": "Dark"
+  "access.theme.dark": "Dark",
+  "error.loadFailed": "Could not load the building data",
+  "error.retry": "Retry",
+  "map.category.poi": "Place"
 }

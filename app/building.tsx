@@ -1,12 +1,14 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/scaled-text';
-import { FLOORS, getStores, isVenueCode, MOCK_BUILDING, type StoreCategory } from '@/data/mock-floor';
+import type { StoreCategory } from '@/data/venue/places';
+import { placesOf } from '@/data/venue/places';
+import { loadVenue, useVenue } from '@/data/venue/venue';
 import { useColors, type Colors } from '@/hooks/use-colors';
 
 type Amenity = { key: string; icon: keyof typeof MaterialIcons.glyphMap; categories: StoreCategory[] };
@@ -15,11 +17,8 @@ const AMENITIES: Amenity[] = [
   { key: 'wc', icon: 'wc', categories: ['wc_male', 'wc_female'] },
   { key: 'elevator', icon: 'elevator', categories: ['elevator'] },
   { key: 'atm', icon: 'atm', categories: ['atm'] },
-  { key: 'pharmacy', icon: 'local-pharmacy', categories: ['pharmacy'] },
+  { key: 'exit', icon: 'exit-to-app', categories: ['exit'] },
 ];
-
-// Everything that is not a service point counts as a store.
-const NON_STORE: StoreCategory[] = ['wc_male', 'wc_female', 'elevator', 'escalator', 'atm', 'exit', 'rest'];
 
 export default function BuildingScreen() {
   const colors = useColors();
@@ -28,21 +27,25 @@ export default function BuildingScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { from } = useLocalSearchParams<{ from?: string }>();
-  const code = from && isVenueCode(from) ? from : null;
+  const { from, label } = useLocalSearchParams<{ from?: string; floor?: string; label?: string }>();
+  const code = label ?? null;
 
-  const { storeCount, amenityCounts } = useMemo(() => {
-    const all = FLOORS.flatMap((f) => getStores(f));
-    return {
-      storeCount: all.filter((s) => !NON_STORE.includes(s.category)).length,
-      amenityCounts: AMENITIES.map((a) => all.filter((s) => a.categories.includes(s.category)).length),
-    };
+  const venue = useVenue();
+  useEffect(() => {
+    loadVenue();
   }, []);
 
+  const { placeCount, amenityCounts } = useMemo(() => {
+    const all = placesOf(venue);
+    return {
+      placeCount: all.length,
+      amenityCounts: AMENITIES.map((a) => all.filter((p) => p.category !== 'poi' && a.categories.includes(p.category)).length),
+    };
+  }, [venue]);
+
   const rows = [
-    { icon: 'layers' as const, label: t('building.floors'), value: t('building.floorsValue', { count: FLOORS.length }) },
-    { icon: 'schedule' as const, label: t('building.hours'), value: MOCK_BUILDING.hours },
-    { icon: 'storefront' as const, label: t('building.stores'), value: t('building.storesValue', { count: storeCount }) },
+    { icon: 'layers' as const, label: t('building.floors'), value: t('building.floorsValue', { count: venue.floors.length }) },
+    { icon: 'storefront' as const, label: t('building.stores'), value: t('building.storesValue', { count: placeCount }) },
   ];
 
   return (
@@ -64,7 +67,7 @@ export default function BuildingScreen() {
           <View style={styles.logo}>
             <MaterialIcons name="apartment" size={30} color="#FFFFFF" />
           </View>
-          <Text style={styles.name}>{MOCK_BUILDING.name}</Text>
+          <Text style={styles.name}>{venue.buildingName}</Text>
           {code && (
             <View style={styles.codeChip}>
               <Text style={styles.codeText}>{code}</Text>
@@ -99,7 +102,7 @@ export default function BuildingScreen() {
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.replace({ pathname: '/map', params: code ? { from: code } : {} })}
+          onPress={() => router.replace({ pathname: '/map', params: from ? { from } : {} })}
           style={styles.cta}>
           <Text style={styles.ctaText}>{t('building.enter')}</Text>
           <MaterialIcons name="arrow-forward" size={20} color="#FFFFFF" />

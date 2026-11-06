@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/scaled-text';
-import { isVenueCode } from '@/data/mock-floor';
+import { extractQrToken, resolveQrToken } from '@/data/venue/venue';
 import { useColors, type Colors } from '@/hooks/use-colors';
 
 // Fixed brand colours; everything else follows the light / dark palette.
@@ -55,29 +55,38 @@ export default function ScanScreen() {
     return () => clearTimeout(id);
   }, [scanError]);
 
+  // A QR carries a link (`...?qr=<token>`) or a bare token; the backend turns it into a position.
   const onScanned = (value: string) => {
-    const trimmed = value.trim().toUpperCase();
-    if (handled.current || !trimmed) return;
-    if (!isVenueCode(trimmed)) {
-      if (lastBad.current !== trimmed) {
-        lastBad.current = trimmed;
+    const token = extractQrToken(value);
+    if (handled.current || !value.trim()) return;
+    if (!token) {
+      if (lastBad.current !== value) {
+        lastBad.current = value;
         setScanError(true);
       }
       return;
     }
-    openVenue(trimmed);
+    void openVenue(token);
   };
 
-  const openVenue = (value: string) => {
-    const trimmed = value.trim().toUpperCase();
-    if (!trimmed || handled.current) return;
-    if (!isVenueCode(trimmed)) {
-      setCodeError(true);
+  const openVenue = async (value: string) => {
+    const token = extractQrToken(value);
+    if (!token || handled.current) {
+      if (!token) setCodeError(true);
       return;
     }
     handled.current = true;
-    setManualOpen(false);
-    router.replace({ pathname: '/building', params: { from: trimmed } });
+    try {
+      const where = await resolveQrToken(token);
+      setManualOpen(false);
+      router.replace({ pathname: '/building', params: { from: where.nodeId, floor: where.floorId, label: where.label } });
+    } catch {
+      // Unknown / expired token or no connection: allow another try.
+      handled.current = false;
+      lastBad.current = value;
+      setScanError(true);
+      setCodeError(true);
+    }
   };
 
   const granted = permission?.granted === true;
@@ -265,7 +274,7 @@ const makeStyles = (
   title: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: INK },
 
   camera: { flex: 1, backgroundColor: '#0B0F19' },
-  permission: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32 },
+  permission: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32 },
   permissionText: { color: '#FFFFFF', fontSize: 15, lineHeight: 22, textAlign: 'center' },
   permissionButton: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, backgroundColor: BRAND },
   permissionButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },

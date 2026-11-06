@@ -53,7 +53,7 @@ const themeMode = createPersistedStore<ThemeMode>('spotway.themeMode', 'system',
 // Native appearance follows the saved choice, so useColorScheme() reflects it everywhere.
 themeMode.subscribe(() => {
   const mode = themeMode.get();
-  Appearance.setColorScheme(mode === 'system' ? null : mode);
+  Appearance.setColorScheme(mode === 'system' ? 'unspecified' : mode);
 });
 
 export const setAccessibilityMode = accessible.set;

@@ -1,49 +1,32 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/empty-state';
 import { Text } from '@/components/scaled-text';
-import { FLOORS, getStores, type Floor, type StoreCategory } from '@/data/mock-floor';
+import { placesOf, type Place, type PlaceCategory, type StoreCategory } from '@/data/venue/places';
+import { loadVenue, useVenue } from '@/data/venue/venue';
 import { useColors, type Colors } from '@/hooks/use-colors';
 import type { StoreRef } from '@/hooks/persisted-list';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useRecent } from '@/hooks/use-recent';
 
 
-type Group =
-  | 'all'
-  | 'coffee'
-  | 'fashion'
-  | 'books'
-  | 'food'
-  | 'electronics'
-  | 'beauty'
-  | 'supermarket'
-  | 'pharmacy'
-  | 'wc'
-  | 'atm'
-  | 'lift';
+type Group = 'all' | 'wc' | 'atm' | 'lift' | 'exit';
 
 const GROUPS: Record<Group, StoreCategory[] | null> = {
   all: null,
-  coffee: ['coffee'],
-  fashion: ['fashion'],
-  books: ['books'],
-  food: ['food'],
-  electronics: ['electronics'],
-  beauty: ['beauty'],
-  supermarket: ['supermarket'],
-  pharmacy: ['pharmacy'],
   wc: ['wc_male', 'wc_female'],
   atm: ['atm'],
   lift: ['elevator', 'escalator'],
+  exit: ['exit'],
 };
 
-const ICONS: Record<StoreCategory, keyof typeof MaterialIcons.glyphMap> = {
+const ICONS: Record<PlaceCategory, keyof typeof MaterialIcons.glyphMap> = {
+  poi: 'place',
   fashion: 'checkroom',
   coffee: 'local-cafe',
   books: 'menu-book',
@@ -73,11 +56,17 @@ export default function SearchScreen() {
   const { recent, clearRecent } = useRecent();
   const { favorites } = useFavorites();
 
+  const venue = useVenue();
+  useEffect(() => {
+    loadVenue();
+  }, []);
+  const places = useMemo(() => placesOf(venue), [venue]);
+
   // Saved refs that no longer exist in the data are dropped.
   const resolve = (refs: StoreRef[]) =>
     refs.flatMap((r) => {
-      const s = getStores(r.floor).find((x) => x.id === r.id);
-      return s ? [{ ...s, floor: r.floor }] : [];
+      const place = places.find((x) => x.id === r.id);
+      return place ? [place] : [];
     });
   const recentItems = resolve(recent);
   const favoriteItems = resolve(favorites);
@@ -86,21 +75,12 @@ export default function SearchScreen() {
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     const allowed = GROUPS[group];
-    return FLOORS.flatMap((floor) =>
-      getStores(floor)
-        .filter((s) => s.category !== 'rest')
-        .filter((s) => !allowed || allowed.includes(s.category))
-        .filter(
-          (s) =>
-            !q ||
-            s.name.toLowerCase().includes(q) ||
-            t(`map.category.${s.category}`).toLowerCase().includes(q),
-        )
-        .map((s) => ({ ...s, floor })),
-    );
-  }, [query, group, t]);
+    return places
+      .filter((p) => !allowed || (p.category !== 'poi' && allowed.includes(p.category)))
+      .filter((p) => !q || p.name.toLowerCase().includes(q) || t(`map.category.${p.category}`).toLowerCase().includes(q));
+  }, [places, query, group, t]);
 
-  const renderRow = (item: { id: string; name: string; category: StoreCategory; floor: Floor }, key?: string) => (
+  const renderRow = (item: Place, key?: string) => (
     <Pressable
       key={key}
       accessibilityRole="button"
@@ -108,7 +88,7 @@ export default function SearchScreen() {
       onPress={() =>
         router.push({
           pathname: '/store',
-          params: { id: item.id, floor: item.floor, from },
+          params: { id: item.id, from },
         })
       }>
       <View style={styles.rowIcon}>
@@ -171,7 +151,7 @@ export default function SearchScreen() {
 
       <FlatList
         data={results}
-        keyExtractor={(s) => `${s.floor}:${s.id}`}
+        keyExtractor={(s) => s.id}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={results.length === 0 ? { flexGrow: 1 } : undefined}
         ListEmptyComponent={
@@ -196,7 +176,7 @@ export default function SearchScreen() {
                       <Text style={styles.sectionAction}>{t('search.clearRecent')}</Text>
                     </Pressable>
                   </View>
-                  {recentItems.map((s) => renderRow(s, `r:${s.floor}:${s.id}`))}
+                  {recentItems.map((s) => renderRow(s, `r:${s.id}`))}
                 </View>
               )}
               {favoriteItems.length > 0 && (
@@ -204,14 +184,14 @@ export default function SearchScreen() {
                   <View style={styles.sectionHead}>
                     <Text style={styles.sectionTitle}>{t('search.favorites')}</Text>
                   </View>
-                  {favoriteItems.map((s) => renderRow(s, `f:${s.floor}:${s.id}`))}
+                  {favoriteItems.map((s) => renderRow(s, `f:${s.id}`))}
                 </View>
               )}
               <View style={styles.sectionHead}>
                 <Text style={styles.sectionTitle}>{t('search.allStores')}</Text>
               </View>
             </View>
-          ) : null
+          ) : undefined
         }
         renderItem={({ item }) => renderRow(item)}
       />

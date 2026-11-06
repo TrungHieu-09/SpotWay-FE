@@ -1,9 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { Floor } from '@/data/mock-floor';
-
 /** A store reference. Store ids repeat across floors, so the floor is part of the identity. */
-export type StoreRef = { id: string; floor: Floor };
+export type StoreRef = { id: string; floor: string };
 
 export const sameStore = (a: StoreRef, b: StoreRef) => a.id === b.id && a.floor === b.floor;
 

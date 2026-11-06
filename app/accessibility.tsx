@@ -1,17 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/scaled-text';
-import {
-  FLOORS,
-  HAZARD_TYPES,
-  HAZARD_ZONE_NAMES,
-  type HazardZone,
-} from '@/data/mock-floor';
+import { floorLabel, loadVenue, useVenue } from '@/data/venue/venue';
 import {
   useAccessibilityMode,
   useHighContrast,
@@ -24,6 +19,7 @@ import { useIncident } from '@/hooks/use-incident';
 
 import { useColors, type Colors } from '@/hooks/use-colors';
 const DANGER = '#D64545';
+const HAZARD_TYPES = ['fire', 'maintenance'] as const;
 
 const TEXT_SIZES: TextSize[] = ['small', 'medium', 'large'];
 const THEME_MODES: ThemeMode[] = ['system', 'light', 'dark'];
@@ -37,9 +33,22 @@ export default function AccessibilityScreen() {
   const [enabled, setEnabled] = useAccessibilityMode();
   const [incident, setIncident] = useIncident();
   const [demoOpen, setDemoOpen] = useState(false);
-  const [draft, setDraft] = useState<HazardZone>(
-    incident ?? { floor: '3', zone: 'west', type: 'fire' },
+  const venue = useVenue();
+  useEffect(() => {
+    loadVenue();
+  }, []);
+  // The simulated incident is anchored at a point (POI) of the real building.
+  const [draft, setDraft] = useState<{ floorId?: string; nodeId?: string; name?: string; type: 'fire' | 'maintenance' }>(
+    incident ?? { type: 'fire' },
   );
+  const draftFloorId = draft.floorId ?? venue.floors[venue.floors.length - 1]?.id ?? '';
+  const draftPois = venue.mapsByFloorId[draftFloorId]?.pois ?? [];
+  const startDemo = () => {
+    const poi = draftPois.find((p) => p.nodeId === draft.nodeId) ?? draftPois[0];
+    if (!poi) return;
+    setIncident({ floorId: draftFloorId, nodeId: poi.nodeId, name: poi.name, type: draft.type });
+    setDemoOpen(false);
+  };
   const [textSize, setTextSize] = useTextSize();
   const [highContrast, setHighContrast] = useHighContrast();
   const [themeMode, setThemeMode] = useThemeMode();
@@ -141,8 +150,8 @@ export default function AccessibilityScreen() {
           <Text style={[styles.groupDesc, { color: DANGER }]}>
             {t('evac.banner', {
               type: t(`hazard.type.${incident.type}`),
-              floor: incident.floor,
-              zone: t(`hazard.zone.${incident.zone}`),
+              floor: floorLabel(incident.floorId),
+              zone: incident.name,
             })}
           </Text>
         )}
@@ -155,30 +164,33 @@ export default function AccessibilityScreen() {
 
               <Text style={styles.modalLabel}>{t('evac.demoFloor')}</Text>
               <View style={styles.demoFloors}>
-                {FLOORS.map((f) => (
+                {venue.floors.map((fl) => (
               <Pressable
-                key={f}
+                key={fl.id}
                 accessibilityRole="button"
-                accessibilityState={{ selected: draft.floor === f }}
-                onPress={() => setDraft({ ...draft, floor: f })}
-                style={[styles.demoFloor, draft.floor === f && styles.demoFloorOn]}>
-                <Text style={[styles.demoFloorText, draft.floor === f && { color: '#FFFFFF' }]}>{f}</Text>
+                accessibilityState={{ selected: draftFloorId === fl.id }}
+                onPress={() => setDraft({ ...draft, floorId: fl.id, nodeId: undefined, name: undefined })}
+                style={[styles.demoFloor, draftFloorId === fl.id && styles.demoFloorOn]}>
+                <Text style={[styles.demoFloorText, draftFloorId === fl.id && { color: '#FFFFFF' }]}>{fl.floorNumber}</Text>
               </Pressable>
                 ))}
               </View>
 
               <Text style={styles.modalLabel}>{t('evac.demoZone')}</Text>
               <View style={styles.demoFloors}>
-                {HAZARD_ZONE_NAMES.map((z) => (
+                {draftPois.map((poi) => {
+                  const on = (draft.nodeId ?? draftPois[0]?.nodeId) === poi.nodeId;
+                  return (
               <Pressable
-                key={z}
+                key={poi.id}
                 accessibilityRole="button"
-                accessibilityState={{ selected: draft.zone === z }}
-                onPress={() => setDraft({ ...draft, zone: z })}
-                style={[styles.demoFloor, draft.zone === z && styles.demoFloorOn]}>
-                <Text style={[styles.demoFloorText, draft.zone === z && { color: '#FFFFFF' }]}>{t(`hazard.zone.${z}`)}</Text>
+                accessibilityState={{ selected: on }}
+                onPress={() => setDraft({ ...draft, floorId: draftFloorId, nodeId: poi.nodeId, name: poi.name })}
+                style={[styles.demoFloor, on && styles.demoFloorOn]}>
+                <Text style={[styles.demoFloorText, on && { color: '#FFFFFF' }]}>{poi.name}</Text>
               </Pressable>
-                ))}
+                  );
+                })}
               </View>
 
               <Text style={styles.modalLabel}>{t('evac.demoType')}</Text>
@@ -206,10 +218,7 @@ export default function AccessibilityScreen() {
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => {
-                    setIncident(draft);
-                    setDemoOpen(false);
-                  }}
+                  onPress={startDemo}
                   style={styles.demoBtn}>
                   <Text style={styles.demoBtnText}>{t('evac.demoOn')}</Text>
                 </Pressable>

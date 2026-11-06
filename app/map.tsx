@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, ToastAndroid, useWindowDimensions, Platform, Alert, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, ToastAndroid, useWindowDimensions, Platform, Alert, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Reanimated, {
   useAnimatedStyle,
@@ -10,29 +10,23 @@ import Reanimated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Defs, G, Line, Pattern, Polyline, Rect, Text as SvgText } from 'react-native-svg';
+import { Circle } from 'react-native-svg';
 
+import { AnimatedCircle, AnimatedPolyline, FloorCanvas, markerScale } from '@/components/floor-canvas';
+import { EmptyState } from '@/components/empty-state';
+import { poiIcon } from '@/data/venue/places';
+import { tripFromRoute, tripMinutes } from '@/data/venue/plan';
 import {
-  blockedNodes,
-  CURRENT_LOCATION_NODE,
-  DEMO_DESTINATION_ID,
-  doorNodeId,
-  getGraph,
-  FLOOR_VIEWBOX,
-  METERS_PER_UNIT,
-  isVenueCode,
-  MOCK_BUILDING,
-  DEFAULT_FLOOR,
-  FLOORS,
-  getStores,
-  type Floor,
-  type StoreCategory,
-  WALK_SPEED_MPS,
-} from '@/data/mock-floor';
-import { StoreIcon, wrapLabel } from '@/components/floor-plan-parts';
-import { HazardOverlay } from '@/components/hazard-overlay';
-import { findNearest, findPath } from '@/data/pathfinding';
-import { useAccessibilityMode, useHighContrast, useTextScale } from '@/hooks/use-accessibility-mode';
+  computeRoute,
+  defaultStartNodeId,
+  floorById,
+  floorLabel,
+  loadVenue,
+  nodeById,
+  plainRoute,
+  useVenue,
+} from '@/data/venue/venue';
+import { useAccessibilityMode } from '@/hooks/use-accessibility-mode';
 import { useIncident } from '@/hooks/use-incident';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 
@@ -44,33 +38,30 @@ const TAB_BAR_HEIGHT = 56;
 const FLOAT_GAP = 16;
 
 
-/** Room reserved for the destination card under the top controls, so selecting a store never resizes the map. */
+/** Room reserved for the destination card under the top controls, so selecting a place never resizes the map. */
 const DEST_CARD_HEIGHT = 66;
 const ZOOM_BUTTON = 40;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.5;
-const VIEW_BOX = `${FLOOR_VIEWBOX.x} ${FLOOR_VIEWBOX.y} ${FLOOR_VIEWBOX.width} ${FLOOR_VIEWBOX.height}`;
 
+/** Quick "nearest ..." shortcuts: the icon a POI is drawn with decides which chip it belongs to. */
 const NEAREST_CHIPS: {
   key: string;
   icon: keyof typeof MaterialIcons.glyphMap;
-  categories: StoreCategory[];
+  match: string[];
 }[] = [
-  { key: 'wc', icon: 'wc', categories: ['wc_male', 'wc_female'] },
-  { key: 'atm', icon: 'atm', categories: ['atm'] },
-  { key: 'elevator', icon: 'elevator', categories: ['elevator'] },
-  { key: 'pharmacy', icon: 'local-pharmacy', categories: ['pharmacy'] },
+  { key: 'wc', icon: 'wc', match: ['wc_male', 'wc_female'] },
+  { key: 'atm', icon: 'atm', match: ['atm'] },
+  { key: 'elevator', icon: 'elevator', match: ['elevator'] },
 ];
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-const AnimatedPolyline = Animated.createAnimatedComponent(Polyline);
 const DASH = [8, 4, 2, 4];
 const DASH_LENGTH = DASH.reduce((a, b) => a + b, 0);
 
 export default function FloorMapScreen() {
   const colors = useColors();
-  const { BLUE, INK, MUTED, WALL, STORE_FILL, SELECTED_FILL, STRONG } = colors;
+  const { BLUE, INK, MUTED } = colors;
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
@@ -81,19 +72,32 @@ export default function FloorMapScreen() {
     ts?: string;
   }>();
 
-  const [floor, setFloor] = useState<Floor>(
-    FLOORS.includes(floorParam as Floor) ? (floorParam as Floor) : DEFAULT_FLOOR,
+  const venue = useVenue();
+  useEffect(() => {
+    loadVenue();
+  }, []);
+  const { floors, mapsByFloorId, destinations } = venue;
+
+  // Where the user stands: a scanned QR node, otherwise the main door of the lowest floor.
+  const startNodeId = useMemo(
+    () => (from && nodeById(from) ? from : defaultStartNodeId()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [from, venue.status],
   );
-  const [destId, setDestId] = useState<string | null>(
-    dest ?? (floor === DEFAULT_FLOOR ? DEMO_DESTINATION_ID : null),
-  );
+  const startNode = startNodeId ? nodeById(startNodeId) : undefined;
+
+  const [floorId, setFloorId] = useState<string | null>(floorParam ?? null);
+  useEffect(() => {
+    if (!floorId && startNode) setFloorId(startNode.floorId);
+  }, [floorId, startNode]);
+  const floorObj = floors.find((f) => f.id === floorId) ?? null;
+  const floor = floorId ? floorLabel(floorId) : '';
+  const map = floorId ? mapsByFloorId[floorId] : undefined;
+
+  const [destId, setDestId] = useState<string | null>(dest ?? null);
   const [navigating, setNavigating] = useState(true);
   const [detailOpen, setDetailOpen] = useState(false);
   const [accessible] = useAccessibilityMode();
-  const [highContrast] = useHighContrast();
-  // Store names scale at half the rate of the other text so they still fit their cells.
-  const mapTextScale = 1 + (useTextScale() - 1) * 0.5;
-  const wall = highContrast ? INK : WALL;
   const [incident] = useIncident();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
@@ -102,9 +106,9 @@ export default function FloorMapScreen() {
   const [topControlsH, setTopControlsH] = useState(0);
   const [floorMenuOpen, setFloorMenuOpen] = useState(false);
   const [floorMenuPos, setFloorMenuPos] = useState({ top: 0, right: 16 });
-  const floorBtnRef = useRef<View>(null);
+  const floorBtnRef = useRef<React.ComponentRef<typeof View>>(null);
   const openFloorMenu = () => {
-    floorBtnRef.current?.measureInWindow((x, y, w, h) => {
+    floorBtnRef.current?.measureInWindow((x: number, y: number, w: number, h: number) => {
       setFloorMenuPos({ top: y + h + 4, right: Math.max(8, windowWidth - (x + w)) });
       setFloorMenuOpen(true);
     });
@@ -114,46 +118,53 @@ export default function FloorMapScreen() {
   // A destination picked on the search screen replaces the current one.
   useEffect(() => {
     if (!dest) return;
-    if (FLOORS.includes(floorParam as Floor)) setFloor(floorParam as Floor);
+    if (floorParam) setFloorId(floorParam);
     setDestId(dest);
     setNavigating(true);
   }, [dest, floorParam, ts]);
 
-  const stores = useMemo(() => getStores(floor), [floor]);
-  const store = useMemo(() => stores.find((s) => s.id === destId) ?? null, [stores, destId]);
-  const changeFloor = (f: Floor) => {
-    if (f === floor) return;
-    setFloor(f);
-    setDestId(null);
-    setNavigating(false);
-    setDetailOpen(false);
+  const destination = useMemo(() => destinations.find((d) => d.id === destId) ?? null, [destinations, destId]);
+  const store = destination;
+  const changeFloor = (id: string) => {
+    if (id === floorId) return;
+    setFloorId(id);
   };
-  const graph = useMemo(() => getGraph(floor), [floor]);
-  const path = useMemo(
-    () => (store ? findPath(graph, CURRENT_LOCATION_NODE, doorNodeId(store.id), blockedNodes(incident, floor)) : null),
-    [graph, store, incident, floor],
+
+  // Route from the user to the picked place, computed on the phone by the routing engine.
+  const result = useMemo(
+    () =>
+      startNodeId && destination
+        ? computeRoute(startNodeId, destination.nodeId, { wheelchair: accessible })
+        : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [startNodeId, destination, accessible, venue.fireNodeIds, venue.status],
   );
-
-  // Route polyline: graph nodes, then a final hop from the corridor into the store's doorway.
+  const path = useMemo(
+    () =>
+      result?.route && destination
+        ? tripFromRoute(result.route, destination.name, {
+            evacuation: result.effectiveMode === 'EVACUATION',
+            destinationCancelled: result.destinationCancelled,
+            warningCode: result.warningCode,
+          })
+        : null,
+    [result, destination],
+  );
   const routePoints = useMemo(() => {
-    if (!path || !store) return null;
-    const last = path.points[path.points.length - 1];
-    const doorway = {
-      x: Math.min(store.x + store.width, Math.max(store.x, last.x)),
-      y: Math.min(store.y + store.height, Math.max(store.y, last.y)),
-    };
-    return [...path.points, doorway].map((p) => `${p.x},${p.y}`).join(' ');
-  }, [path, store]);
+    if (!path || !floorId) return null;
+    const pts = path.legs.filter((l) => l.floorId === floorId).flatMap((l) => l.corners);
+    return pts.length > 1 ? pts.map((p) => `${p.x},${p.y}`).join(' ') : null;
+  }, [path, floorId]);
 
-  const meters = path ? Math.round(path.length * METERS_PER_UNIT) : 0;
-  const minutes = Math.max(1, Math.ceil(meters / WALK_SPEED_MPS / 60));
+  const meters = path ? Math.round(path.totalMeters) : 0;
+  const minutes = path ? tripMinutes(path) : 0;
 
-  const origin = graph.nodes[CURRENT_LOCATION_NODE];
-  // The user is assumed to stand at the entrance of the default floor only.
-  const onUserFloor = floor === DEFAULT_FLOOR;
+  const origin = startNode;
+  // The "you are here" dot only shows on the floor of the start node.
+  const onUserFloor = !!startNode && startNode.floorId === floorId;
 
   // The map starts right under the controls; the destination card pushes it down smoothly.
-  const cardVisible = !!store && (!!path || !onUserFloor);
+  const cardVisible = !!store && !!path;
   const topPad = useSharedValue(0);
   const mapTopTarget = topControlsH + 4 + (cardVisible ? DEST_CARD_HEIGHT + 8 : 0);
   useEffect(() => {
@@ -207,8 +218,9 @@ export default function FloorMapScreen() {
     loop.start();
     return () => loop.stop();
   }, [flow]);
-  const dashOffset = flow.interpolate({ inputRange: [0, 1], outputRange: [0, -DASH_LENGTH] });
-  const pulseR = pulse.interpolate({ inputRange: [0, 1], outputRange: [6, 22] });
+  const dashOffset = flow.interpolate({ inputRange: [0, 1], outputRange: [0, -DASH_LENGTH * (floorObj ? markerScale(floorObj) : 1)] });
+  const k = floorObj ? markerScale(floorObj) : 1;
+  const pulseR = pulse.interpolate({ inputRange: [0, 1], outputRange: [6 * k, 22 * k] });
   const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.4, 0] });
 
   // Pan + pinch-to-zoom: the whole map layer is transformed on the UI thread.
@@ -267,7 +279,7 @@ export default function FloorMapScreen() {
   };
 
   const openSearch = () => router.push({ pathname: '/search', params: { from } });
-  // First tap selects a store as destination; tapping the selected store again opens its details.
+  // First tap selects a place as destination; tapping the selected place again opens its details.
   const onStorePress = (id: string) => {
     if (id === destId) {
       setDetailOpen(true);
@@ -276,34 +288,34 @@ export default function FloorMapScreen() {
     setDestId(id);
     setNavigating(true);
   };
-  // Start turn-by-turn guidance for the selected (or demo) destination.
+  // Start turn-by-turn guidance for the selected destination.
   const startGuidance = () => {
-    const id = destId ?? (floor === DEFAULT_FLOOR ? DEMO_DESTINATION_ID : null);
-    if (!id) return;
-    setDestId(id);
+    if (!destId) return;
     setNavigating(true);
-    router.push({ pathname: '/directions', params: { to: id, floor, from, originFloor: DEFAULT_FLOOR } });
+    router.push({ pathname: '/directions', params: { to: destId, from: startNodeId } });
   };
   const startFromDetail = () => {
     setDetailOpen(false);
     startGuidance();
   };
-  const goNearest = (categories: StoreCategory[]) => {
-    const hit = findNearest(categories, CURRENT_LOCATION_NODE, {
-      fromFloor: DEFAULT_FLOOR,
-      accessible,
-      hazard: incident,
-    });
-    if (!hit) {
+  const goNearest = (match: string[]) => {
+    let best: { id: string; length: number } | null = null;
+    if (startNodeId) {
+      for (const d of destinations) {
+        const poi = mapsByFloorId[d.floorId]?.pois.find((p) => p.id === d.id);
+        const icon = poi ? poiIcon(poi) : null;
+        if (!icon || !match.includes(icon)) continue;
+        const route = plainRoute(startNodeId, d.nodeId, { wheelchair: accessible });
+        if (route && (!best || route.totalDistance < best.length)) best = { id: d.id, length: route.totalDistance };
+      }
+    }
+    if (!best) {
       const msg = t('map.nearest.notFound');
       if (Platform.OS === 'android') ToastAndroid.show(msg, ToastAndroid.SHORT);
       else Alert.alert(msg);
       return;
     }
-    router.push({
-      pathname: '/directions',
-      params: { to: hit.storeId, floor: hit.floor, from, originFloor: DEFAULT_FLOOR },
-    });
+    router.push({ pathname: '/directions', params: { to: best.id, from: startNodeId } });
   };
   const startEvacuation = () => {
     Alert.alert(t('evac.confirmTitle'), t('evac.confirmMsg'), [
@@ -311,7 +323,7 @@ export default function FloorMapScreen() {
       {
         text: t('evac.confirmGo'),
         style: 'destructive',
-        onPress: () => router.push({ pathname: '/directions', params: { mode: 'evac', floor, from } }),
+        onPress: () => router.push({ pathname: '/directions', params: { mode: 'evac', from: startNodeId } }),
       },
     ]);
   };
@@ -329,81 +341,32 @@ export default function FloorMapScreen() {
           onLayout={(e) => {
             box.value = { w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height };
           }}>
-        <Svg width="100%" height="100%" viewBox={VIEW_BOX} preserveAspectRatio="xMidYMid meet">
-          <Defs>
-            <Pattern id="hatch" patternUnits="userSpaceOnUse" width={6} height={6}>
-              <Line x1={0} y1={0} x2={0} y2={6} stroke="#C9CDD4" strokeWidth={1.5} />
-            </Pattern>
-          </Defs>
-
-          <Rect
-            x={8}
-            y={8}
-            width={FLOOR_VIEWBOX.width - 16}
-            height={FLOOR_VIEWBOX.height - 16}
-            fill="none"
-            stroke={wall}
-            strokeWidth={4}
-          />
-
-          {stores.map((s) => {
-            const rest = s.category === 'rest';
-            const cx = s.x + s.width / 2;
-            const cy = s.y + s.height / 2;
-            const selected = s.id === destId;
-            const liftHint = accessible && s.category === 'elevator';
-            const dimmed = accessible && s.category === 'escalator';
-            return (
-              <G
-                key={s.id}
-                opacity={dimmed ? 0.35 : 1}
-                onPress={rest ? undefined : () => onStorePress(s.id)}>
-                <Rect
-                  x={s.x}
-                  y={s.y}
-                  width={s.width}
-                  height={s.height}
-                  fill={rest ? 'url(#hatch)' : selected ? SELECTED_FILL : STORE_FILL}
-                  stroke={liftHint ? BLUE : wall}
-                  strokeWidth={liftHint ? 3 : 2.5}
-                />
-                {!rest && <StoreIcon category={s.category} x={cx} y={cy - 10} />}
-                {wrapLabel(s.name).map((line, i) => (
-                  <SvgText
-                    key={i}
-                    x={cx}
-                    y={rest ? cy + i * 8 : cy + 8 + i * 7.5}
-                    fontSize={6.5 * mapTextScale}
-                    fill={highContrast ? STRONG : INK}
-                    textAnchor="middle">
-                    {line}
-                  </SvgText>
-                ))}
-              </G>
-            );
-          })}
-
-          <HazardOverlay hazard={incident} floor={floor} />
-
-          {navigating && onUserFloor && routePoints && (
-            <AnimatedPolyline
-              points={routePoints}
-              fill="none"
-              stroke={BLUE}
-              strokeWidth={3}
-              strokeDasharray={DASH}
-              strokeDashoffset={dashOffset}
-              strokeLinejoin="round"
-            />
-          )}
-
-          {onUserFloor && (
-            <>
-              <AnimatedCircle cx={origin.x} cy={origin.y} r={pulseR} fill={BLUE} opacity={pulseOpacity} />
-              <Circle cx={origin.x} cy={origin.y} r={7} fill={BLUE} stroke="#FFFFFF" strokeWidth={3} />
-            </>
-          )}
-        </Svg>
+        {floorObj ? (
+          <FloorCanvas
+            floor={floorObj}
+            map={map}
+            selectedPoiId={destId}
+            onPoiPress={(poi) => onStorePress(poi.id)}
+            fireNodeIds={incident && incident.floorId === floorObj.id ? [incident.nodeId] : []}>
+            {navigating && routePoints && (
+              <AnimatedPolyline
+                points={routePoints}
+                fill="none"
+                stroke={BLUE}
+                strokeWidth={3 * k}
+                strokeDasharray={DASH.map((d) => d * k)}
+                strokeDashoffset={dashOffset}
+                strokeLinejoin="round"
+              />
+            )}
+            {onUserFloor && origin && (
+              <>
+                <AnimatedCircle cx={origin.x} cy={origin.y} r={pulseR} fill={BLUE} opacity={pulseOpacity} />
+                <Circle cx={origin.x} cy={origin.y} r={7 * k} fill={BLUE} stroke="#FFFFFF" strokeWidth={3 * k} />
+              </>
+            )}
+          </FloorCanvas>
+        ) : null}
         </Reanimated.View>
       </GestureDetector>
 
@@ -421,8 +384,8 @@ export default function FloorMapScreen() {
               <Text style={styles.incidentText}>
                 {t('evac.banner', {
                   type: t(`hazard.type.${incident.type}`),
-                  floor: incident.floor,
-                  zone: t(`hazard.zone.${incident.zone}`),
+                  floor: floorLabel(incident.floorId),
+                  zone: incident.name,
                 })}
               </Text>
               <Text style={styles.incidentCta}>{t('evac.bannerCta')}</Text>
@@ -431,7 +394,7 @@ export default function FloorMapScreen() {
         )}
         <View style={styles.titleRow}>
           <Text style={styles.building} numberOfLines={1}>
-            {from && isVenueCode(from) ? `${MOCK_BUILDING.name} · ${from}` : MOCK_BUILDING.name}
+            {venue.buildingName}
           </Text>
         </View>
 
@@ -477,7 +440,7 @@ export default function FloorMapScreen() {
             <Pressable
               key={c.key}
               accessibilityRole="button"
-              onPress={() => goNearest(c.categories)}
+              onPress={() => goNearest(c.match)}
               style={styles.chip}>
               <MaterialIcons name={c.icon} size={16} color={BLUE} />
               <Text style={styles.chipText} numberOfLines={1}>
@@ -496,21 +459,23 @@ export default function FloorMapScreen() {
           onPress={() => setFloorMenuOpen(false)}>
           <View style={[styles.floorMenu, { top: floorMenuPos.top, right: floorMenuPos.right }]}>
             <ScrollView>
-            {FLOORS.map((f) => {
-              const active = f === floor;
+            {floors.map((fl) => {
+              const f = fl.id;
+              const label = floorLabel(fl.id);
+              const active = f === floorId;
               return (
                 <Pressable
                   key={f}
                   accessibilityRole="menuitem"
                   accessibilityState={{ selected: active }}
-                  accessibilityLabel={t('map.floor', { floor: f })}
+                  accessibilityLabel={t('map.floor', { floor: label })}
                   onPress={() => {
                     setFloorMenuOpen(false);
                     changeFloor(f);
                   }}
                   style={[styles.floorMenuItem, active && styles.floorMenuItemActive]}>
-                  <Text maxFontSizeMultiplier={1.15} style={[styles.floorMenuText, active && { color: BLUE }]}>{t('map.floor', { floor: f })}</Text>
-                  {incident?.floor === f && <View style={styles.floorMenuDot} />}
+                  <Text maxFontSizeMultiplier={1.15} style={[styles.floorMenuText, active && { color: BLUE }]}>{t('map.floor', { floor: label })}</Text>
+                  {incident?.floorId === f && <View style={styles.floorMenuDot} />}
                   {active && <MaterialIcons name="check" size={16} color={BLUE} />}
                 </Pressable>
               );
@@ -557,11 +522,10 @@ export default function FloorMapScreen() {
         onRequestClose={() => setDetailOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setDetailOpen(false)}>
           <Pressable style={styles.modalCard} onPress={() => {}}>
-            {store?.category && (
-              <Text style={styles.modalCategory}>{t(`map.category.${store.category}`)}</Text>
+            {store && floorById(store.floorId) && (
+              <Text style={styles.modalCategory}>{t('map.floor', { floor: floorLabel(store.floorId) })}</Text>
             )}
             <Text style={styles.modalName}>{store?.name}</Text>
-            {store?.description && <Text style={styles.modalDesc}>{store.description}</Text>}
             <View style={styles.modalFooter}>
               <Pressable
                 accessibilityRole="button"
@@ -576,7 +540,7 @@ export default function FloorMapScreen() {
                 onPress={() => {
                   setDetailOpen(false);
                   if (store) {
-                    router.push({ pathname: '/store', params: { id: store.id, floor, from } });
+                    router.push({ pathname: '/store', params: { id: store.id, from: startNodeId } });
                   }
                 }}>
                 <Text style={styles.modalLink}>{t('map.details')}</Text>
@@ -637,8 +601,8 @@ export default function FloorMapScreen() {
               <Text style={styles.modalName}>
                 {t('evac.banner', {
                   type: t(`hazard.type.${incident.type}`),
-                  floor: incident.floor,
-                  zone: t(`hazard.zone.${incident.zone}`),
+                  floor: floorLabel(incident.floorId),
+                  zone: incident.name,
                 })}
               </Text>
             )}
@@ -650,7 +614,7 @@ export default function FloorMapScreen() {
                 accessibilityRole="button"
                 onPress={() => {
                   setAlertOpen(false);
-                  router.push({ pathname: '/directions', params: { mode: 'evac', floor, from } });
+                  router.push({ pathname: '/directions', params: { mode: 'evac', from: startNodeId } });
                 }}
                 style={styles.alertGo}>
                 <Text style={styles.alertGoText}>{t('evac.nowBtn')}</Text>
@@ -659,6 +623,22 @@ export default function FloorMapScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {venue.status !== 'ready' && (
+        <View style={styles.statusOverlay}>
+          {venue.status === 'error' ? (
+            <EmptyState
+              icon="cloud-off"
+              title={t('error.loadFailed')}
+              message={venue.error}
+              actionLabel={t('error.retry')}
+              onAction={() => loadVenue(true)}
+            />
+          ) : (
+            <ActivityIndicator size="large" color={BLUE} />
+          )}
+        </View>
+      )}
 
       <View style={[styles.zoom, { bottom: floatBottom }]}>
         <Pressable
@@ -691,6 +671,7 @@ const shadow = {
 const makeStyles = ({ BLUE, INK, MUTED, BORDER, CANVAS, CARD, ACTIVE_BG, TINT }: Colors) =>
   StyleSheet.create({
   root: { flex: 1, backgroundColor: CANVAS },
+  statusOverlay: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: CANVAS },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 16, gap: 8 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 2 },
   building: { flex: 1, fontSize: 14, fontWeight: '700', color: INK },

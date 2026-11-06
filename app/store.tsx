@@ -1,5 +1,4 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,26 +7,14 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { EmptyState } from '@/components/empty-state';
 import { Text } from '@/components/scaled-text';
-import {
-  CURRENT_LOCATION_NODE,
-  doorNodeId,
-  FLOORS,
-  getGraph,
-  getStores,
-  METERS_PER_UNIT,
-  openingHours,
-  zoneOf,
-  type Floor,
-  type StoreCategory,
-} from '@/data/mock-floor';
-import { findPath } from '@/data/pathfinding';
-import { getStoreImage } from '@/data/store-images';
-
+import { placesOf, type PlaceCategory } from '@/data/venue/places';
+import { defaultStartNodeId, loadVenue, nodeById, plainRoute, useVenue } from '@/data/venue/venue';
 
 import { useColors, type Colors } from '@/hooks/use-colors';
 import { useFavorites } from '@/hooks/use-favorites';
 import { addRecent } from '@/hooks/use-recent';
-const ICONS: Record<StoreCategory, keyof typeof MaterialIcons.glyphMap> = {
+const ICONS: Record<PlaceCategory, keyof typeof MaterialIcons.glyphMap> = {
+  poi: 'place',
   fashion: 'checkroom',
   coffee: 'local-cafe',
   books: 'menu-book',
@@ -52,25 +39,31 @@ export default function StoreDetailScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { id, floor: floorParam, from } = useLocalSearchParams<{
+  const { id, from } = useLocalSearchParams<{
     id?: string;
-    floor?: string;
     from?: string;
   }>();
-  const floor: Floor = FLOORS.includes(floorParam as Floor) ? (floorParam as Floor) : '1';
 
-  const store = useMemo(() => getStores(floor).find((s) => s.id === id) ?? null, [floor, id]);
+  const venue = useVenue();
+  useEffect(() => {
+    loadVenue();
+  }, []);
+  const store = useMemo(() => placesOf(venue).find((p) => p.id === id) ?? null, [venue, id]);
+  const floor = store?.floor ?? '';
   const meters = useMemo(() => {
-    if (!store) return null;
-    const p = findPath(getGraph(floor), CURRENT_LOCATION_NODE, doorNodeId(store.id));
-    return p ? Math.round(p.length * METERS_PER_UNIT) : null;
-  }, [floor, store]);
+    const start = from && nodeById(from) ? from : defaultStartNodeId();
+    if (!store || !start) return null;
+    const route = plainRoute(start, store.nodeId);
+    return route ? Math.round(route.totalDistance) : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store, from, venue.status]);
 
   const { isFavorite, toggleFavorite } = useFavorites();
   const storeId = store?.id;
+  const storeFloorId = store?.floorId;
   useEffect(() => {
-    if (storeId) addRecent({ id: storeId, floor });
-  }, [storeId, floor]);
+    if (storeId && storeFloorId) addRecent({ id: storeId, floor: storeFloorId });
+  }, [storeId, storeFloorId]);
 
   const goBack = () => router.back();
 
@@ -91,13 +84,11 @@ export default function StoreDetailScreen() {
   }
 
   const icon = ICONS[store.category];
-  const fav = isFavorite({ id: store.id, floor });
-  const photo = getStoreImage(store);
+  const fav = isFavorite({ id: store.id, floor: store.floorId });
   const category = t(`map.category.${store.category}`);
   const meta = [
     category,
     t('map.floor', { floor }),
-    t(`store.zone.${zoneOf(store.corridor)}`),
     meters !== null ? `${meters}m` : null,
   ]
     .filter(Boolean)
@@ -107,11 +98,7 @@ export default function StoreDetailScreen() {
     <View style={styles.root}>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
         <View style={styles.hero}>
-          {photo ? (
-            <Image source={photo} contentFit="cover" style={StyleSheet.absoluteFill} />
-          ) : (
-            <MaterialIcons name={icon} size={120} color="rgba(255,255,255,0.16)" />
-          )}
+          <MaterialIcons name={icon} size={120} color="rgba(255,255,255,0.16)" />
           <View style={styles.heroShade} />
           <Pressable
             accessibilityRole="button"
@@ -124,7 +111,7 @@ export default function StoreDetailScreen() {
             accessibilityRole="button"
             accessibilityLabel={t(fav ? 'store.favoriteRemove' : 'store.favoriteAdd')}
             accessibilityState={{ selected: fav }}
-            onPress={() => toggleFavorite({ id: store.id, floor })}
+            onPress={() => toggleFavorite({ id: store.id, floor: store.floorId })}
             style={[styles.back, styles.heart, { top: insets.top + 12 }]}>
             <MaterialIcons name={fav ? 'favorite' : 'favorite-border'} size={22} color={fav ? '#D64545' : INK} />
           </Pressable>
@@ -143,10 +130,6 @@ export default function StoreDetailScreen() {
             <Text style={styles.title} numberOfLines={1}>
               {store.name}
             </Text>
-            <View style={styles.openBadge}>
-              <View style={styles.openDot} />
-              <Text style={styles.openText}>{t('store.open')}</Text>
-            </View>
           </View>
           <Text style={styles.meta}>{meta}</Text>
         </View>
@@ -154,10 +137,10 @@ export default function StoreDetailScreen() {
         <View style={[styles.block, styles.grid]}>
           <View style={styles.card}>
             <View style={styles.cardLabelRow}>
-              <MaterialIcons name="schedule" size={17} color={MUTED} />
-              <Text style={styles.cardLabel}>{t('store.hours')}</Text>
+              <MaterialIcons name="layers" size={17} color={MUTED} />
+              <Text style={styles.cardLabel}>{t('map.floor', { floor: '' }).trim()}</Text>
             </View>
-            <Text style={styles.cardValue}>{openingHours(store.category)}</Text>
+            <Text style={styles.cardValue}>{floor}</Text>
           </View>
           <View style={styles.card}>
             <View style={styles.cardLabelRow}>
@@ -168,9 +151,6 @@ export default function StoreDetailScreen() {
           </View>
         </View>
 
-        <View style={styles.block}>
-          <Text style={styles.desc}>{store.description}</Text>
-        </View>
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
@@ -179,7 +159,7 @@ export default function StoreDetailScreen() {
           onPress={() =>
             router.dismissTo({
               pathname: '/map',
-              params: { from, dest: store.id, floor, ts: String(Date.now()) },
+              params: { from, dest: store.id, floor: store.floorId, ts: String(Date.now()) },
             })
           }
           style={styles.cta}>
@@ -202,7 +182,7 @@ const makeStyles = ({ BLUE, INK, MUTED, BORDER, BG, CARD, SURFACE, OPEN_BG, OPEN
     overflow: 'hidden',
   },
   heroShade: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     top: '55%',
     backgroundColor: 'rgba(0,0,0,0.25)',
   },

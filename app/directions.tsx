@@ -11,40 +11,24 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Defs, G, Line, Path, Pattern, Polyline, Rect, Text as SvgText } from 'react-native-svg';
+import { Circle, G, Path, Polyline } from 'react-native-svg';
 
-import { StoreIcon, wrapLabel } from '@/components/floor-plan-parts';
-import { HazardOverlay } from '@/components/hazard-overlay';
+import { FloorCanvas, markerScale } from '@/components/floor-canvas';
 import { EmptyState } from '@/components/empty-state';
 import { Text } from '@/components/scaled-text';
-import {
-  CURRENT_LOCATION_NODE,
-  EVAC_START_NODE,
-  FLOOR_VIEWBOX,
-  FLOORS,
-  getStores,
-  STAIRWELL_EXIT_ID,
-  WALK_SPEED_MPS,
-  zoneOf,
-  type Floor,
-} from '@/data/mock-floor';
-import {
-  planEvacuation,
-  planTrip,
-  routeKey,
-  stepHeadline,
-  type Point,
-  type StepKind,
-} from '@/data/route-steps';
-import { useAccessibilityMode, useHighContrast, useTextScale } from '@/hooks/use-accessibility-mode';
+import { stepHeadline, type Point, type StepKind } from '@/data/venue/plan';
+import { floorLabel, metersPerPixelOf } from '@/data/venue/venue';
+import { useTextScale } from '@/hooks/use-accessibility-mode';
 import { useActiveStep } from '@/hooks/use-active-step';
-import { setIncident, useIncident } from '@/hooks/use-incident';
-import { useWalkSimulation } from '@/hooks/use-walk-simulation';
+import { setIncident } from '@/hooks/use-incident';
+import { routeKey, useTrip } from '@/hooks/use-trip';
+import { simSpeed, useWalkSimulation } from '@/hooks/use-walk-simulation';
 
 import { useColors, type Colors } from '@/hooks/use-colors';
 const DANGER = '#D64545';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const WALK_SPEED_MPS = 1.2;
 
 const TRANSFER_ICON = {
   stairs: 'stairs',
@@ -67,54 +51,36 @@ const lowerFirst = (s: string) => (s ? s.charAt(0).toLowerCase() + s.slice(1) : 
 
 export default function DirectionsScreen() {
   const colors = useColors();
-  const { BLUE, INK, WALL, STORE_FILL, EVAC_BG, STRONG } = colors;
+  const { BLUE, INK, EVAC_BG } = colors;
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: winW, height: winH } = useWindowDimensions();
-  const {
-    to,
-    dest,
-    floor: floorParam,
-    from,
-    mode,
-    originFloor: originParam,
-  } = useLocalSearchParams<{
+  const { to, dest, from, mode } = useLocalSearchParams<{
     to?: string;
     dest?: string;
-    floor?: string;
     from?: string;
     mode?: string;
-    originFloor?: string;
   }>();
   const evac = mode === 'evac';
   const destId = to ?? dest ?? '';
-  const floor: Floor = FLOORS.includes(floorParam as Floor) ? (floorParam as Floor) : '1';
 
-  // Evacuation routes span floors: one leg per floor, joined by a 'stairs' step.
-  const [accessible] = useAccessibilityMode();
-  const [highContrast] = useHighContrast();
-  const [incident] = useIncident();
-  const textScale = useTextScale();
-  const mapTextScale = 1 + (textScale - 1) * 0.5;
-  // Without an origin the route stays on the destination floor.
-  const originFloor: Floor = FLOORS.includes(originParam as Floor) ? (originParam as Floor) : floor;
-  const legs = useMemo(
-    () =>
-      evac
-        ? planEvacuation(floor, EVAC_START_NODE, incident)
-        : planTrip(originFloor, CURRENT_LOCATION_NODE, floor, destId, accessible, incident),
-    [evac, floor, originFloor, destId, accessible, incident],
-  );
+  // One leg per floor, joined by 'transfer' steps; computed on the phone by the routing engine.
+  const { venue, trip, startNodeId, incident } = useTrip({ to: destId, from, evac });
+  const mapTextScale = 1 + (useTextScale() - 1) * 0.5;
+  void mapTextScale;
+  const legs = trip?.legs ?? null;
   const [legIndex, setLegIndex] = useState(0);
-  useEffect(() => setLegIndex(0), [legs]);
+  useEffect(() => setLegIndex(0), [trip]);
   const plan = useMemo(() => legs?.[legIndex] ?? null, [legs, legIndex]);
-  const routeFloor: Floor = evac ? (legs?.[legIndex]?.floor ?? floor) : floor;
-  const [active, setActive] = useActiveStep(routeKey(evac, originFloor, floor, destId, legIndex));
-  const [viewFloor, setViewFloor] = useState<Floor>(routeFloor);
-  useEffect(() => setViewFloor(routeFloor), [routeFloor]);
+  const routeFloorId = plan?.floorId ?? '';
+  const [active, setActive] = useActiveStep(routeKey(evac, startNodeId, destId, legIndex));
+  const [viewFloorId, setViewFloorId] = useState<string>(routeFloorId);
+  useEffect(() => setViewFloorId(routeFloorId), [routeFloorId]);
   const [focus, setFocus] = useState<Focus>('follow');
+  const viewFloorObj = venue.floors.find((f) => f.id === viewFloorId) ?? null;
+  const k = viewFloorObj ? markerScale(viewFloorObj) : 1;
 
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -129,12 +95,12 @@ export default function DirectionsScreen() {
     loop.start();
     return () => loop.stop();
   }, [pulse]);
-  const pulseR = pulse.interpolate({ inputRange: [0, 1], outputRange: [10, 28] });
+  const pulseR = pulse.interpolate({ inputRange: [0, 1], outputRange: [10 * k, 28 * k] });
   const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0] });
 
   // Simulated walker: drives the active step; external step changes (card tap, list) seek it.
-  const corners = plan?.route.corners ?? NO_CORNERS;
-  const sim = useWalkSimulation(corners);
+  const corners = plan?.corners ?? NO_CORNERS;
+  const sim = useWalkSimulation(corners, simSpeed(metersPerPixelOf(routeFloorId)));
   const { segmentIndex, seekToSegment } = sim;
   useEffect(() => {
     setActive(segmentIndex);
@@ -157,17 +123,13 @@ export default function DirectionsScreen() {
   );
 
   // Reaching the lift / escalator / stairwell hands over to the next floor's leg after a short pause.
-  const lastStep = plan?.route.steps[plan.route.steps.length - 1];
+  const lastStep = plan?.steps[plan.steps.length - 1];
   const atTransfer = lastStep?.kind === 'transfer' && sim.finished;
   useEffect(() => {
     if (!atTransfer || !legs || legIndex >= legs.length - 1) return;
     const id = setTimeout(() => setLegIndex((i) => i + 1), 2000);
     return () => clearTimeout(id);
   }, [atTransfer, legs, legIndex]);
-
-  const stores = useMemo(() => getStores(viewFloor), [viewFloor]);
-  const elevator = stores.find((s) => s.category === 'elevator') ?? null;
-  const stairwell = stores.find((s) => s.id === STAIRWELL_EXIT_ID) ?? null;
 
   if (!plan) {
     return (
@@ -186,8 +148,11 @@ export default function DirectionsScreen() {
     );
   }
 
-  const { store, route } = plan;
-  const { steps } = route;
+  const { steps } = plan;
+  const destName = trip?.destName ?? '';
+  const viewMap = viewFloorObj ? venue.mapsByFloorId[viewFloorObj.id] : undefined;
+  const routeFloor = routeFloorId;
+  const viewFloor = viewFloorId;
   const accent = evac ? DANGER : BLUE;
   const legCount = corners.length - 1;
   const current = Math.min(active, steps.length - 1);
@@ -197,50 +162,51 @@ export default function DirectionsScreen() {
 
   // Position + heading come from the walk simulation; leg bounds still drive the camera.
   const { position, heading } = sim;
-  const legFrom = corners[Math.min(current, legCount - 1)];
-  const legTo = corners[Math.min(current + 1, legCount)];
+  const legFrom = corners[Math.min(current, legCount - 1)] ?? position;
+  const legTo = corners[Math.min(current + 1, legCount)] ?? position;
   const legLeft = step.kind === 'arrive' ? 0 : Math.max(1, Math.ceil(step.meters * (1 - sim.progress)));
 
   const remainingMeters =
-    legLeft + steps.slice(current + 1).reduce((sum, s) => sum + s.meters, 0);
+    legLeft + steps.slice(current + 1).reduce((sum, s) => sum + s.meters, 0) +
+    (legs ?? []).slice(legIndex + 1).reduce((sum, l) => sum + l.steps.reduce((a, c) => a + c.meters, 0), 0);
   const arrived = step.kind === 'arrive' && sim.finished;
   const safe = evac && arrived && legIndex === (legs?.length ?? 1) - 1;
   const remainingMinutes = Math.max(1, Math.ceil(remainingMeters / WALK_SPEED_MPS / 60));
 
-  // Camera: follow the current leg, or jump to a facility the user asked about.
-  const focusPoint =
-    focus === 'stairs'
-      ? stairwell
-        ? { x: stairwell.x + stairwell.width / 2, y: stairwell.y + stairwell.height / 2 }
-        : null
-      : focus === 'elevator' && elevator
-        ? { x: elevator.x + elevator.width / 2, y: elevator.y + elevator.height / 2 }
-        : null;
+  // Camera: follow the current leg, or jump to a lift / stairwell the user asked about.
+  const facilityNode = (type: 'ELEVATOR' | 'STAIR') => {
+    const nodes = (viewMap?.nodes ?? []).filter((n) => n.type === type);
+    let best = nodes[0];
+    for (const n of nodes) {
+      if (Math.hypot(n.x - position.x, n.y - position.y) < Math.hypot(best.x - position.x, best.y - position.y)) best = n;
+    }
+    return best ?? null;
+  };
+  const focusPoint = focus === 'stairs' ? facilityNode('STAIR') : focus === 'elevator' ? facilityNode('ELEVATOR') : null;
+  const MAP_W = viewFloorObj?.mapWidth ?? 1000;
+  const MAP_H = viewFloorObj?.mapHeight ?? 1000;
   const aspect = winH / winW;
   let vbW: number;
   let cx: number;
   let cy: number;
   if (focusPoint || !onRouteFloor) {
-    vbW = 240;
-    cx = focusPoint?.x ?? FLOOR_VIEWBOX.width / 2;
-    cy = focusPoint?.y ?? FLOOR_VIEWBOX.height / 2;
-    if (!focusPoint) vbW = FLOOR_VIEWBOX.width;
+    vbW = 240 * k;
+    cx = focusPoint?.x ?? MAP_W / 2;
+    cy = focusPoint?.y ?? MAP_H / 2;
+    if (!focusPoint) vbW = Math.max(MAP_W, MAP_H * 0.7);
   } else {
     const minX = Math.min(legFrom.x, legTo.x);
     const maxX = Math.max(legFrom.x, legTo.x);
     const minY = Math.min(legFrom.y, legTo.y);
     const maxY = Math.max(legFrom.y, legTo.y);
-    vbW = Math.min(FLOOR_VIEWBOX.width, Math.max(maxX - minX + 200, (maxY - minY + 200) / aspect, 320));
+    vbW = Math.min(MAP_W, Math.max(maxX - minX + 200 * k, (maxY - minY + 200 * k) / aspect, 320 * k));
     cx = (minX + maxX) / 2;
     cy = (minY + maxY) / 2;
   }
   const vbH = vbW * aspect;
-  const vbX = Math.min(Math.max(FLOOR_VIEWBOX.width - vbW, 0), Math.max(0, cx - vbW / 2));
+  const vbX = Math.min(Math.max(MAP_W - vbW, 0), Math.max(0, cx - vbW / 2));
   // The instruction card is taller than the bottom bar, so nudge content down a little.
-  const vbY = Math.min(
-    Math.max(FLOOR_VIEWBOX.height - vbH, 0),
-    Math.max(-60, cy - vbH / 2 - vbH * 0.06),
-  );
+  const vbY = Math.min(Math.max(MAP_H - vbH, 0), Math.max(-60 * k, cy - vbH / 2 - vbH * 0.06));
   const viewBox = `${vbX} ${vbY} ${vbW} ${vbH}`;
 
   const pts = (list: { x: number; y: number }[]) => list.map((p) => `${p.x},${p.y}`).join(' ');
@@ -248,9 +214,7 @@ export default function DirectionsScreen() {
   const now = current < legCount ? [position, corners[current + 1]] : [];
   const upcoming = current + 1 < legCount ? corners.slice(current + 1) : [];
 
-  const sub = step.kind === 'arrive' || step.kind === 'transfer' ? store.name : step.landmark
-    ? t('dir.toward', { place: step.landmark })
-    : t(`store.zone.${zoneOf(store.corridor)}`);
+  const sub = step.kind === 'arrive' || step.kind === 'transfer' ? destName : step.text;
   const afterText = next
     ? next.kind === 'arrive'
       ? t('dir.arrived')
@@ -260,64 +224,22 @@ export default function DirectionsScreen() {
   return (
     <View style={styles.root}>
       <View style={StyleSheet.absoluteFill}>
-        <Svg width="100%" height="100%" viewBox={viewBox} preserveAspectRatio="xMidYMid slice">
-          <Defs>
-            <Pattern id="hatchDir" patternUnits="userSpaceOnUse" width={6} height={6}>
-              <Line x1={0} y1={0} x2={0} y2={6} stroke="#C9CDD4" strokeWidth={1.5} />
-            </Pattern>
-          </Defs>
-          <Rect
-            x={8}
-            y={8}
-            width={FLOOR_VIEWBOX.width - 16}
-            height={FLOOR_VIEWBOX.height - 16}
-            fill="none"
-            stroke={WALL}
-            strokeWidth={4}
-          />
-          {stores.map((s) => {
-            const rest = s.category === 'rest';
-            const mx = s.x + s.width / 2;
-            const my = s.y + s.height / 2;
-            const isDest = onRouteFloor && s.id === store.id;
-            const isLift = s.category === 'elevator';
-            return (
-              <G key={s.id}>
-                <Rect
-                  x={s.x}
-                  y={s.y}
-                  width={s.width}
-                  height={s.height}
-                  fill={rest ? 'url(#hatchDir)' : isDest ? '#D3D7DE' : STORE_FILL}
-                  stroke={isLift ? BLUE : WALL}
-                  strokeWidth={isLift ? 3 : 2.5}
-                />
-                {!rest && <StoreIcon category={s.category} x={mx} y={my - 10} />}
-                {wrapLabel(s.name).map((line, i) => (
-                  <SvgText
-                    key={i}
-                    x={mx}
-                    y={rest ? my + i * 8 : my + 8 + i * 7.5}
-                    fontSize={6.5 * mapTextScale}
-                    fill={highContrast ? STRONG : INK}
-                    textAnchor="middle">
-                    {line}
-                  </SvgText>
-                ))}
-              </G>
-            );
-          })}
-
-          <HazardOverlay hazard={incident} floor={viewFloor} />
-
+        {viewFloorObj ? (
+          <FloorCanvas
+            floor={viewFloorObj}
+            map={viewMap}
+            showLabels={false}
+            viewBox={viewBox}
+            preserveAspectRatio="xMidYMid slice"
+            fireNodeIds={incident && incident.floorId === viewFloorObj.id ? [incident.nodeId] : []}>
           {onRouteFloor && done.length > 1 && (
             <Polyline
               points={pts(done)}
               fill="none"
               stroke={accent}
-              strokeWidth={3}
+              strokeWidth={3 * k}
               strokeOpacity={0.25}
-              strokeDasharray={[8, 4, 2, 4]}
+              strokeDasharray={[8 * k, 4 * k, 2 * k, 4 * k]}
               strokeLinejoin="round"
             />
           )}
@@ -326,8 +248,8 @@ export default function DirectionsScreen() {
               points={pts([corners[current + 1], ...upcoming.slice(1)])}
               fill="none"
               stroke={accent}
-              strokeWidth={3}
-              strokeDasharray={[8, 4, 2, 4]}
+              strokeWidth={3 * k}
+              strokeDasharray={[8 * k, 4 * k, 2 * k, 4 * k]}
               strokeLinejoin="round"
             />
           )}
@@ -336,7 +258,7 @@ export default function DirectionsScreen() {
               points={pts(now)}
               fill="none"
               stroke={accent}
-              strokeWidth={6}
+              strokeWidth={6 * k}
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -351,7 +273,7 @@ export default function DirectionsScreen() {
                 fill={accent}
                 opacity={pulseOpacity}
               />
-              <G transform={`translate(${position.x}, ${position.y}) rotate(${heading})`}>
+              <G transform={`translate(${position.x}, ${position.y}) rotate(${heading}) scale(${k})`}>
                 <Path
                   d="M0 -11 L8 9 L0 4 L-8 9 Z"
                   fill={accent}
@@ -362,7 +284,8 @@ export default function DirectionsScreen() {
               </G>
             </G>
           )}
-        </Svg>
+          </FloorCanvas>
+        ) : null}
       </View>
 
       <SafeAreaView edges={['top']} style={styles.overlay} pointerEvents="box-none">
@@ -405,7 +328,7 @@ export default function DirectionsScreen() {
             accessibilityLabel={t('dir.list')}
             hitSlop={10}
             onPress={() =>
-              router.push({ pathname: '/directions-list', params: { to: destId, floor, from, mode, leg: String(legIndex), originFloor },
+              router.push({ pathname: '/directions-list', params: { to: destId, from, mode, leg: String(legIndex) },
               })
             }
             style={styles.menu}>
@@ -439,21 +362,23 @@ export default function DirectionsScreen() {
 
       <View style={[styles.sideRight, { top: insets.top + 150 + (evac ? 70 : 0) }]} pointerEvents="box-none">
         <View style={styles.floorColumn}>
-          {[...FLOORS].reverse().map((f) => {
+          {[...venue.floors].reverse().map((fl) => {
+            const f = fl.id;
+            const label = floorLabel(fl.id);
             const on = f === viewFloor;
             return (
               <Pressable
                 key={f}
                 accessibilityRole="button"
                 accessibilityState={{ selected: on }}
-                accessibilityLabel={t('map.floor', { floor: f })}
+                accessibilityLabel={t('map.floor', { floor: label })}
                 onPress={() => {
-                  setViewFloor(f);
+                  setViewFloorId(f);
                   setFocus('follow');
                 }}
                 style={[styles.floorItem, on && styles.floorItemOn]}>
-                <Text style={[styles.floorText, on && styles.floorTextOn]}>{f}</Text>
-                {incident?.floor === f && <View style={styles.floorDot} />}
+                <Text style={[styles.floorText, on && styles.floorTextOn]}>{label}</Text>
+                {incident?.floorId === f && <View style={styles.floorDot} />}
               </Pressable>
             );
           })}
@@ -467,7 +392,7 @@ export default function DirectionsScreen() {
         ]}>
         <View style={styles.bottomInfo}>
           <Text style={styles.bottomName} numberOfLines={1}>
-            {store.name}
+            {destName}
           </Text>
           <Text style={styles.bottomMeta}>
             {arrived
@@ -479,7 +404,7 @@ export default function DirectionsScreen() {
           <View style={styles.arrivedBtns}>
             <Pressable
               accessibilityRole="button"
-              onPress={() => router.push({ pathname: '/store', params: { id: store.id, floor: routeFloor, from } })}
+              onPress={() => router.push({ pathname: '/store', params: { id: destId, from } })}
               style={[styles.arrivedBtn, styles.arrivedBtnPrimary]}>
               <Text style={styles.arrivedBtnPrimaryText}>{t('dir.viewStore')}</Text>
             </Pressable>
@@ -513,7 +438,7 @@ export default function DirectionsScreen() {
         <Pressable
           accessibilityRole="button"
           onPress={() =>
-            router.dismissTo({ pathname: '/map', params: { from, floor, ts: String(Date.now()) } })
+            router.dismissTo({ pathname: '/map', params: { from, floor: routeFloor, ts: String(Date.now()) } })
           }
           hitSlop={8}>
           <Text style={styles.exit}>{t('dir.exit')}</Text>
@@ -576,7 +501,7 @@ const makeStyles = ({ BLUE, INK, MUTED, BORDER, ACTIVE_BG, CANVAS, CARD }: Color
   },
   evacBannerText: { flex: 1, fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
   safe: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
