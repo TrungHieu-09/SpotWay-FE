@@ -49,6 +49,9 @@ export type Connector = {
   stops: ConnectorStop[]
 }
 
+/** Trường sửa được của connector (BE: PATCH /connectors/:id). */
+export type ConnectorPatch = Partial<Pick<Connector, 'name' | 'accessible'>>
+
 /** Dữ liệu tạo connector; `buildingId` lấy từ đường dẫn, `id` do BE cấp. */
 export type NewConnector = Omit<Connector, 'id' | 'buildingId'>
 

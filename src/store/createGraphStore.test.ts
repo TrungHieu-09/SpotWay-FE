@@ -41,6 +41,7 @@ function setup(overrides: Partial<GraphGateway> = {}) {
     deleteEdge: async (id) => { calls.push(`deleteEdge:${id}`) },
     fetchConnectors: async () => [],
     createConnector: async (buildingId, value) => ({ ...value, id: 'new-c', buildingId }),
+    updateConnector: async (id, patch) => ({ id, buildingId: 'B1', name: 'x', kind: 'ELEVATOR', accessible: true, stops: [], ...patch }),
     deleteConnector: async (id) => { calls.push(`deleteConnector:${id}`) },
     ...overrides,
   }
@@ -419,5 +420,32 @@ describe('connector CRUD', () => {
     await failing.getState().flush()
     assert.deepEqual(failing.getState().connectorsByBuilding['B1']?.map((c) => c.id), ['c1'])
     assert.match(failing.getState().error ?? '', /Không thể xoá connector: 409/)
+  })
+})
+
+describe('updateConnector', () => {
+  const connector = { id: 'c1', buildingId: 'B1', name: 'Thang A', kind: 'ELEVATOR' as const, accessible: true, stops: [] }
+
+  it('đổi ngay trên state rồi dùng bản BE trả về', async () => {
+    const { store } = setup({ fetchConnectors: async () => [connector] })
+    await store.getState().loadConnectors('B1')
+    store.getState().updateConnector('B1', 'c1', { name: 'Thang B' })
+    assert.equal(store.getState().connectorsByBuilding.B1[0].name, 'Thang B')
+    await store.getState().flush()
+    assert.equal(store.getState().connectorsByBuilding.B1[0].name, 'Thang B')
+    assert.equal(store.getState().connectorsByBuilding.B1[0].kind, 'ELEVATOR')
+  })
+
+  it('BE từ chối thì hoàn tác đúng trường đã đổi', async () => {
+    const { store } = setup({
+      fetchConnectors: async () => [connector],
+      updateConnector: () => Promise.reject(new Error('403')),
+    })
+    await store.getState().loadConnectors('B1')
+    store.getState().updateConnector('B1', 'c1', { accessible: false })
+    assert.equal(store.getState().connectorsByBuilding.B1[0].accessible, false)
+    await store.getState().flush()
+    assert.equal(store.getState().connectorsByBuilding.B1[0].accessible, true)
+    assert.ok(store.getState().error)
   })
 })

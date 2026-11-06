@@ -106,6 +106,7 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [suggestedEdges, setSuggestedEdges] = useState<EdgeSuggestion[]>([])
   const createEdge = useGraphStore((state) => state.createEdge)
   const createNode = useGraphStore((state) => state.createNode)
+  const moveNode = useGraphStore((state) => state.moveNode)
   const floors = useFloorStore((state) => state.floors)
   const calibrateFloor = useFloorStore((state) => state.calibrateFloor)
   const [editingPoiId, setEditingPoiId] = useState<string>()
@@ -603,6 +604,7 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
                       size={stageSize}
                       onNodeClick={tool.handleNodeClick}
                       onNodeDelete={readOnly ? () => undefined : tool.handleNodeDelete}
+                      onNodeMove={readOnly ? undefined : (nodeId, to) => selectedFloorId && moveNode(selectedFloorId, nodeId, to)}
                       onDraftNodeMove={moveDraftNode}
                     />
                     <PoiMarkersLayer pois={pois} nodes={currentFloorNodes} size={stageSize} selectedPoiId={editingPoiId} onMove={readOnly ? () => undefined : handleMovePoi} onSelect={setEditingPoiId} />

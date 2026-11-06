@@ -14,6 +14,8 @@ type GraphNodesLayerProps = {
   size: MapSize
   onNodeClick: (nodeId: string) => void
   onNodeDelete: (nodeId: string) => void
+  /** Có truyền thì node kéo thả được; vị trí mới tính theo % (chưa lưu pixel). */
+  onNodeMove?: (nodeId: string, to: PercentPoint) => void
   onDraftNodeMove: (nodeId: string, to: PercentPoint) => void
 }
 
@@ -37,6 +39,7 @@ export const GraphNodesLayer = memo(function GraphNodesLayer({
   size,
   onNodeClick,
   onNodeDelete,
+  onNodeMove,
   onDraftNodeMove,
 }: GraphNodesLayerProps) {
   return (
@@ -61,6 +64,10 @@ export const GraphNodesLayer = memo(function GraphNodesLayer({
               fill={nodeFill(node.type)}
               stroke="#ffffff"
               strokeWidth={isHighlighted ? 4 : 3}
+              draggable={Boolean(onNodeMove)}
+              onDragEnd={(event) =>
+                onNodeMove?.(node.id, pixelToPercent(event.target.x(), event.target.y(), size.width, size.height))
+              }
               onClick={(event) => {
                 event.cancelBubble = true
                 onNodeClick(node.id)

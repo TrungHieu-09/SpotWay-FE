@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand/vanilla'
 import type { GraphGateway } from '../api/graphGateway.ts'
 import type { MapSize, PercentPoint } from '../types/geometry.ts'
-import type { Connector, GraphEdge, GraphNode, NewConnector, NewGraphNode } from '../types/graph.ts'
+import type { Connector, ConnectorPatch, GraphEdge, GraphNode, NewConnector, NewGraphNode } from '../types/graph.ts'
 import { clampPercent } from '../utils/canvasCoordinates.ts'
 import { createOptimisticKit } from './optimisticKit.ts'
 
@@ -38,6 +38,8 @@ export type GraphState = {
   clearConnectors: (buildingId: string) => void
   /** Không optimistic (cần id từ BE). Trả true khi tạo xong. */
   createConnector: (buildingId: string, input: NewConnector) => Promise<boolean>
+  /** Optimistic: đổi ngay, BE từ chối thì hoàn tác. */
+  updateConnector: (buildingId: string, connectorId: string, patch: ConnectorPatch) => void
   deleteConnector: (buildingId: string, connectorId: string) => void
   clearError: () => void
   /** Chờ mọi thao tác ghi đang bay hoàn tất (thành công hoặc đã rollback). */
@@ -406,6 +408,31 @@ export function createGraphSlice(gateway: GraphGateway): StateCreator<GraphState
         })()
         track(task)
         return task
+      },
+
+      updateConnector(buildingId, connectorId, patch) {
+        const connector = get().connectorsByBuilding[buildingId]?.find((item) => item.id === connectorId)
+        if (!connector) return
+        const setList = (fn: (list: Connector[]) => Connector[]) =>
+          set((state) =>
+            state.connectorsByBuilding[buildingId]
+              ? { connectorsByBuilding: { ...state.connectorsByBuilding, [buildingId]: fn(state.connectorsByBuilding[buildingId]) } }
+              : state,
+          )
+        const previous = { name: connector.name, accessible: connector.accessible }
+        setList((list) => list.map((item) => (item.id === connectorId ? { ...item, ...patch } : item)))
+        track(
+          (async () => {
+            try {
+              const saved = await gateway.updateConnector(connectorId, patch)
+              setList((list) => list.map((item) => (item.id === connectorId ? saved : item)))
+            } catch (reason) {
+              // Chỉ hoàn tác các trường vừa đổi, giữ nguyên thay đổi khác nếu có.
+              setList((list) => list.map((item) => (item.id === connectorId ? { ...item, ...Object.fromEntries(Object.keys(patch).map((key) => [key, previous[key as keyof typeof previous]])) } : item)))
+              fail('Không thể cập nhật connector', reason)
+            }
+          })(),
+        )
       },
 
       deleteConnector(buildingId, connectorId) {

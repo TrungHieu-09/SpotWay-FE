@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button, Card, Empty, List, Popconfirm, Space, Spin, Tag, Typography } from 'antd'
+import { Button, Card, Empty, List, Popconfirm, Space, Spin, Switch, Tag, Typography } from 'antd'
 import { DeleteOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { useFloorStore } from '../../store/useFloorStore'
 import { useGraphStore } from '../../store/useGraphStore'
@@ -19,6 +19,7 @@ export function ConnectorPanel({ readOnly = false }: { readOnly?: boolean }) {
   const connectors = useGraphStore((state) => (buildingId && state.connectorsByBuilding[buildingId]) || EMPTY_CONNECTORS)
   const loadConnectors = useGraphStore((state) => state.loadConnectors)
   const createConnector = useGraphStore((state) => state.createConnector)
+  const updateConnector = useGraphStore((state) => state.updateConnector)
   const deleteConnector = useGraphStore((state) => state.deleteConnector)
   const [formOpen, setFormOpen] = useState(false)
   const [suggestOpen, setSuggestOpen] = useState(false)
@@ -51,6 +52,15 @@ export function ConnectorPanel({ readOnly = false }: { readOnly?: boolean }) {
           renderItem={(connector) => (
             <List.Item
               actions={[
+                <Switch
+                  key="accessible"
+                  size="small"
+                  checked={connector.accessible}
+                  disabled={readOnly}
+                  checkedChildren="Tiếp cận"
+                  unCheckedChildren="Không"
+                  onChange={(accessible) => buildingId && updateConnector(buildingId, connector.id, { accessible })}
+                />,
                 <Popconfirm key="remove" title="Xóa connector này?" disabled={readOnly} onConfirm={() => buildingId && deleteConnector(buildingId, connector.id)}>
                   <Button danger type="text" icon={<DeleteOutlined />} disabled={readOnly} />
                 </Popconfirm>,
@@ -59,8 +69,21 @@ export function ConnectorPanel({ readOnly = false }: { readOnly?: boolean }) {
               <Space orientation="vertical" size={2}>
                 <Space>
                   <Tag color={CONNECTOR_STYLE[connector.kind].color}>{CONNECTOR_STYLE[connector.kind].label}</Tag>
-                  <Typography.Text strong>{connector.name}</Typography.Text>
-                  {!connector.accessible && <Tag>Không tiếp cận</Tag>}
+                  <Typography.Text
+                    strong
+                    editable={
+                      readOnly
+                        ? false
+                        : {
+                            onChange: (value) => {
+                              const name = value.trim()
+                              if (buildingId && name && name !== connector.name) updateConnector(buildingId, connector.id, { name })
+                            },
+                          }
+                    }
+                  >
+                    {connector.name}
+                  </Typography.Text>
                 </Space>
                 <Typography.Text type="secondary">
                   {connector.stops.map((stop) => floorName.get(stop.floorId) ?? stop.floorId).join(' → ')}
