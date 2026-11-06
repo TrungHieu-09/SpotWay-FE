@@ -1,4 +1,4 @@
-import type { HazardType } from './graph'
+import type { GraphEdge, GraphNode, HazardType } from './graph'
 
 export type PublicFloor = {
   id: string
@@ -13,7 +13,9 @@ export type PublicFloor = {
 }
 
 export type NodeHazardType = HazardType
+
 export type VerticalLinkKind = 'ELEVATOR' | 'STAIR' | 'ESCALATOR'
+
 export type VerticalLinkDirection = 'UP' | 'DOWN' | 'BIDIRECTIONAL'
 
 export type VerticalLink = {
@@ -28,9 +30,19 @@ export type VerticalLink = {
 }
 
 export type Maneuver =
-  | 'START' | 'STRAIGHT' | 'SLIGHT_LEFT' | 'SLIGHT_RIGHT'
-  | 'TURN_LEFT' | 'TURN_RIGHT' | 'U_TURN_LEFT' | 'U_TURN_RIGHT'
-  | 'ELEVATOR' | 'STAIR' | 'ESCALATOR' | 'ARRIVE' | 'ARRIVE_AT_SAFE_EXIT'
+  | 'START'
+  | 'STRAIGHT'
+  | 'SLIGHT_LEFT'
+  | 'SLIGHT_RIGHT'
+  | 'TURN_LEFT'
+  | 'TURN_RIGHT'
+  | 'U_TURN_LEFT'
+  | 'U_TURN_RIGHT'
+  | 'ELEVATOR'
+  | 'STAIR'
+  | 'ESCALATOR'
+  | 'ARRIVE'
+  | 'ARRIVE_AT_SAFE_EXIT'
 
 export type RouteInstruction = {
   maneuver: Maneuver
@@ -64,6 +76,15 @@ export type PublicNode = {
   accessible: boolean
   name?: string | null
   hazard?: NodeHazardType
+}
+
+/** Dữ liệu RouteMap cần: floor + graph domain (toạ độ %); route steps vẫn là toạ độ pixel bản đồ. */
+export type RouteMapData = {
+  floor: PublicFloor
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+  /** POI của tầng (gắn vào node) để vẽ biểu tượng trên bản đồ khách. */
+  pois: PublicPoi[]
 }
 
 export type PublicStore = {

@@ -1,4 +1,4 @@
-import type { RouteStep, VerticalLinkKind } from '../types/navigation'
+import type { RouteStep, VerticalLinkKind } from '../types/navigation.ts'
 
 /** Đoạn đi bộ trên một tầng. */
 export type WalkSegment = {

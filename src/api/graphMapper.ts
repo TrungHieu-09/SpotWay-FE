@@ -1,6 +1,7 @@
 import type { MapSize, PercentPoint } from '../types/geometry.ts'
 import type { Connector, ConnectorKind, EdgeStatus, GraphEdge, GraphNode, HazardType, NewGraphNode, NodeType } from '../types/graph.ts'
 import type { NewPoi, Poi, PoiCategory, PoiDetailsPatch } from '../types/poi.ts'
+import type { PublicFloorMap, RouteMapData } from '../types/navigation.ts'
 import { percentToPixel, pixelToPercent } from '../utils/canvasCoordinates.ts'
 
 /**
@@ -166,5 +167,44 @@ export function connectorFromDto(dto: ConnectorDto): Connector {
     kind: dto.kind,
     accessible: dto.accessible,
     stops: dto.stops.map(({ floorId, nodeId }) => ({ floorId, nodeId })),
+  }
+}
+
+const NODE_TYPES: readonly NodeType[] = [
+  'NORMAL', 'DOOR', 'JUNCTION', 'ELEVATOR', 'STAIR', 'ESCALATOR', 'EXIT', 'EMERGENCY_EXIT',
+]
+
+/** Kích thước mặc định khi tầng công khai chưa khai báo (khớp mặc định cũ của RouteMap). */
+const DEFAULT_PUBLIC_MAP_SIZE: MapSize = { width: 1200, height: 760 }
+
+export function publicMapSize(floor: PublicFloorMap['floor']): MapSize {
+  return {
+    width: floor.mapWidth ?? DEFAULT_PUBLIC_MAP_SIZE.width,
+    height: floor.mapHeight ?? DEFAULT_PUBLIC_MAP_SIZE.height,
+  }
+}
+
+/** Bản đồ công khai (pixel) -> graph domain (%) cho RouteMap. */
+export function toRouteMapData(map: PublicFloorMap): RouteMapData {
+  const size = publicMapSize(map.floor)
+  return {
+    floor: map.floor,
+    nodes: map.nodes.map((node) =>
+      nodeFromDto(
+        {
+          id: node.id,
+          floorId: node.floorId,
+          x: node.x,
+          y: node.y,
+          name: node.name,
+          type: NODE_TYPES.find((type) => type === node.type) ?? 'NORMAL',
+          accessible: node.accessible,
+          hazard: node.hazard,
+        },
+        size,
+      ),
+    ),
+    edges: map.edges.map((edge) => edgeFromDto(edge)),
+    pois: map.pois,
   }
 }

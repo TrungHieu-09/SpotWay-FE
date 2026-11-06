@@ -6,6 +6,7 @@ import {
   nodeFromDto,
   nodeToCreateDto,
   poiFromDto,
+  toRouteMapData,
   poiToCreateDto,
   poiToUpdateDto,
   positionFromDto,
@@ -99,5 +100,34 @@ describe('connectorFromDto', () => {
     } as Parameters<typeof connectorFromDto>[0])
     assert.deepEqual(connector.stops.map((s) => s.floorId), ['f1', 'f2'])
     assert.equal('createdAt' in connector, false)
+  })
+})
+
+describe('toRouteMapData', () => {
+  const floor = { id: 'f1', buildingId: 'b1', floorNumber: 1, name: 'T1', mapImageUrl: null, mapWidth: 1000, mapHeight: 500 }
+
+  it('đổi node công khai (pixel) sang domain (%), type lạ -> NORMAL', () => {
+    const data = toRouteMapData({
+      floor,
+      nodes: [
+        { id: 'n1', floorId: 'f1', x: 500, y: 250, type: 'ELEVATOR', accessible: true },
+        { id: 'n2', floorId: 'f1', x: 100, y: 50, type: 'WEIRD', accessible: false, hazard: 'FIRE' },
+      ],
+      edges: [{ id: 'e1', floorId: 'f1', fromNodeId: 'n1', toNodeId: 'n2' }],
+      pois: [],
+      stores: [],
+    })
+    assert.deepEqual([data.nodes[0].x, data.nodes[0].y, data.nodes[0].type], [50, 50, 'ELEVATOR'])
+    assert.deepEqual([data.nodes[1].type, data.nodes[1].hazard, data.nodes[1].accessible], ['NORMAL', 'FIRE', false])
+    assert.equal(data.edges[0].status, 'ACTIVE')
+  })
+
+  it('tầng thiếu kích thước dùng mặc định 1200x760', () => {
+    const data = toRouteMapData({
+      floor: { ...floor, mapWidth: null, mapHeight: null },
+      nodes: [{ id: 'n1', floorId: 'f1', x: 600, y: 380, type: 'NORMAL', accessible: true }],
+      edges: [], pois: [], stores: [],
+    })
+    assert.deepEqual([data.nodes[0].x, data.nodes[0].y], [50, 50])
   })
 })

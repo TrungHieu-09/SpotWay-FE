@@ -1,12 +1,19 @@
+/** Phần tối thiểu của Storage mà module cần (test truyền bản giả, trình duyệt truyền `localStorage`). */
 export type KeyValueStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
 const KEY = 'spotway.guest.destination'
+/** Quá thời gian này thì coi như khách đã bỏ chuyến đi cũ. */
 export const DESTINATION_TTL_MS = 30 * 60 * 1000
 
 type Remembered = { buildingId: string; destinationId: string; savedAt: number }
 
+/**
+ * Nhớ điểm đến của khách để khi quét một mã QR khác giữa đường (trang tải lại) vẫn tiếp tục chỉ đường
+ * từ vị trí mới tới đúng điểm đến cũ, không bắt chọn lại.
+ */
 export function rememberDestination(storage: KeyValueStorage, buildingId: string, destinationId: string, now = Date.now()) {
-  storage.setItem(KEY, JSON.stringify({ buildingId, destinationId, savedAt: now } satisfies Remembered))
+  const value: Remembered = { buildingId, destinationId, savedAt: now }
+  storage.setItem(KEY, JSON.stringify(value))
 }
 
 export function recallDestination(storage: KeyValueStorage, buildingId: string, now = Date.now()): string | undefined {

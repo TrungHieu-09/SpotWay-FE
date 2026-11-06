@@ -1,0 +1,114 @@
+.route-floors {
+  margin: 0 auto 24px;
+  max-width: 560px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.route-floors__header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+  color: #e2e8f0;
+}
+
+.route-floors__header span {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.route-floors__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.route-floors__walk,
+.route-floors__ride {
+  width: 100%;
+  border: 2px solid transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.route-floors__walk {
+  padding: 10px;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.route-floors__walk.is-active {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+
+.route-floors__walk-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.route-floors__distance {
+  margin-left: auto;
+  font-size: 12px;
+  color: #475569;
+}
+
+.route-floors__tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.route-floors__tag--start {
+  background: #2563eb;
+}
+
+.route-floors__tag--end {
+  background: #16a34a;
+}
+
+.route-floors__map .route-map {
+  min-height: 0;
+  height: 260px;
+  border-radius: 10px;
+}
+
+.route-floors__ride {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(124, 58, 237, 0.18);
+  color: #e9d5ff;
+  font-size: 13px;
+}
+
+.route-floors__ride.is-active {
+  border-color: #a78bfa;
+  background: rgba(124, 58, 237, 0.34);
+}
+
+.route-floors__ride-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #7c3aed;
+  font-size: 18px;
+  color: #ffffff;
+}

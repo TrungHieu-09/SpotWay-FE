@@ -85,10 +85,10 @@
 
 /* Top Turn-by-Turn Card (Matching Photo Header) */
 .phone-turn-banner {
-  position: absolute;
-  top: 54px;
-  left: 16px;
-  right: 16px;
+  /* Nằm trong luồng (không đè lên bản đồ) để hộp chọn điểm cao đến đâu cũng không che nút chọn tầng */
+  position: relative;
+  flex: none;
+  margin: 54px 16px 0;
   z-index: 30;
   background: #ffffff;
   border-radius: 18px;
@@ -151,7 +151,7 @@
 /* Floating Vertical Floor Selector (Matching Right Column in Photo) */
 .phone-floor-pills {
   position: absolute;
-  top: 180px;
+  top: 12px;
   right: 14px;
   z-index: 25;
   display: flex;
@@ -194,7 +194,7 @@
 /* Left Floating Transition Shortcuts */
 .phone-transition-shortcuts {
   position: absolute;
-  top: 240px;
+  top: 12px;
   left: 14px;
   z-index: 25;
   display: flex;
@@ -328,4 +328,108 @@
   .navigation-page__grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Điểm xuất phát bị khoá theo mã QR: chữ phải đọc được (mặc định select vô hiệu hoá bị mờ gần như vô hình) */
+.navigation-page .ant-select-disabled .ant-select-selection-item {
+  color: #1e293b;
+  -webkit-text-fill-color: #1e293b;
+  font-weight: 600;
+}
+
+/* Tầng nằm trên tuyến: viền xanh + chấm để thấy ngay tuyến đi qua những tầng nào */
+.phone-floor-pill-btn.on-route:not(.active) {
+  box-shadow: inset 0 0 0 2px #2563eb;
+  position: relative;
+}
+
+.phone-floor-pill-btn.on-route::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f97316;
+}
+
+.bottom-sheet__sim {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.bottom-sheet__hint {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Bản đồ trong khung điện thoại co theo phần còn lại sau hộp chọn điểm, không giữ chiều cao tối thiểu của bản desktop */
+.phone-screen .route-map {
+  min-height: 0;
+}
+
+/* Điều khiển trong hộp chọn điểm: nền thẻ trắng nên chữ phải đậm (giao diện antd tối làm chữ mờ gần như không đọc được).
+   Dùng !important vì antd gắn style theo biến CSS với độ ưu tiên cao hơn. */
+.phone-turn-banner .ant-segmented,
+.bottom-sheet__sim .ant-segmented {
+  background: #e2e8f0 !important;
+}
+
+.phone-turn-banner .ant-segmented .ant-segmented-item,
+.bottom-sheet__sim .ant-segmented .ant-segmented-item {
+  color: #334155 !important;
+}
+
+.phone-turn-banner .ant-segmented .ant-segmented-item-selected,
+.bottom-sheet__sim .ant-segmented .ant-segmented-item-selected {
+  background: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.phone-turn-banner .ant-btn-default,
+.bottom-sheet__sim .ant-btn-default {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+.phone-turn-banner .ant-select {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px;
+}
+
+.phone-turn-banner .ant-select .ant-select-content,
+.phone-turn-banner .ant-select .ant-select-selection-item {
+  color: #0f172a !important;
+}
+
+.phone-turn-banner .ant-select .ant-select-placeholder,
+.phone-turn-banner .ant-select input::placeholder {
+  color: #64748b !important;
+}
+
+/* Cột điều khiển bản máy tính: ô chọn/nút không được tràn ra ngoài cột 360px */
+.navigation-page__panel {
+  min-width: 0;
+}
+
+.navigation-page__panel > *,
+.navigation-page__guidance > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.navigation-page__panel .ant-select,
+.navigation-page__panel .ant-input-affix-wrapper {
+  width: 100%;
+}
+
+.navigation-page__panel .ant-steps-item-title,
+.navigation-page__panel .ant-steps-item-description {
+  overflow-wrap: anywhere;
 }
