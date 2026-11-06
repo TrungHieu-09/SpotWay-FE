@@ -5,6 +5,7 @@ import type { Area } from '../types/area'
 export type CreateStaffPayload = {
   name: string
   email: string
+  password?: string
   role: 'building_manager' | 'store_owner'
   areaIds?: string[]
 }

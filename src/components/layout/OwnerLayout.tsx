@@ -13,6 +13,7 @@ import {
 import { useAuthStore } from '../../auth/store'
 import './SpotWayNavbar.css'
 import './OwnerLayout.css'
+import '../../pages/BuildingOwner/OwnerStaffPage.css'
 
 interface NavItem {
   path: string

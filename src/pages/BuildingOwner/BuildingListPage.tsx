@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { App as AntApp, Button, Form, Input, Modal, Popconfirm } from 'antd'
+import { App as AntApp, Button, Popconfirm } from 'antd'
 import {
   ApartmentOutlined,
   EditOutlined,
@@ -15,12 +15,15 @@ import { useBuildingStore } from '../../store/useBuildingStore'
 import type { Building } from '../../types/building'
 import { StatCard, StatusPill } from '../../components/ui'
 import './BuildingListPage.css'
+import './OwnerStaffPage.css'
 
 export function BuildingListPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingBuilding, setEditingBuilding] = useState<Building | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editAddress, setEditAddress] = useState('')
+  const [editErrors, setEditErrors] = useState<{ name?: string; address?: string }>({})
   const [isSaving, setIsSaving] = useState(false)
-  const [editForm] = Form.useForm<{ name: string; address: string }>()
   const navigate = useNavigate()
   const buildings = useBuildingStore((state) => state.buildings)
   const isLoading = useBuildingStore((state) => state.isLoading)
@@ -41,15 +44,29 @@ export function BuildingListPage() {
 
   function openEdit(building: Building) {
     setEditingBuilding(building)
-    editForm.setFieldsValue({ name: building.name, address: building.address })
+    setEditName(building.name)
+    setEditAddress(building.address)
+    setEditErrors({})
   }
 
-  async function submitEdit(values: { name: string; address: string }) {
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault()
     if (!editingBuilding) return
+    const nextErrors: { name?: string; address?: string } = {}
+    if (!editName.trim()) nextErrors.name = 'Vui lòng nhập tên tòa nhà'
+    if (!editAddress.trim()) nextErrors.address = 'Vui lòng nhập địa chỉ'
+    if (Object.keys(nextErrors).length > 0) {
+      setEditErrors(nextErrors)
+      return
+    }
+    setEditErrors({})
     setIsSaving(true)
     try {
-      await updateBuilding(editingBuilding.id, values)
-      message.success('Đã cập nhật tòa nhà')
+      await updateBuilding(editingBuilding.id, {
+        name: editName.trim(),
+        address: editAddress.trim(),
+      })
+      message.success('Đã cập nhật thông tin tòa nhà')
       setEditingBuilding(null)
     } catch (error) {
       message.error((error as Error).message)
@@ -154,33 +171,129 @@ export function BuildingListPage() {
         onClose={() => setIsCreateOpen(false)}
       />
 
-      {/* ── Edit modal ── */}
-      <Modal
-        title="Chỉnh sửa tòa nhà"
-        open={Boolean(editingBuilding)}
-        confirmLoading={isSaving}
-        onCancel={() => setEditingBuilding(null)}
-        onOk={() => editForm.submit()}
-        okText="Lưu"
-        cancelText="Hủy"
-      >
-        <Form form={editForm} layout="vertical" onFinish={submitEdit}>
-          <Form.Item
-            name="name"
-            label="Tên tòa nhà"
-            rules={[{ required: true, message: 'Nhập tên tòa nhà' }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="address"
-            label="Địa chỉ"
-            rules={[{ required: true, message: 'Nhập địa chỉ' }]}
-          >
-            <Input />
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* ── Custom Spatial Glass Edit Building Modal ── */}
+      {editingBuilding && (
+        <div
+          className="swm-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isSaving) {
+              setEditingBuilding(null)
+            }
+          }}
+        >
+          <div className="swm-card" role="dialog" aria-modal="true">
+            <div className="swm-topline" />
+
+            <div className="swm-head">
+              <div className="swm-head__left">
+                <div className="swm-badge">
+                  <span className="material-symbols-outlined" style={{ fontSize: 22 }}>
+                    edit_square
+                  </span>
+                </div>
+                <div>
+                  <h2 className="swm-title">Chỉnh sửa Tòa nhà</h2>
+                  <p className="swm-subtitle">
+                    Cập nhật tên hiển thị và địa chỉ của cơ sở hạ tầng
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="swm-close"
+                onClick={() => setEditingBuilding(null)}
+                disabled={isSaving}
+                aria-label="Đóng"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  close
+                </span>
+              </button>
+            </div>
+
+            <form className="swm-form" onSubmit={(e) => void handleEditSubmit(e)} noValidate>
+              <div className="swm-field">
+                <label className="swm-label">
+                  <span>
+                    Tên tòa nhà <span className="swm-req">*</span>
+                  </span>
+                </label>
+                <div className="swm-input-wrap">
+                  <span className="material-symbols-outlined swm-input-icon">domain</span>
+                  <input
+                    type="text"
+                    className="swm-input"
+                    value={editName}
+                    onChange={(e) => {
+                      setEditName(e.target.value)
+                      if (editErrors.name) setEditErrors((prev) => ({ ...prev, name: undefined }))
+                    }}
+                  />
+                </div>
+                {editErrors.name && (
+                  <p className="swm-error">
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
+                      error
+                    </span>
+                    {editErrors.name}
+                  </p>
+                )}
+              </div>
+
+              <div className="swm-field">
+                <label className="swm-label">
+                  <span>
+                    Địa chỉ <span className="swm-req">*</span>
+                  </span>
+                </label>
+                <div className="swm-input-wrap">
+                  <span className="material-symbols-outlined swm-input-icon">location_on</span>
+                  <input
+                    type="text"
+                    className="swm-input"
+                    value={editAddress}
+                    onChange={(e) => {
+                      setEditAddress(e.target.value)
+                      if (editErrors.address) {
+                        setEditErrors((prev) => ({ ...prev, address: undefined }))
+                      }
+                    }}
+                  />
+                </div>
+                {editErrors.address && (
+                  <p className="swm-error">
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
+                      error
+                    </span>
+                    {editErrors.address}
+                  </p>
+                )}
+              </div>
+
+              <div className="swm-footer">
+                <button
+                  type="button"
+                  className="swm-btn"
+                  onClick={() => setEditingBuilding(null)}
+                  disabled={isSaving}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="swm-btn swm-btn--primary"
+                  disabled={isSaving}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                    {isSaving ? 'hourglass_top' : 'check'}
+                  </span>
+                  <span>{isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

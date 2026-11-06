@@ -217,6 +217,490 @@
   font-size: 16px;
 }
 
+/* ============================================================
+   SpotWay Owner Spatial Glass Modal (.swm-*)
+   Shared across Create Building, Create Manager, Create Store Owner
+   ============================================================ */
+.swm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background: rgba(6, 6, 16, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: swmFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes swmFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.swm-card {
+  width: 100%;
+  max-width: 540px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: linear-gradient(165deg, rgba(24, 24, 52, 0.98) 0%, rgba(12, 12, 28, 0.99) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.32);
+  border-radius: 24px;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.8),
+    0 0 42px rgba(139, 92, 246, 0.18);
+  position: relative;
+  animation: swmSlideUp 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes swmSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.swm-topline {
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, #8b5cf6 0%, #ec4899 50%, #22d3ee 100%);
+}
+
+.swm-head {
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.swm-head__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.swm-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.22) 0%, rgba(34, 211, 238, 0.18) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c4b5fd;
+  box-shadow: 0 0 18px rgba(139, 92, 246, 0.25);
+  flex-shrink: 0;
+}
+
+.swm-badge--cyan {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.2) 0%, rgba(139, 92, 246, 0.18) 100%);
+  border-color: rgba(34, 211, 238, 0.45);
+  color: #67e8f9;
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.22);
+}
+
+.swm-badge--pink {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.22) 0%, rgba(139, 92, 246, 0.18) 100%);
+  border-color: rgba(236, 72, 153, 0.45);
+  color: #f472b6;
+  box-shadow: 0 0 18px rgba(236, 72, 153, 0.22);
+}
+
+.swm-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.swm-subtitle {
+  font-size: 12.5px;
+  color: #958ea0;
+  margin: 3px 0 0;
+}
+
+.swm-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: #958ea0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+}
+
+.swm-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.swm-form {
+  padding: 20px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.swm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.swm-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #e3e0f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.swm-req {
+  color: #f472b6;
+  margin-left: 3px;
+}
+
+.swm-opt {
+  font-size: 11px;
+  font-weight: 400;
+  color: #958ea0;
+}
+
+.swm-input-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.swm-input-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.swm-input-icon {
+  position: absolute;
+  left: 13px;
+  color: #958ea0;
+  font-size: 18px;
+  pointer-events: none;
+}
+
+.swm-input {
+  width: 100%;
+  background: #101024 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 11px 38px 11px 40px;
+  font-size: 13.5px;
+  color: #ffffff !important;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.swm-input::placeholder {
+  color: #6b667b;
+}
+
+.swm-input:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18);
+}
+
+.swm-input:-webkit-autofill,
+.swm-input:-webkit-autofill:hover,
+.swm-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #101024 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+  border-color: rgba(139, 92, 246, 0.45) !important;
+}
+
+.swm-eye-btn {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: #958ea0;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.swm-eye-btn:hover {
+  color: #ffffff;
+}
+
+.swm-gen-btn {
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(139, 92, 246, 0.38);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.18) 0%, rgba(34, 211, 238, 0.12) 100%);
+  color: #d8b4fe;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.swm-gen-btn:hover {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(34, 211, 238, 0.2) 100%);
+  border-color: #c084fc;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.3);
+}
+
+.swm-hint {
+  font-size: 11.5px;
+  color: #958ea0;
+  margin: 0;
+}
+
+.swm-error {
+  font-size: 12px;
+  color: #fca5a5;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* 2-Role Selector Cards */
+.swm-role-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.swm-role-card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(16, 16, 36, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  text-align: left;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.swm-role-card:hover {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(24, 24, 50, 0.9);
+}
+
+.swm-role-card--violet {
+  background: rgba(139, 92, 246, 0.14);
+  border-color: rgba(139, 92, 246, 0.55);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.18);
+}
+
+.swm-role-card--cyan {
+  background: rgba(34, 211, 238, 0.12);
+  border-color: rgba(34, 211, 238, 0.55);
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.18);
+}
+
+.swm-role-card__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.swm-role-card__title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 2px;
+}
+
+.swm-role-card__desc {
+  font-size: 11.5px;
+  color: #958ea0;
+  margin: 0;
+  line-height: 1.35;
+}
+
+/* Building / Area Check Chips */
+.swm-area-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.swm-area-chip {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(16, 16, 36, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e3e0f6;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+  transition: all 0.18s ease;
+}
+
+.swm-area-chip:hover {
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.swm-area-chip--selected {
+  background: rgba(139, 92, 246, 0.16);
+  border-color: rgba(139, 92, 246, 0.6);
+  color: #ffffff;
+}
+
+.swm-area-empty {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  color: #958ea0;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Upload Dropzone for CreateBuildingModal */
+.swm-upload-zone {
+  border: 1.5px dashed rgba(139, 92, 246, 0.38);
+  border-radius: 16px;
+  background: rgba(16, 16, 36, 0.7);
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.swm-upload-zone:hover {
+  border-color: #ec4899;
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.swm-upload-preview {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0b0b1a;
+}
+
+.swm-upload-preview img {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+.swm-upload-preview__bar {
+  padding: 8px 12px;
+  background: rgba(16, 16, 36, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #cbc3d7;
+}
+
+.swm-footer {
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.swm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e3e0f6;
+}
+
+.swm-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.swm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.swm-btn--primary {
+  background: linear-gradient(90deg, #8b5cf6 0%, #ec4899 100%);
+  border: none;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.32);
+}
+
+.swm-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(90deg, #9333ea 0%, #db2777 100%);
+  box-shadow: 0 10px 28px rgba(236, 72, 153, 0.42);
+  transform: translateY(-1px);
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .osp-table__head,
