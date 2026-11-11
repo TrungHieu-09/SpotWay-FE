@@ -12,6 +12,7 @@ import {
   Space,
   Tag,
   Typography,
+  theme,
 } from 'antd'
 import { Stage } from 'react-konva'
 import {
@@ -92,6 +93,7 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
   const promotingRef = useRef(false)
   const createNode = useGraphStore((state) => state.createNode)
   const moveNode = useGraphStore((state) => state.moveNode)
+  const { token } = theme.useToken()
   const updateNode = useGraphStore((state) => state.updateNode)
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
   const floors = useFloorStore((state) => state.floors)
@@ -390,8 +392,8 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
               style={{
                 margin: '0 16px 12px',
                 padding: '8px 12px',
-                background: '#f0f9ff',
-                border: '1px solid #bae6fd',
+                background: token.colorPrimaryBg,
+                border: `1px solid ${token.colorPrimaryBorder}`,
                 borderRadius: 6,
                 display: 'flex',
                 alignItems: 'center',

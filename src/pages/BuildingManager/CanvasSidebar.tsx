@@ -1,4 +1,4 @@
-import { Button, Card, List, Popconfirm, Space, Switch, Tabs, Tag, Typography } from 'antd'
+import { Button, Card, List, Popconfirm, Space, Switch, Tabs, Tag, Typography, theme } from 'antd'
 import { ApartmentOutlined, ClearOutlined, DeleteOutlined, EditOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { CONNECTOR_STYLE } from '../../components/canvas/ConnectorsLayer'
 import type { Connector, GraphEdge, GraphNode } from '../../types/graph'
@@ -85,6 +85,7 @@ export function CanvasSidebar({
   promotablePoiCount,
   onPromotePois,
 }: CanvasSidebarProps) {
+  const { token } = theme.useToken()
   return (
     <Card
       className="tool-card poi-card"
@@ -113,7 +114,7 @@ export function CanvasSidebar({
                   <List.Item
                     style={{
                       padding: '6px 8px',
-                      background: selectedNodeId === node.id ? '#f0f9ff' : undefined,
+                      background: selectedNodeId === node.id ? token.colorPrimaryBg : undefined,
                       borderRadius: 4,
                       cursor: 'pointer',
                     }}
