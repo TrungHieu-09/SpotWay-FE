@@ -17,6 +17,7 @@ import {
 import { Stage } from 'react-konva'
 import {
   DeleteOutlined,
+  EditOutlined,
   QrcodeOutlined,
   LinkOutlined,
   LoadingOutlined,
@@ -400,16 +401,23 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
                 justifyContent: 'space-between',
                 flexWrap: 'wrap',
                 gap: 8,
+                maxWidth: '100%',
+                boxSizing: 'border-box',
               }}
             >
-              <Space>
-                <Tag color="cyan">{selectedNode.type}</Tag>
-                <AntText strong>Node #{selectedNode.id.slice(0, 8)}</AntText>
+              <Space wrap size={[8, 4]}>
+                <Tag color="cyan" style={{ marginInlineEnd: 0 }}>{selectedNode.type}</Tag>
+                <AntText strong>{selectedNode.name ?? `Node #${selectedNode.id.slice(0, 8)}`}</AntText>
                 <AntText type="secondary">
                   ({Math.round(selectedNode.x)}%, {Math.round(selectedNode.y)}%)
                 </AntText>
               </Space>
-              <Space>
+              <Space wrap size={[8, 8]}>
+                {!readOnly && (
+                  <Button size="small" icon={<EditOutlined />} onClick={() => setEditingNodeId(selectedNode.id)}>
+                    Sửa node
+                  </Button>
+                )}
                 <Button
                   size="small"
                   icon={<LinkOutlined />}
