@@ -142,9 +142,13 @@ export function CanvasSidebar({
                       </div>,
                     ]}
                   >
-                    <Space orientation="vertical" size={1}>
-                      <Space>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <AntText strong style={{ fontSize: 12, display: 'block', wordBreak: 'break-word' }}>
+                        {node.name ?? `#${node.id.slice(0, 6)}`}
+                      </AntText>
+                      <Space size={4} wrap style={{ marginTop: 2 }}>
                         <Tag
+                          style={{ marginInlineEnd: 0 }}
                           color={
                             node.type === 'ELEVATOR'
                               ? 'purple'
@@ -157,15 +161,12 @@ export function CanvasSidebar({
                         >
                           {node.type}
                         </Tag>
-                        <AntText strong style={{ fontSize: 12 }}>
-                          {node.name ?? `#${node.id.slice(0, 6)}`}
+                        {isolatedNodeIds?.has(node.id) && <Tag color="error" style={{ marginInlineEnd: 0 }}>Chưa nối Edge</Tag>}
+                        <AntText type="secondary" style={{ fontSize: 11 }}>
+                          {Math.round(node.x)}%, {Math.round(node.y)}%
                         </AntText>
-                        {isolatedNodeIds?.has(node.id) && <Tag color="error">Chưa nối Edge</Tag>}
                       </Space>
-                      <AntText type="secondary" style={{ fontSize: 11 }}>
-                        {Math.round(node.x)}%, {Math.round(node.y)}%
-                      </AntText>
-                    </Space>
+                    </div>
                   </List.Item>
                 )}
               />
