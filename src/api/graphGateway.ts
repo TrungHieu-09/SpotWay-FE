@@ -14,7 +14,7 @@ import {
   type PoiDto,
 } from './graphMapper'
 import type { MapSize, PercentPoint } from '../types/geometry'
-import type { Connector, ConnectorPatch, GraphEdge, GraphNode, NewConnector, NewGraphNode } from '../types/graph'
+import type { Connector, ConnectorPatch, GraphEdge, GraphNode, NewConnector, NewGraphNode, NodePatch } from '../types/graph'
 import type { NewPoi, Poi, PoiDetailsPatch } from '../types/poi'
 
 /** Hợp đồng store <-> mạng. Nhận/trả domain type (%); đổi pixel xảy ra trong graphMapper. */
@@ -22,6 +22,7 @@ export type GraphGateway = {
   fetchGraph(floorId: string, size: MapSize, signal?: AbortSignal): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }>
   createNode(floorId: string, size: MapSize, input: NewGraphNode): Promise<GraphNode>
   moveNode(nodeId: string, size: MapSize, to: PercentPoint): Promise<void>
+  updateNode(nodeId: string, patch: NodePatch): Promise<void>
   deleteNode(nodeId: string): Promise<void>
   /** Một lần gọi xoá mọi node + edge của tầng (BE gỡ luôn POI và connector gắn vào). */
   clearFloorGraph(floorId: string): Promise<void>
@@ -51,6 +52,9 @@ export const graphGateway: GraphGateway = {
   },
   async moveNode(nodeId, size, to) {
     await apiClient.patch(`/nodes/${nodeId}`, positionToDto(to, size))
+  },
+  async updateNode(nodeId, patch) {
+    await apiClient.patch(`/nodes/${nodeId}`, patch)
   },
   async deleteNode(nodeId) {
     await apiClient.delete(`/nodes/${nodeId}`)

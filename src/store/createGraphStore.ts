@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand/vanilla'
 import type { GraphGateway } from '../api/graphGateway.ts'
 import type { MapSize, PercentPoint } from '../types/geometry.ts'
-import type { Connector, ConnectorPatch, GraphEdge, GraphNode, NewConnector, NewGraphNode } from '../types/graph.ts'
+import type { Connector, ConnectorPatch, GraphEdge, GraphNode, NewConnector, NewGraphNode, NodePatch } from '../types/graph.ts'
 import { clampPercent } from '../utils/canvasCoordinates.ts'
 import { createOptimisticKit } from './optimisticKit.ts'
 
@@ -23,6 +23,8 @@ export type GraphState = {
   /** Trả id tạm (hiện ngay trên canvas) hoặc null nếu không tạo được. */
   createNode: (floorId: string, input: NewGraphNode, options?: { linkFromNodeId?: string }) => string | null
   moveNode: (floorId: string, nodeId: string, to: PercentPoint) => void
+  /** Sửa loại/tên/tiếp cận của node: cập nhật ngay trên canvas, BE từ chối thì hoàn tác. */
+  updateNode: (floorId: string, nodeId: string, patch: NodePatch) => void
   deleteNode: (floorId: string, nodeId: string) => void
   /**
    * Xoá mọi node + edge của tầng bằng MỘT yêu cầu (BE gỡ luôn POI và connector gắn vào trong cùng giao dịch).
@@ -234,6 +236,25 @@ export function createGraphSlice(gateway: GraphGateway): StateCreator<GraphState
                 ),
               )
               fail('Không thể di chuyển node', reason)
+            }
+          })(),
+        )
+      },
+
+      updateNode(floorId, rawNodeId, patch) {
+        const nodeId = canon(rawNodeId)
+        const node = get().nodesByFloor[floorId]?.find((item) => item.id === nodeId)
+        if (!node) return
+        const previous: NodePatch = { name: node.name, type: node.type, accessible: node.accessible }
+        updateNodes(floorId, (nodes) => nodes.map((item) => (item.id === nodeId ? { ...item, ...patch } : item)))
+
+        track(
+          (async () => {
+            try {
+              await gateway.updateNode(await resolveId(nodeId), patch)
+            } catch (reason) {
+              updateNodes(floorId, (nodes) => nodes.map((item) => (item.id === nodeId ? { ...item, ...previous } : item)))
+              fail('Không thể cập nhật node', reason)
             }
           })(),
         )

@@ -32,6 +32,7 @@ function setup(overrides: Partial<GraphGateway> = {}) {
       return { ...node(`real-n${++counter}`, floorId, value.x, value.y) }
     },
     moveNode: async (id) => { calls.push(`moveNode:${id}`) },
+    updateNode: async (id) => { calls.push(`updateNode:${id}`) },
     deleteNode: async (id) => { calls.push(`deleteNode:${id}`) },
     clearFloorGraph: async () => {},
     createEdge: async (floorId, from, to) => {
@@ -320,6 +321,31 @@ describe('deleteAllNodes', () => {
     const { store } = setup({ clearFloorGraph: async (id) => { calls.push(id) } })
     assert.equal(await store.getState().deleteAllNodes('chua-tai'), false)
     assert.deepEqual(calls, [])
+  })
+})
+
+describe('updateNode', () => {
+  it('đổi loại ngay; lỗi -> trả về giá trị cũ', async () => {
+    const { store } = setup({ updateNode: () => Promise.reject(new Error('x')) })
+    await store.getState().loadFloorGraph('A', size)
+    store.setState({ nodesByFloor: { A: [node('n1', 'A', 10, 10)] } })
+    const before = store.getState().nodesByFloor['A']?.[0]?.type
+
+    store.getState().updateNode('A', 'n1', { type: 'EXIT', name: 'Cửa A' })
+    assert.equal(store.getState().nodesByFloor['A']?.[0]?.type, 'EXIT')
+    await store.getState().flush()
+    assert.equal(store.getState().nodesByFloor['A']?.[0]?.type, before)
+    assert.equal(store.getState().nodesByFloor['A']?.[0]?.name, null)
+  })
+
+  it('gọi BE với id thật khi thành công', async () => {
+    const { store, calls } = setup()
+    await store.getState().loadFloorGraph('A', size)
+    store.setState({ nodesByFloor: { A: [node('n1', 'A', 10, 10)] } })
+    store.getState().updateNode('A', 'n1', { accessible: false })
+    await store.getState().flush()
+    assert.ok(calls.includes('updateNode:n1'))
+    assert.equal(store.getState().nodesByFloor['A']?.[0]?.accessible, false)
   })
 })
 

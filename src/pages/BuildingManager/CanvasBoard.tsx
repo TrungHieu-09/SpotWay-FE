@@ -31,6 +31,7 @@ import { CalibrationDistanceModal } from '../../components/canvas/CalibrationDis
 import { CalibrationLayer } from '../../components/canvas/CalibrationLayer'
 import { QrAnchorModal } from '../../components/canvas/QrAnchorModal'
 import { ConnectorSuggestModal } from '../../components/canvas/ConnectorSuggestModal'
+import { NodeEditModal } from '../../components/canvas/NodeEditModal'
 import { ConnectorFormModal } from '../../components/canvas/ConnectorFormModal'
 import { ConnectorsLayer } from '../../components/canvas/ConnectorsLayer'
 import { GraphEdgesLayer } from '../../components/canvas/GraphEdgesLayer'
@@ -91,6 +92,8 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
   const promotingRef = useRef(false)
   const createNode = useGraphStore((state) => state.createNode)
   const moveNode = useGraphStore((state) => state.moveNode)
+  const updateNode = useGraphStore((state) => state.updateNode)
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
   const floors = useFloorStore((state) => state.floors)
   const calibrateFloor = useFloorStore((state) => state.calibrateFloor)
   const [editingPoiId, setEditingPoiId] = useState<string>()
@@ -534,6 +537,7 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
         edgeLength={edgeLength}
         onSelectNode={selectNode}
         onDeleteNode={tool.handleNodeDelete}
+        onEditNode={setEditingNodeId}
         onDeleteEdge={handleDeleteEdge}
         onDeleteCrossingEdges={handleDeleteCrossingEdges}
         onCreateConnector={() => setConnectorModalOpen(true)}
@@ -546,6 +550,11 @@ export function CanvasBoard({ readOnly = false }: { readOnly?: boolean } = {}) {
         onDeleteAllPois={handleDeleteAllPois}
         promotablePoiCount={isPromoting ? 0 : planPoiPromotions(pois, currentFloorNodes).length}
         onPromotePois={() => void handlePromotePois()}
+      />
+      <NodeEditModal
+        node={currentFloorNodes.find((item) => item.id === editingNodeId) ?? null}
+        onSubmit={(nodeId, patch) => selectedFloorId && updateNode(selectedFloorId, nodeId, patch)}
+        onClose={() => setEditingNodeId(null)}
       />
       <CalibrationDistanceModal
         points={tool.calibrationPoints}

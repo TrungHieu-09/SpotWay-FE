@@ -1,5 +1,5 @@
 import { Button, Card, List, Popconfirm, Space, Switch, Tabs, Tag, Typography } from 'antd'
-import { ApartmentOutlined, ClearOutlined, DeleteOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, ClearOutlined, DeleteOutlined, EditOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { CONNECTOR_STYLE } from '../../components/canvas/ConnectorsLayer'
 import type { Connector, GraphEdge, GraphNode } from '../../types/graph'
 import type { Poi } from '../../types/poi'
@@ -41,6 +41,7 @@ type CanvasSidebarProps = {
   edgeLength: (edge: GraphEdge) => number
   onSelectNode: (nodeId: string | null) => void
   onDeleteNode: (nodeId: string) => void
+  onEditNode: (nodeId: string) => void
   onDeleteEdge: (edgeId: string) => void
   onDeleteCrossingEdges: () => void
   onCreateConnector: () => void
@@ -70,6 +71,7 @@ export function CanvasSidebar({
   edgeLength,
   onSelectNode,
   onDeleteNode,
+  onEditNode,
   onDeleteEdge,
   onDeleteCrossingEdges,
   onCreateConnector,
@@ -117,6 +119,11 @@ export function CanvasSidebar({
                     }}
                     onClick={() => onSelectNode(selectedNodeId === node.id ? null : node.id)}
                     actions={[
+                      !readOnly && (
+                        <div key="edit" onClick={(e) => e.stopPropagation()}>
+                          <Button size="small" type="text" icon={<EditOutlined />} title="Sửa node" onClick={() => onEditNode(node.id)} />
+                        </div>
+                      ),
                       <div key="delete" onClick={(e) => e.stopPropagation()}>
                         <Popconfirm
                           title="Xác nhận xóa Node?"
@@ -151,7 +158,7 @@ export function CanvasSidebar({
                           {node.type}
                         </Tag>
                         <AntText strong style={{ fontSize: 12 }}>
-                          #{node.id.slice(0, 6)}
+                          {node.name ?? `#${node.id.slice(0, 6)}`}
                         </AntText>
                         {isolatedNodeIds?.has(node.id) && <Tag color="error">Chưa nối Edge</Tag>}
                       </Space>

@@ -23,6 +23,8 @@ export type GraphNode = PercentPoint & {
   hazard: HazardType
 }
 
+export type NodePatch = Partial<Pick<GraphNode, 'name' | 'type' | 'accessible'>>
+
 export type NewGraphNode = Pick<GraphNode, 'x' | 'y' | 'type' | 'name' | 'accessible'>
 
 export type GraphEdge = {
