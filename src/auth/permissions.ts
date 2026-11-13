@@ -18,7 +18,7 @@ export function can(user: AuthUser | null, action: string, resource: string) {
   if (!user) return false
   if (user.role === 'admin') return resource === 'admin'
   if (resource === 'building' && action === 'create') return user.role === 'building_owner' && PERMISSIONS.ownerCanCreateBuilding
-  if (resource === 'store' && action === 'create') return user.role === 'building_manager' || user.role === 'building_owner'
+  if (resource === 'store' && action === 'create') return user.role === 'building_owner'
   if (resource === 'staff') return user.role === 'building_owner'
   return user.role === 'building_owner' || user.role === 'building_manager'
 }

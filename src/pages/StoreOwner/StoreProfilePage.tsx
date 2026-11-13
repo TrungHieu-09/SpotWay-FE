@@ -35,13 +35,9 @@ import { useAuthStore } from '../../auth/store'
 const { Text, Title } = Typography
 const { TextArea } = Input
 
-const STORE_CATEGORIES = ['Thời trang', 'Ăn uống', 'Dịch vụ']
-
 type StoreProfileFormValues = {
   name: string
-  category: string
   description: string
-  openingHours: string
   isActive: boolean
 }
 
@@ -180,9 +176,7 @@ export function StoreProfilePage() {
 
     form.setFieldsValue({
       name: currentStore.name,
-      category: currentStore.category,
       description: currentStore.description,
-      openingHours: currentStore.openingHours ?? '',
       isActive: currentStore.status === 'active',
     })
     setLogoFileList(
@@ -228,7 +222,6 @@ export function StoreProfilePage() {
     try {
       await updateStore(currentStore.id, {
         description: values.description,
-        openingHours: values.openingHours.trim(),
         status: values.isActive ? 'active' : 'inactive',
         logoUrl: retainedLogoUrl,
         logoFile,
@@ -252,7 +245,6 @@ export function StoreProfilePage() {
     createForm.setFieldsValue({
       buildingId: defaultBuildingId,
       description: '',
-      openingHours: '',
       isActive: true,
     })
     setCreateLogoFileList([])
@@ -287,9 +279,7 @@ export function StoreProfilePage() {
         buildingId: values.buildingId,
         floorId: values.floorId,
         name: values.name,
-        category: values.category,
         description: values.description,
-        openingHours: values.openingHours.trim(),
         status: values.isActive ? 'active' : 'inactive',
         logoFile,
         galleryFiles,
@@ -428,7 +418,6 @@ export function StoreProfilePage() {
                 render: (floorId: string, store) =>
                   getFloorName(store.buildingId, floorId),
               },
-              { title: 'Nhóm dịch vụ', dataIndex: 'category', width: 140 },
               {
                 title: 'Trạng thái',
                 dataIndex: 'status',
@@ -481,34 +470,11 @@ export function StoreProfilePage() {
                   </Form.Item>
 
                   <Form.Item
-                    label="Nhóm dịch vụ"
-                    name="category"
-                    rules={[{ required: true, message: 'Vui lòng chọn nhóm dịch vụ' }]}
-                  >
-                    <Select
-                      disabled
-                      options={STORE_CATEGORIES.map((category) => ({
-                        label: category,
-                        value: category,
-                      }))}
-                      placeholder="Chọn nhóm dịch vụ"
-                    />
-                  </Form.Item>
-
-                  <Form.Item
                     label="Mô tả dịch vụ"
                     name="description"
                     rules={[{ required: true, message: 'Vui lòng nhập mô tả' }]}
                   >
                     <TextArea rows={6} placeholder="Mô tả dịch vụ của gian hàng" />
-                  </Form.Item>
-
-                  <Form.Item
-                    label="Giờ mở cửa"
-                    name="openingHours"
-                    extra="Ví dụ: 08:00 - 22:00"
-                  >
-                    <Input placeholder="08:00 - 22:00" />
                   </Form.Item>
 
                   <Form.Item
@@ -607,14 +573,10 @@ export function StoreProfilePage() {
                       ? 'Đang hoạt động'
                       : 'Tạm ngưng'}
                   </Tag>
-                  <Tag>{detailStore.category}</Tag>
                 </Space>
               </Space>
             </Space>
             <Text>{detailStore.description}</Text>
-            {detailStore.openingHours ? (
-              <Text type="secondary">Giờ mở cửa: {detailStore.openingHours}</Text>
-            ) : null}
             {detailStore.galleryImageUrls.length > 0 ? (
               <Image.PreviewGroup>
                 <div className="store-gallery-grid">
@@ -687,33 +649,11 @@ export function StoreProfilePage() {
           </Form.Item>
 
           <Form.Item
-            label="Nhóm dịch vụ"
-            name="category"
-            rules={[{ required: true, message: 'Vui lòng chọn nhóm dịch vụ' }]}
-          >
-            <Select
-              options={STORE_CATEGORIES.map((category) => ({
-                label: category,
-                value: category,
-              }))}
-              placeholder="Chọn nhóm dịch vụ"
-            />
-          </Form.Item>
-
-          <Form.Item
             label="Mô tả dịch vụ"
             name="description"
             rules={[{ required: true, message: 'Vui lòng nhập mô tả' }]}
           >
             <TextArea rows={4} placeholder="Mô tả dịch vụ của gian hàng" />
-          </Form.Item>
-
-          <Form.Item
-            label="Giờ mở cửa"
-            name="openingHours"
-            extra="Ví dụ: 08:00 - 22:00"
-          >
-            <Input placeholder="08:00 - 22:00" />
           </Form.Item>
 
           <Form.Item

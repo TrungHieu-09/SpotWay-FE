@@ -113,7 +113,13 @@ apiClient.interceptors.response.use(
         const tokens = await refreshAccessToken();
         request.headers.Authorization = `Bearer ${tokens.accessToken}`;
         return apiClient.request(request);
-      } catch {
+      } catch (refreshError) {
+        // The session is only dead when the server answered 4xx; a lost connection must not log the user out.
+        const refreshStatus = (refreshError as { response?: { status?: number } })
+          ?.response?.status;
+        if (refreshStatus === undefined && refreshError instanceof Error && refreshError.message !== "Phiên đăng nhập đã hết hạn" && refreshError.message !== "Không thể làm mới phiên đăng nhập") {
+          return Promise.reject(refreshError);
+        }
         clearSession();
         if (window.location.pathname !== "/login")
           window.location.assign("/login");

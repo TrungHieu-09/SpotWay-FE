@@ -41,7 +41,7 @@ export type CreateStorePayload = {
   nodeId?: string | null
   name: string
   description: string
-  category: string
+  category?: string
   openingHours?: string
   status: StoreStatus
   logoFile?: File

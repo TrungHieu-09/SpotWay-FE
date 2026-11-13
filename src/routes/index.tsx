@@ -1,7 +1,7 @@
 /* oxlint-disable react/only-export-components */
 import { Suspense, lazy, type ReactNode } from 'react'
 import { Spin } from 'antd'
-import { createBrowserRouter } from 'react-router-dom'
+import { Navigate, createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from '../components/layout/AppLayout'
 import { AdminLayout } from '../components/layout/AdminLayout'
 import { OwnerLayout } from '../components/layout/OwnerLayout'
@@ -74,12 +74,6 @@ const StoreOwnerManagementPage = lazy(() =>
 )
 
 // ── Guest ──
-const GuestMapPage = lazy(() =>
-  import('../pages/Guest/GuestMapPage').then((module) => ({
-    default: module.GuestMapPage,
-  })),
-)
-
 const NavigationPage = lazy(() =>
   import('../pages/Guest/NavigationPage').then((module) => ({
     default: module.NavigationPage,
@@ -175,7 +169,7 @@ export const router = createBrowserRouter([
         ],
       },
       {
-        children: [{ path: 'guest', element: lazyElement(<GuestMapPage />) }],
+        children: [{ path: 'guest', element: <Navigate to="/navigate" replace /> }],
       },
       {
         element: <ProtectedRoute allowedRoles={['store_owner']} />,

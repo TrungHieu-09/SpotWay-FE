@@ -90,9 +90,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       const user = await getCurrentUser()
       saveToken(token, user.role, user)
       set({ user, token, error: null })
-    } catch {
-      saveToken(null)
-      set({ user: null, token: null })
+    } catch (error) {
+      // Only an answered 401/403 means the session is dead; a BE restart or lost connection keeps the cached user.
+      const status = (error as { status?: number; response?: { status?: number } })?.status ?? (error as { response?: { status?: number } })?.response?.status
+      if (status === 401 || status === 403) {
+        saveToken(null)
+        set({ user: null, token: null })
+      }
     } finally {
       set({ isInitializing: false })
     }

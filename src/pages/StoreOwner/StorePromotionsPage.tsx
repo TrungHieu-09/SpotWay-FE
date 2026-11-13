@@ -40,14 +40,13 @@ export function StorePromotionsPage() {
       .finally(() => setIsLoading(false))
   }, [message, storeId])
   function openCreate() { form.resetFields(); form.setFieldsValue({ status: 'draft', dates: [dayjs(), dayjs().add(7, 'day')] }); setEditing({ id: '', storeId: storeId ?? '', title: '', description: '', discountText: '', startDate: '', endDate: '', status: 'draft' }) }
-  function openEdit(item: Promotion) { form.setFieldsValue({ title: item.title, description: item.description, discountText: item.discountText, status: item.status, dates: [dayjs(item.startDate), dayjs(item.endDate)] }); setEditing(item) }
+  function openEdit(item: Promotion) { form.setFieldsValue({ title: item.title, description: item.description, status: item.status, dates: [dayjs(item.startDate), dayjs(item.endDate)] }); setEditing(item) }
   async function save(values: PromotionForm) {
     if (!storeId) return
     const payload: PromotionPayload = {
       title: values.title,
       description: values.description,
-      discountText: values.discountText,
-      imageUrl: values.imageUrl,
+      discountText: '',
       status: values.status,
       startDate: values.dates[0].toISOString(),
       endDate: values.dates[1].toISOString(),
@@ -111,7 +110,6 @@ export function StorePromotionsPage() {
             locale={{ emptyText: 'Chưa có khuyến mãi cho gian hàng này' }}
             columns={[
               { title: 'Tiêu đề', dataIndex: 'title' },
-              { title: 'Ưu đãi', dataIndex: 'discountText' },
               { title: 'Thời gian', render: (_: unknown, item: Promotion) => `${dayjs(item.startDate).format('DD/MM/YYYY')} - ${dayjs(item.endDate).format('DD/MM/YYYY')}` },
               { title: 'Trạng thái', dataIndex: 'status', render: (status: Promotion['status']) => <Tag color={status === 'published' ? 'green' : 'gold'}>{status === 'published' ? 'Đã đăng' : 'Bản nháp'}</Tag> },
               { title: 'Hành động', render: (_: unknown, item: Promotion) => <Space><Button size="small" disabled={isSaving} onClick={() => openEdit(item)}>Sửa</Button><Popconfirm title="Xoá khuyến mãi?" okText="Xoá" cancelText="Hủy" onConfirm={() => void removePromotion(item.id)}><Button danger size="small" disabled={isSaving} icon={<DeleteOutlined />} /></Popconfirm></Space> },
@@ -124,9 +122,7 @@ export function StorePromotionsPage() {
       <Modal title={editing?.id ? 'Sửa khuyến mãi' : 'Thêm khuyến mãi'} open={Boolean(editing)} okText="Lưu" cancelText="Hủy" confirmLoading={isSaving} onCancel={() => setEditing(null)} onOk={() => form.submit()}>
         <Form form={form} layout="vertical" onFinish={save}>
           <Form.Item name="title" label="Tiêu đề" rules={[{ required: true, message: 'Vui lòng nhập tiêu đề' }]}><Input /></Form.Item>
-          <Form.Item name="discountText" label="Ưu đãi" rules={[{ required: true, message: 'Vui lòng nhập nội dung ưu đãi' }]}><Input /></Form.Item>
           <Form.Item name="description" label="Mô tả"><Input.TextArea rows={3} /></Form.Item>
-          <Form.Item name="imageUrl" label="URL ảnh"><Input placeholder="https://..." /></Form.Item>
           <Form.Item name="dates" label="Thời gian" rules={[{ required: true, message: 'Vui lòng chọn thời gian' }]}><DatePicker.RangePicker className="full-width" /></Form.Item>
           <Form.Item name="status" label="Trạng thái"><Select options={[{ value: 'draft', label: 'Bản nháp' }, { value: 'published', label: 'Đã đăng' }]} /></Form.Item>
         </Form>
