@@ -45,7 +45,8 @@ export function NavigationAnalyticsCard() {
             <Statistic title="Chuyến chỉ đường" value={data.routes.started} />
             <Statistic title="Hoàn thành" value={data.routes.completed} suffix={data.routes.started ? `/ ${data.routes.started}` : undefined} />
             <Statistic title="Thời gian trung bình" value={formatDuration(data.routes.avgDurationSeconds)} />
-            <Statistic title="Lượt sơ tán" value={data.routes.evacuations} />
+            <Statistic title="Lượt sơ tán" value={data.routes.evacuations} suffix={data.safeReached ? `· ${data.safeReached} đã an toàn` : undefined} />
+            <Statistic title="Yêu cầu hỗ trợ" value={data.helpRequests ?? 0} />
           </div>
 
           <div>

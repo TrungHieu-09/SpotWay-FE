@@ -10,6 +10,8 @@ export type NavigationAnalytics = {
   routes: { started: number; completed: number; evacuations: number; avgDurationSeconds: number | null }
   qrScans: number
   storeViews: number
+  helpRequests?: number
+  safeReached?: number
 }
 
 export async function getNavigationAnalytics() {
