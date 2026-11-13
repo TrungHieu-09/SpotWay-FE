@@ -34,6 +34,14 @@ export function FireAlarmCard({ buildingId, nodes, nodeName, canEdit }: FireAlar
     void refresh()
   }, [refresh])
 
+  // While an alarm is on, keep the evacuee count fresh.
+  const active = incident.active
+  useEffect(() => {
+    if (!active) return
+    const timer = setInterval(() => void refresh(), 5000)
+    return () => clearInterval(timer)
+  }, [active, refresh])
+
   async function run(action: () => Promise<IncidentState>, success: string) {
     setBusy(true)
     try {
@@ -59,6 +67,7 @@ export function FireAlarmCard({ buildingId, nodes, nodeName, canEdit }: FireAlar
         description={
           <Space orientation="vertical" size={6}>
             <Text>{incident.nodeIds.length} điểm đang cháy. Điện thoại khách đang được chỉ lối thoát.</Text>
+            <Text strong>{incident.evacuees ?? 0} người đang di chuyển tới lối thoát</Text>
             {canEdit && (
               <Button danger loading={busy} onClick={() => void run(() => clearIncident(buildingId), 'Đã kết thúc sự cố.')}>
                 Kết thúc sự cố
