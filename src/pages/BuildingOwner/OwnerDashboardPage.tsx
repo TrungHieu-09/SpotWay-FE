@@ -20,6 +20,7 @@ import type { TenantOverview } from '../../types/auth'
 import type { Building } from '../../types/building'
 import { GlassCard, StatusPill } from '../../components/ui'
 import { CreateBuildingModal } from './CreateBuildingModal'
+import { NavigationAnalyticsCard } from './NavigationAnalyticsCard'
 import './OwnerDashboardPage.css'
 
 export function OwnerDashboardPage() {
@@ -180,6 +181,8 @@ export function OwnerDashboardPage() {
         </div>
       ) : (
         <>
+          <NavigationAnalyticsCard />
+
           {/* ── 4 Main KPI Cards ── */}
           <div className="odp-stats-grid">
             <StatCard
