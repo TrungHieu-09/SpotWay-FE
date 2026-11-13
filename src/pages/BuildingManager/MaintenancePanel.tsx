@@ -13,6 +13,7 @@ import {
   type MaintenanceReport,
 } from '../../api/maintenance'
 import { AppSelect as Select } from '../../components/ui/AppSelect'
+import { FireAlarmCard } from './FireAlarmCard'
 
 const { Text, Title } = Typography
 
@@ -86,6 +87,7 @@ export function MaintenancePanel({ readOnly = false }: { readOnly?: boolean }) {
 
   return (
     <Card className="tool-card" title={<Title level={3} style={{ margin: 0 }}>Bảo trì lối đi</Title>}>
+      <FireAlarmCard buildingId={floor.buildingId} nodes={nodes} nodeName={nodeName} canEdit={canEdit} />
       <Alert
         type="info"
         showIcon
