@@ -27,15 +27,15 @@ export function toApiError(message: string, status?: number, code?: string) {
 let refreshInFlight: Promise<TokenPair> | null = null;
 
 function clearSession() {
-  window.localStorage.removeItem("spotway.accessToken");
-  window.localStorage.removeItem("spotway.refreshToken");
-  window.localStorage.removeItem("spotway.role");
-  window.localStorage.removeItem("auth:token");
-  window.localStorage.removeItem("spotway.user");
+  window.sessionStorage.removeItem("spotway.accessToken");
+  window.sessionStorage.removeItem("spotway.refreshToken");
+  window.sessionStorage.removeItem("spotway.role");
+  window.sessionStorage.removeItem("auth:token");
+  window.sessionStorage.removeItem("spotway.user");
 }
 
 async function refreshAccessToken() {
-  const refreshToken = window.localStorage.getItem("spotway.refreshToken");
+  const refreshToken = window.sessionStorage.getItem("spotway.refreshToken");
   if (!refreshToken) {
     throw new Error("Phiên đăng nhập đã hết hạn");
   }
@@ -57,8 +57,8 @@ async function refreshAccessToken() {
         ) {
           throw new Error("Không thể làm mới phiên đăng nhập");
         }
-        window.localStorage.setItem("spotway.accessToken", tokens.accessToken);
-        window.localStorage.setItem(
+        window.sessionStorage.setItem("spotway.accessToken", tokens.accessToken);
+        window.sessionStorage.setItem(
           "spotway.refreshToken",
           tokens.refreshToken,
         );
@@ -79,8 +79,8 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   const token =
-    window.localStorage.getItem("spotway.accessToken") ||
-    window.localStorage.getItem("auth:token");
+    window.sessionStorage.getItem("spotway.accessToken") ||
+    window.sessionStorage.getItem("auth:token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
