@@ -145,7 +145,7 @@ export const useFloorStore = create<FloorState>((set, get) => ({
         selectedFloor,
       })
     } catch (error) {
-      set({ error: (error as Error).message })
+      // Không ghi vào `error` dùng chung: lỗi publish do nơi gọi (FloorSelector) hiện một lần, tránh Alert đỏ nằm lại trên canvas.
       throw error
     } finally {
       set({ isFloorLoading: false })
