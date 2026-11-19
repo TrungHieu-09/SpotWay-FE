@@ -53,7 +53,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     path: '/owner/contracts',
     icon: <FileTextOutlined />,
-    label: 'Hợp đồng dịch vụ',
+    label: 'Hợp đồng của tôi',
     matchPrefixes: ['/owner/contracts'],
   },
   {

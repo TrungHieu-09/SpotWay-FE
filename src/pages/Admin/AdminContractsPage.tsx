@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { App as AntApp, Popconfirm } from 'antd'
+import { useNavigate } from 'react-router-dom'
 import {
   createAdminContract,
   deleteAdminContract,
@@ -23,6 +24,16 @@ import {
 import './AdminPages.css'
 import './ContractsPage.css'
 
+interface ScanPageFileItem {
+  id: string
+  fileName: string
+  sizeText: string
+  statusText: string
+  iconName: 'check_circle' | 'verified_user'
+  iconColor: string
+  dataUrl?: string | null
+}
+
 function getInitials(name: string): string {
   const parts = name
     .trim()
@@ -44,8 +55,39 @@ function nextContractCode(existing: ServiceContract[]): string {
   return `HD-${year}-${String(maxNum + 1).padStart(3, '0')}`
 }
 
+function buildDefaultScanPages(codeSlug: string): ScanPageFileItem[] {
+  const slug = codeSlug.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'mta'
+  return [
+    {
+      id: 'p-1',
+      fileName: `hop_dong_${slug}_trang1.pdf`,
+      sizeText: '1.8 MB',
+      statusText: 'Hoàn tất 100%',
+      iconName: 'check_circle',
+      iconColor: '#5de6ff',
+    },
+    {
+      id: 'p-2',
+      fileName: `hop_dong_${slug}_trang2.pdf`,
+      sizeText: '1.4 MB',
+      statusText: 'Hoàn tất 100%',
+      iconName: 'check_circle',
+      iconColor: '#5de6ff',
+    },
+    {
+      id: 'p-3',
+      fileName: `phu_luc_ky_ten_${slug}.png`,
+      sizeText: '2.1 MB · Ký tên & Con dấu',
+      statusText: 'Hợp lệ',
+      iconName: 'verified_user',
+      iconColor: '#f8acff',
+    },
+  ]
+}
+
 export function AdminContractsPage() {
   const { message } = AntApp.useApp()
+  const navigate = useNavigate()
   const [contracts, setContracts] = useState<ServiceContract[]>([])
   const [owners, setOwners] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -60,6 +102,8 @@ export function AdminContractsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [notifyOwner, setNotifyOwner] = useState(true)
 
   // Form fields
   const [formCode, setFormCode] = useState('')
@@ -81,9 +125,9 @@ export function AdminContractsPage() {
   const [formPaymentStatus, setFormPaymentStatus] = useState<ContractPaymentStatus>('paid')
   const [formMaxBuildings, setFormMaxBuildings] = useState('3')
   const [formMaxFloors, setFormMaxFloors] = useState('15')
-  const [formPageCount, setFormPageCount] = useState('3')
-  const [formScanFileName, setFormScanFileName] = useState('')
-  const [formScanDataUrl, setFormScanDataUrl] = useState<string | null>(null)
+  const [formScanPages, setFormScanPages] = useState<ScanPageFileItem[]>(() =>
+    buildDefaultScanPages('mta'),
+  )
   const [formNotes, setFormNotes] = useState('')
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -153,22 +197,25 @@ export function AdminContractsPage() {
 
   function openCreateModal() {
     setEditingId(null)
-    setFormCode(nextContractCode(contracts))
+    const nextCode = nextContractCode(contracts)
+    setFormCode(nextCode)
     const defaultOwner = owners[0]
     setFormOwnerId(defaultOwner?.id ?? '')
     setFormCustomerName(
-      defaultOwner?.tenantName || defaultOwner?.name || 'Tổ hợp Tòa nhà Doanh nghiệp',
+      defaultOwner?.tenantName ||
+        defaultOwner?.name ||
+        'Metro Transit Authority - Sân bay & Ga quốc tế',
     )
-    setFormOwnerEmail(defaultOwner?.email || '')
+    setFormOwnerEmail(defaultOwner?.email || 'owner@spotway.app')
     setFormRepresentative(
-      defaultOwner ? `${defaultOwner.name} (Chủ tòa nhà)` : 'Đại diện Chủ tòa nhà',
+      defaultOwner ? `${defaultOwner.name} (Chủ tòa nhà)` : 'Elena Rostova (GĐ Vận hành)',
     )
     setFormDomain(
       defaultOwner
-        ? `${(defaultOwner.tenantName || defaultOwner.name || 'workspace')
+        ? `${(defaultOwner.tenantName || defaultOwner.name || 'metro-transit')
             .toLowerCase()
             .replace(/[^a-z0-9-]+/g, '-')}.spotway.app`
-        : 'enterprise.spotway.app',
+        : 'metro-transit.spotway.app',
     )
     const today = new Date().toISOString().slice(0, 10)
     const nextYear = new Date()
@@ -180,12 +227,11 @@ export function AdminContractsPage() {
     setFormPaymentStatus('paid')
     setFormMaxBuildings('3')
     setFormMaxFloors('15')
-    setFormPageCount('3')
-    setFormScanFileName('')
-    setFormScanDataUrl(null)
+    setFormScanPages(buildDefaultScanPages(defaultOwner?.name || 'mta'))
     setFormNotes(
-      'Hợp đồng cấp quyền quản trị tòa nhà, số hóa bản đồ 3D và dẫn đường thông minh giữa Admin và Chủ tòa nhà.',
+      'Tủ lưu trữ hồ sơ A-3, ngăn số 08 (Tòa nhà Điều hành Trung tâm). Người thụ lý bàn giao: Nguyễn Văn An - Ban Pháp chế.',
     )
+    setNotifyOwner(true)
     setModalOpen(true)
   }
 
@@ -204,16 +250,15 @@ export function AdminContractsPage() {
     setFormPaymentStatus(c.paymentStatus)
     setFormMaxBuildings(String(c.maxBuildings))
     setFormMaxFloors(String(c.maxFloors))
-    setFormPageCount(String(c.pageCount))
-    setFormScanFileName(c.scanFileName ?? '')
-    setFormScanDataUrl(c.scanDataUrl ?? null)
+    setFormScanPages(buildDefaultScanPages(c.customerName))
     setFormNotes(c.notes)
+    setNotifyOwner(true)
     setModalOpen(true)
   }
 
-  function handleSelectOwner(ownerId: string) {
-    setFormOwnerId(ownerId)
-    const found = owners.find((o) => o.id === ownerId)
+  function handleSelectOwnerPreset(val: string) {
+    setFormOwnerId(val)
+    const found = owners.find((o) => o.id === val)
     if (found) {
       setFormOwnerEmail(found.email)
       setFormCustomerName(found.tenantName || found.name || found.email.split('@')[0])
@@ -223,30 +268,87 @@ export function AdminContractsPage() {
           .toLowerCase()
           .replace(/[^a-z0-9-]+/g, '-')}.spotway.app`,
       )
+      return
+    }
+    if (val === 'preset-vingroup') {
+      setFormCustomerName('Vincom Mega Mall Smart City')
+      setFormOwnerEmail('owner.smartcity@vincom.vn')
+      setFormRepresentative('Nguyễn Hoàng Minh (GĐ Tổ hợp)')
+      setFormDomain('smartcity-vincom.spotway.app')
+    } else if (val === 'preset-saigon') {
+      setFormCustomerName('Saigon Mega Mall - Central Atrium Ops')
+      setFormOwnerEmail('ops@saigonmegamall.vn')
+      setFormRepresentative('Trần Minh Quân (GĐ Vận hành)')
+      setFormDomain('saigon-atrium.spotway.app')
+    } else if (val === 'preset-noibai') {
+      setFormCustomerName('Cảng Hàng không Quốc tế Nội Bài T2')
+      setFormOwnerEmail('spatial.ops@noibai.aero')
+      setFormRepresentative('Lê Quang Đạo (Trưởng ban Khai thác)')
+      setFormDomain('noibai-t2.spotway.app')
     }
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setFormScanFileName(file.name)
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader()
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setFormScanDataUrl(reader.result)
+  function processUploadedFiles(fileList: FileList | null) {
+    if (!fileList || fileList.length === 0) return
+    Array.from(fileList).forEach((file) => {
+      const sizeMb = Math.max(0.2, file.size / (1024 * 1024)).toFixed(1)
+      const isImg = file.type.startsWith('image/')
+      const itemId = `scan-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+
+      if (isImg) {
+        const reader = new FileReader()
+        reader.onload = () => {
+          setFormScanPages((prev) => [
+            ...prev,
+            {
+              id: itemId,
+              fileName: file.name,
+              sizeText: `${sizeMb} MB · Ký tên & Con dấu`,
+              statusText: 'Hợp lệ',
+              iconName: 'verified_user',
+              iconColor: '#f8acff',
+              dataUrl: typeof reader.result === 'string' ? reader.result : null,
+            },
+          ])
         }
+        reader.readAsDataURL(file)
+      } else {
+        setFormScanPages((prev) => [
+          ...prev,
+          {
+            id: itemId,
+            fileName: file.name,
+            sizeText: `${sizeMb} MB`,
+            statusText: 'Hoàn tất 100%',
+            iconName: 'check_circle',
+            iconColor: '#5de6ff',
+            dataUrl: null,
+          },
+        ])
       }
-      reader.readAsDataURL(file)
-    } else {
-      setFormScanDataUrl(null)
-    }
+    })
+  }
+
+  function handleMovePage(index: number, direction: -1 | 1) {
+    const targetIdx = index + direction
+    if (targetIdx < 0 || targetIdx >= formScanPages.length) return
+    setFormScanPages((prev) => {
+      const copy = [...prev]
+      const temp = copy[index]
+      copy[index] = copy[targetIdx]
+      copy[targetIdx] = temp
+      return copy
+    })
+  }
+
+  function handleRemovePage(id: string) {
+    setFormScanPages((prev) => prev.filter((p) => p.id !== id))
   }
 
   async function handleSaveContract(e: React.FormEvent) {
     e.preventDefault()
-    if (!formCustomerName.trim() || !formOwnerEmail.trim()) {
-      message.error('Vui lòng nhập tên Chủ tòa nhà / Khách hàng và Email.')
+    if (!formCustomerName.trim()) {
+      message.error('Vui lòng chọn hoặc nhập tên Khách hàng / Chủ tòa nhà.')
       return
     }
     setSaving(true)
@@ -256,37 +358,48 @@ export function AdminContractsPage() {
           o.id === formOwnerId ||
           o.email.toLowerCase() === formOwnerEmail.trim().toLowerCase(),
       )
+      const firstImgPage = formScanPages.find((p) => p.dataUrl)
       const payload = {
         contractCode: formCode.trim() || nextContractCode(contracts),
-        ownerId: matchedOwner?.id ?? (formOwnerId || null),
-        tenantId: matchedOwner?.tenantId ?? null,
+        ownerId: matchedOwner?.id ?? (owners[0]?.id || null),
+        tenantId: matchedOwner?.tenantId ?? (owners[0]?.tenantId || null),
         customerName: formCustomerName.trim(),
-        ownerEmail: formOwnerEmail.trim(),
+        ownerEmail:
+          formOwnerEmail.trim() || matchedOwner?.email || 'owner@spotway.app',
         representative: formRepresentative.trim() || formCustomerName.trim(),
         workspaceDomain: formDomain.trim() || 'workspace.spotway.app',
         startDate: formStartDate,
         endDate: formEndDate,
-        annualValue: Number(formValue) || 0,
+        annualValue: Number(String(formValue).replace(/[^0-9.]/g, '')) || 0,
         currency: formCurrency,
         billingLabel: null,
         paymentStatus: formPaymentStatus,
         maxBuildings: Math.max(1, Number(formMaxBuildings) || 3),
         maxFloors: Math.max(1, Number(formMaxFloors) || 15),
-        pageCount: Math.max(1, Number(formPageCount) || 3),
-        scanFileName: formScanFileName.trim() || `${formCode.trim()}-Signed.pdf`,
-        scanDataUrl: formScanDataUrl,
+        pageCount: Math.max(1, formScanPages.length || 3),
+        scanFileName:
+          formScanPages[0]?.fileName || `${formCode.trim()}-Signed.pdf`,
+        scanDataUrl: firstImgPage?.dataUrl ?? null,
         notes: formNotes.trim(),
       }
 
       if (editingId) {
         const updated = await updateAdminContract(editingId, payload)
         setContracts((prev) => prev.map((c) => (c.id === editingId ? updated : c)))
-        message.success(`Đã cập nhật hợp đồng ${updated.contractCode}!`)
+        message.success(
+          notifyOwner
+            ? `Đã lưu hợp đồng ${updated.contractCode} và đồng bộ sang cổng Chủ tòa nhà!`
+            : `Đã cập nhật hợp đồng ${updated.contractCode}!`,
+        )
       } else {
         const created = await createAdminContract(payload)
         setContracts((prev) => [created, ...prev])
         setSelectedId(created.id)
-        message.success(`Đã tạo và lưu trữ hợp đồng ${created.contractCode} cho Chủ tòa nhà!`)
+        message.success(
+          notifyOwner
+            ? `Đã số hóa hợp đồng ${created.contractCode} và gửi thông báo tới Chủ tòa nhà!`
+            : `Đã tạo và lưu trữ hợp đồng ${created.contractCode}!`,
+        )
       }
       setModalOpen(false)
     } finally {
@@ -323,7 +436,7 @@ export function AdminContractsPage() {
 
   return (
     <div className="adm-page">
-      {/* ── Page Header (Synchronized with AdminAccountsPage) ── */}
+      {/* ── Page Header ── */}
       <header className="adm-hero">
         <div>
           <div className="adm-hero__eyebrow">
@@ -335,8 +448,7 @@ export function AdminContractsPage() {
             <span className="adm-count-pill">{contracts.length} hợp đồng</span>
           </div>
           <p className="adm-hero__subtitle">
-            Kho lưu trữ và quản lý hợp đồng dịch vụ cấp quyền hạ tầng không gian 3D giữa Admin và
-            Chủ tòa nhà.
+            Kho lưu trữ và số hóa bản scan hợp đồng dịch vụ ký ngoại tuyến với Chủ tòa nhà.
           </p>
         </div>
 
@@ -344,15 +456,12 @@ export function AdminContractsPage() {
           <button
             type="button"
             className="adm-btn"
-            onClick={() => {
-              fileInputRef.current?.click()
-              openCreateModal()
-            }}
+            onClick={openCreateModal}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
               upload_file
             </span>
-            <span>+ Nhập bản scan</span>
+            <span>+ Nhập hàng loạt</span>
           </button>
 
           <button
@@ -370,7 +479,6 @@ export function AdminContractsPage() {
 
       {/* ── 3 Horizontal KPI Stat Cards ── */}
       <section className="cnt-stat-grid" aria-label="Thống kê hợp đồng">
-        {/* Card 1: Đang hiệu lực */}
         <div
           className={`adm-glass-card cnt-stat-card ${
             statusFilter === 'active' ? 'adm-stat-card--selected' : ''
@@ -403,7 +511,6 @@ export function AdminContractsPage() {
           </div>
         </div>
 
-        {/* Card 2: Sắp hết hạn */}
         <div
           className={`adm-glass-card cnt-stat-card ${
             statusFilter === 'expiring' ? 'adm-stat-card--selected' : ''
@@ -436,7 +543,6 @@ export function AdminContractsPage() {
           </div>
         </div>
 
-        {/* Card 3: Hết hạn */}
         <div
           className={`adm-glass-card cnt-stat-card ${
             statusFilter === 'expired' ? 'adm-stat-card--selected' : ''
@@ -519,7 +625,7 @@ export function AdminContractsPage() {
             <input
               type="text"
               className="cnt-search-input"
-              placeholder="Tìm số hợp đồng, tên chủ tòa nhà..."
+              placeholder="Tìm theo số hợp đồng, tên khách hàng..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -533,7 +639,7 @@ export function AdminContractsPage() {
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
               sort
             </span>
-            <span>{sortAsc ? 'Hạn gần nhất' : 'Hạn xa nhất'}</span>
+            <span>{sortAsc ? 'Hạn gần nhất' : 'Sắp xếp'}</span>
           </button>
         </div>
       </section>
@@ -547,9 +653,9 @@ export function AdminContractsPage() {
               <thead>
                 <tr>
                   <th>Số hợp đồng</th>
-                  <th>Chủ tòa nhà / Khách hàng</th>
+                  <th>Khách hàng</th>
                   <th>Thời hạn</th>
-                  <th>Giá trị &amp; Hạn mức</th>
+                  <th>Giá trị</th>
                   <th>Trạng thái</th>
                   <th style={{ textAlign: 'center' }}>Bản scan</th>
                 </tr>
@@ -583,14 +689,6 @@ export function AdminContractsPage() {
                             {isSelected && (
                               <span className="cnt-selected-badge">Đang chọn</span>
                             )}
-                            {c.renewalRequested && (
-                              <span
-                                className="cnt-selected-badge"
-                                style={{ background: '#fbbf24', color: '#451a03' }}
-                              >
-                                Xin gia hạn
-                              </span>
-                            )}
                           </div>
                         </td>
 
@@ -601,9 +699,7 @@ export function AdminContractsPage() {
                             </div>
                             <div>
                               <div className="cnt-customer-name">{c.customerName}</div>
-                              <div className="cnt-customer-sub">
-                                {c.ownerEmail} · {c.workspaceDomain}
-                              </div>
+                              <div className="cnt-customer-sub">{c.workspaceDomain}</div>
                             </div>
                           </div>
                         </td>
@@ -736,8 +832,7 @@ export function AdminContractsPage() {
                     </span>
                   </div>
                   <div style={{ fontSize: 12, color: '#958ea0', marginTop: 2 }}>
-                    Ký kết ngày {formatDateVN(selectedContract.startDate)} · Hồ sơ pháp lý giữa
-                    Admin &amp; Chủ tòa nhà
+                    Ký kết ngày {formatDateVN(selectedContract.startDate)} · Hồ sơ thẩm định điện tử
                   </div>
                 </div>
               </div>
@@ -755,43 +850,20 @@ export function AdminContractsPage() {
               </button>
             </div>
 
-            {/* Renewal Request Alert from Building Owner if present */}
-            {selectedContract.renewalRequested && (
-              <div className="cnt-renewal-alert">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
-                    notifications_active
-                  </span>
-                  <div>
-                    <strong>Yêu cầu từ Chủ tòa nhà:</strong>{' '}
-                    {selectedContract.renewalNote ||
-                      'Đề nghị gia hạn hợp đồng thêm 12 tháng.'}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="adm-btn adm-btn--sm adm-btn--primary"
-                  onClick={() => handleQuickRenew(selectedContract)}
-                >
-                  Duyệt gia hạn
-                </button>
-              </div>
-            )}
-
             {/* Compact Info List */}
             <div className="cnt-info-grid">
               <div className="cnt-info-item">
-                <span className="cnt-info-label">Chủ tòa nhà / Khách hàng</span>
+                <span className="cnt-info-label">Khách hàng</span>
                 <span className="cnt-info-value" style={{ color: '#5de6ff' }}>
                   {selectedContract.customerName}
                 </span>
                 <span className="cnt-info-sub">
-                  Đại diện: {selectedContract.representative} ({selectedContract.ownerEmail})
+                  Đại diện: {selectedContract.representative}
                 </span>
               </div>
 
               <div className="cnt-info-item">
-                <span className="cnt-info-label">Giá trị hợp đồng &amp; Hạn mức</span>
+                <span className="cnt-info-label">Giá trị hợp đồng</span>
                 <span className="cnt-info-value">
                   {formatContractValue(selectedContract)}{' '}
                   {!selectedContract.billingLabel && (
@@ -804,8 +876,10 @@ export function AdminContractsPage() {
                   className="cnt-info-sub"
                   style={{ color: '#10b981', fontWeight: 600 }}
                 >
-                  ✓ Tối đa {selectedContract.maxBuildings} tòa nhà ·{' '}
-                  {selectedContract.maxFloors} mặt sàn 3D
+                  ✓{' '}
+                  {selectedContract.paymentStatus === 'paid'
+                    ? 'Đã thanh toán kỳ 1'
+                    : 'Chờ thanh toán'}
                 </span>
               </div>
 
@@ -854,7 +928,7 @@ export function AdminContractsPage() {
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                   edit_document
                 </span>
-                <span>Chỉnh sửa hợp đồng</span>
+                <span>Chỉnh sửa</span>
               </button>
 
               <Popconfirm
@@ -877,7 +951,7 @@ export function AdminContractsPage() {
         )}
       </div>
 
-      {/* ── Create / Edit Contract Modal ── */}
+      {/* ── Focused High-End 2-Column Glassmorphism Upload & Create Contract Modal ── */}
       {modalOpen && (
         <div
           className="adm-modal-backdrop"
@@ -885,266 +959,450 @@ export function AdminContractsPage() {
           role="presentation"
         >
           <div
-            className="adm-modal"
-            style={{ maxWidth: 660 }}
+            className="cnt-upload-modal"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
           >
-            <div className="adm-modal__header">
-              <div className="adm-modal__header-left">
-                <div className="adm-modal__icon">
-                  <span className="material-symbols-outlined">contract</span>
+            {/* Top Micro Ambient Light Strip */}
+            <div className="cnt-upload-modal__toplight" />
+
+            {/* Modal Header */}
+            <div className="cnt-upload-modal__header">
+              <div className="cnt-upload-modal__header-left">
+                <div className="cnt-upload-modal__icon-box">
+                  <span className="material-symbols-outlined" style={{ fontSize: 26 }}>
+                    note_add
+                  </span>
                 </div>
                 <div>
-                  <h2 className="adm-modal__title">
-                    {editingId ? 'Chỉnh sửa Hợp đồng dịch vụ' : 'Tạo & Tải Hợp đồng mới'}
-                  </h2>
-                  <p className="adm-modal__subtitle">
-                    Ký kết và cấp hạn mức tòa nhà 3D giữa Admin và Chủ tòa nhà
+                  <div className="cnt-upload-modal__title-row">
+                    <h2 className="cnt-upload-modal__title">
+                      {editingId
+                        ? 'Cập nhật & Lưu trữ hợp đồng'
+                        : 'Tải lên & Lưu trữ hợp đồng mới'}
+                    </h2>
+                    <span className="cnt-upload-modal__ocr-badge">OFFLINE OCR SYNC</span>
+                  </div>
+                  <p className="cnt-upload-modal__subtitle">
+                    Khai báo thông tin cơ bản và lưu trữ bản scan hợp đồng đã ký ngoại tuyến với Chủ
+                    tòa nhà.
                   </p>
                 </div>
               </div>
+
               <button
                 type="button"
-                className="adm-modal__close"
+                className="cnt-upload-modal__close"
                 onClick={() => setModalOpen(false)}
               >
-                <span className="material-symbols-outlined">close</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                  close
+                </span>
               </button>
             </div>
 
-            <form onSubmit={handleSaveContract} className="adm-modal__body">
-              {/* Select existing Building Owner */}
-              {owners.length > 0 && (
-                <div className="adm-field">
-                  <label className="adm-field__label">
-                    Chọn tài khoản Chủ tòa nhà trong hệ thống
-                  </label>
-                  <select
-                    className="adm-input"
-                    value={formOwnerId}
-                    onChange={(e) => handleSelectOwner(e.target.value)}
-                  >
-                    <option value="">-- Nhập thông tin Chủ tòa nhà mới hoặc chọn bên dưới --</option>
-                    {owners.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.name} ({o.email}) {o.tenantName ? `— ${o.tenantName}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+            {/* Modal Two-Column Form Body */}
+            <form onSubmit={handleSaveContract} style={{ display: 'contents' }}>
+              <div className="cnt-upload-modal__body">
+                <div className="cnt-upload-grid">
+                  {/* LEFT COLUMN: 1. Thông tin văn bản & Đối tác */}
+                  <div className="cnt-upload-col">
+                    <div className="cnt-upload-sec-header">
+                      <div className="cnt-upload-sec-title">
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                          feed
+                        </span>
+                        <span>1. Thông tin văn bản &amp; Đối tác</span>
+                      </div>
+                    </div>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1.5fr',
-                  gap: 14,
-                }}
-              >
-                <div className="adm-field">
-                  <label className="adm-field__label">Số hợp đồng *</label>
-                  <input
-                    type="text"
-                    className="adm-input"
-                    value={formCode}
-                    onChange={(e) => setFormCode(e.target.value)}
-                    placeholder="HD-2026-001"
-                    required
-                  />
-                </div>
+                    {/* Khách hàng / Doanh nghiệp Select */}
+                    <div className="cnt-upload-field">
+                      <div className="cnt-upload-label-row">
+                        <label className="cnt-upload-label">
+                          Khách hàng / Doanh nghiệp (Chủ tòa nhà){' '}
+                          <span style={{ color: '#f8acff' }}>*</span>
+                        </label>
+                        <button
+                          type="button"
+                          className="cnt-upload-label-link"
+                          onClick={() => {
+                            setModalOpen(false)
+                            navigate('/admin/accounts?create=1')
+                          }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                            add_circle
+                          </span>
+                          <span>+ Thêm khách hàng mới</span>
+                        </button>
+                      </div>
 
-                <div className="adm-field">
-                  <label className="adm-field__label">
-                    Tên Chủ tòa nhà / Tổ hợp Doanh nghiệp *
-                  </label>
-                  <input
-                    type="text"
-                    className="adm-input"
-                    value={formCustomerName}
-                    onChange={(e) => setFormCustomerName(e.target.value)}
-                    placeholder="VD: Metro Transit Authority"
-                    required
-                  />
+                      <div className="cnt-upload-input-wrap">
+                        <select
+                          className="cnt-upload-select"
+                          value={formOwnerId}
+                          onChange={(e) => handleSelectOwnerPreset(e.target.value)}
+                        >
+                          {owners.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.tenantName || o.name} ({o.email})
+                            </option>
+                          ))}
+                          <option value="preset-mta">
+                            Metro Transit Authority - Sân bay &amp; Ga quốc tế
+                          </option>
+                          <option value="preset-vingroup">
+                            Vincom Mega Mall Smart City - Vingroup Retail
+                          </option>
+                          <option value="preset-saigon">
+                            Saigon Mega Mall - Central Atrium Ops
+                          </option>
+                          <option value="preset-noibai">
+                            Cảng Hàng không Quốc tế Nội Bài T2
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Số hợp đồng ngoại tuyến */}
+                    <div className="cnt-upload-field">
+                      <label className="cnt-upload-label">
+                        Số hợp đồng ngoại tuyến <span style={{ color: '#f8acff' }}>*</span>
+                      </label>
+                      <div className="cnt-upload-input-wrap">
+                        <input
+                          type="text"
+                          className="cnt-upload-input"
+                          style={{ paddingRight: 36, letterSpacing: '0.04em', fontWeight: 600 }}
+                          value={formCode}
+                          onChange={(e) => setFormCode(e.target.value)}
+                          placeholder="Ví dụ: HD-2026-001"
+                          required
+                        />
+                        <span
+                          className="material-symbols-outlined"
+                          style={{
+                            position: 'absolute',
+                            right: 12,
+                            fontSize: 18,
+                            color: '#5de6ff',
+                          }}
+                        >
+                          verified
+                        </span>
+                      </div>
+                      <span className="cnt-upload-hint">
+                        Định dạng chuẩn: [TIỀN TỐ]-[NĂM]-[MÃ 3 CHỮ SỐ]
+                      </span>
+                    </div>
+
+                    {/* Thời hạn hiệu lực: Ngày bắt đầu & Ngày kết thúc */}
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: 12,
+                      }}
+                    >
+                      <div className="cnt-upload-field">
+                        <label className="cnt-upload-label">
+                          Ngày bắt đầu <span style={{ color: '#f8acff' }}>*</span>
+                        </label>
+                        <div className="cnt-upload-input-wrap">
+                          <input
+                            type="date"
+                            className="cnt-upload-input"
+                            value={formStartDate}
+                            onChange={(e) => setFormStartDate(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="cnt-upload-field">
+                        <label className="cnt-upload-label">
+                          Ngày kết thúc <span style={{ color: '#f8acff' }}>*</span>
+                        </label>
+                        <div className="cnt-upload-input-wrap">
+                          <input
+                            type="date"
+                            className="cnt-upload-input"
+                            value={formEndDate}
+                            onChange={(e) => setFormEndDate(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Giá trị hợp đồng & Trạng thái thanh toán */}
+                    <div className="cnt-upload-field">
+                      <label className="cnt-upload-label">
+                        Giá trị hợp đồng (Tùy chọn)
+                      </label>
+                      <div className="cnt-value-row">
+                        <div className="cnt-upload-input-wrap" style={{ flex: 1 }}>
+                          <button
+                            type="button"
+                            className="cnt-currency-badge-btn"
+                            title="Bấm để đổi đơn vị tiền tệ USD / VNĐ"
+                            onClick={() =>
+                              setFormCurrency((c) => (c === 'USD' ? 'VND' : 'USD'))
+                            }
+                          >
+                            {formCurrency === 'USD' ? '$ USD' : '₫ VND'}
+                          </button>
+                          <input
+                            type="text"
+                            className="cnt-upload-input"
+                            style={{ paddingLeft: 74, textAlign: 'right', fontWeight: 700 }}
+                            value={formValue}
+                            onChange={(e) => setFormValue(e.target.value)}
+                          />
+                        </div>
+
+                        <label className="cnt-paid-check-pill">
+                          <input
+                            type="checkbox"
+                            checked={formPaymentStatus === 'paid'}
+                            onChange={(e) =>
+                              setFormPaymentStatus(e.target.checked ? 'paid' : 'pending')
+                            }
+                            style={{ accentColor: '#a078ff', width: 16, height: 16 }}
+                          />
+                          <span>Đã thanh toán</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Ghi chú & Vị trí lưu trữ bản gốc */}
+                    <div className="cnt-upload-field">
+                      <label className="cnt-upload-label">
+                        Ghi chú &amp; Vị trí lưu trữ bản gốc
+                      </label>
+                      <textarea
+                        className="cnt-upload-textarea"
+                        rows={3}
+                        value={formNotes}
+                        onChange={(e) => setFormNotes(e.target.value)}
+                        placeholder="Nhập ghi chú pháp lý, vị trí tủ hồ sơ vật lý hoặc người phụ trách..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* RIGHT COLUMN: 2. Upload & Quản lý tệp scan */}
+                  <div className="cnt-upload-col">
+                    <div className="cnt-upload-sec-header">
+                      <div className="cnt-upload-sec-title cnt-upload-sec-title--cyan">
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                          cloud_upload
+                        </span>
+                        <span>2. Upload &amp; Quản lý tệp scan</span>
+                      </div>
+                      <span
+                        style={{
+                          fontFamily: "'Space Grotesk', sans-serif",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: '#f8acff',
+                        }}
+                      >
+                        {formScanPages.length} trang đã sẵn sàng
+                      </span>
+                    </div>
+
+                    {/* Large Drag-and-Drop Upload Zone */}
+                    <div
+                      className={`cnt-dropzone ${isDragging ? 'cnt-dropzone--dragging' : ''}`}
+                      onClick={() => fileInputRef.current?.click()}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        setIsDragging(true)
+                      }}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        setIsDragging(false)
+                        processUploadedFiles(e.dataTransfer.files)
+                      }}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        accept=".pdf,image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => processUploadedFiles(e.target.files)}
+                      />
+                      <div className="cnt-dropzone__icon">
+                        <span className="material-symbols-outlined" style={{ fontSize: 30 }}>
+                          upload_file
+                        </span>
+                      </div>
+                      <span className="cnt-dropzone__title">
+                        Kéo thả ảnh hoặc PDF hợp đồng vào đây
+                      </span>
+                      <span className="cnt-dropzone__sub">
+                        Hỗ trợ tệp định dạng JPG, PNG, PDF (tối đa 10MB mỗi tệp)
+                      </span>
+                      <button
+                        type="button"
+                        className="cnt-dropzone__btn"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          fileInputRef.current?.click()
+                        }}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 17 }}>
+                          folder_open
+                        </span>
+                        <span>Chọn tệp từ máy tính</span>
+                      </button>
+                    </div>
+
+                    {/* Uploaded File Thumbnails & Reorder List */}
+                    <div className="cnt-pages-list">
+                      <div className="cnt-pages-list__head">
+                        <span>Danh sách các trang scan</span>
+                        <span>Sắp xếp thứ tự trang</span>
+                      </div>
+
+                      {formScanPages.map((pg, idx) => (
+                        <div key={pg.id} className="cnt-page-item">
+                          <span
+                            className="material-symbols-outlined"
+                            style={{ color: '#958ea0', fontSize: 19 }}
+                          >
+                            drag_indicator
+                          </span>
+
+                          <div className="cnt-page-item__thumb">
+                            {pg.dataUrl && (
+                              <img
+                                src={pg.dataUrl}
+                                alt={pg.fileName}
+                                style={{
+                                  position: 'absolute',
+                                  inset: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'cover',
+                                }}
+                              />
+                            )}
+                            <span className="cnt-page-item__badge">P{idx + 1}</span>
+                          </div>
+
+                          <div className="cnt-page-item__info">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span className="cnt-page-item__name">{pg.fileName}</span>
+                              <span
+                                className="material-symbols-outlined"
+                                style={{ fontSize: 15, color: pg.iconColor }}
+                              >
+                                {pg.iconName}
+                              </span>
+                            </div>
+                            <div className="cnt-page-item__meta">
+                              <span>{pg.sizeText}</span>
+                              <span>•</span>
+                              <span style={{ color: '#5de6ff', fontWeight: 600 }}>
+                                {pg.statusText}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="cnt-page-item__actions">
+                            <button
+                              type="button"
+                              className="cnt-page-icon-btn"
+                              disabled={idx === 0}
+                              onClick={() => handleMovePage(idx, -1)}
+                              title="Chuyển lên trang trước"
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                                arrow_upward
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              className="cnt-page-icon-btn"
+                              disabled={idx === formScanPages.length - 1}
+                              onClick={() => handleMovePage(idx, 1)}
+                              title="Chuyển xuống trang sau"
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                                arrow_downward
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              className="cnt-page-icon-btn cnt-page-icon-btn--del"
+                              onClick={() => handleRemovePage(pg.id)}
+                              title="Xóa trang"
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: 17 }}>
+                                delete
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Helper Note */}
+                    <div className="cnt-helper-note">
+                      <span
+                        className="material-symbols-outlined"
+                        style={{ fontSize: 17, color: '#5de6ff', marginTop: 1 }}
+                      >
+                        info
+                      </span>
+                      <span>
+                        Sắp xếp lại thứ tự các trang trong bản scan hợp nhất. Hệ thống sẽ tự động
+                        ghép thành 1 file PDF lưu trữ vĩnh viễn và hiển thị cho Chủ tòa nhà.
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 14,
-                }}
-              >
-                <div className="adm-field">
-                  <label className="adm-field__label">Email tài khoản Chủ tòa nhà *</label>
+              {/* Modal Footer */}
+              <div className="cnt-upload-modal__footer">
+                <label className="cnt-notify-check">
                   <input
-                    type="email"
-                    className="adm-input"
-                    value={formOwnerEmail}
-                    onChange={(e) => setFormOwnerEmail(e.target.value)}
-                    placeholder="owner@company.com"
-                    required
+                    type="checkbox"
+                    checked={notifyOwner}
+                    onChange={(e) => setNotifyOwner(e.target.checked)}
+                    style={{ accentColor: '#a078ff', width: 16, height: 16 }}
                   />
-                </div>
-
-                <div className="adm-field">
-                  <label className="adm-field__label">Người đại diện pháp lý</label>
-                  <input
-                    type="text"
-                    className="adm-input"
-                    value={formRepresentative}
-                    onChange={(e) => setFormRepresentative(e.target.value)}
-                    placeholder="VD: Nguyễn Văn A (Giám đốc)"
-                  />
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 14,
-                }}
-              >
-                <div className="adm-field">
-                  <label className="adm-field__label">Ngày bắt đầu hiệu lực</label>
-                  <input
-                    type="date"
-                    className="adm-input"
-                    value={formStartDate}
-                    onChange={(e) => setFormStartDate(e.target.value)}
-                  />
-                </div>
-
-                <div className="adm-field">
-                  <label className="adm-field__label">Ngày kết thúc</label>
-                  <input
-                    type="date"
-                    className="adm-input"
-                    value={formEndDate}
-                    onChange={(e) => setFormEndDate(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1.2fr 0.8fr 1fr 1fr',
-                  gap: 12,
-                }}
-              >
-                <div className="adm-field">
-                  <label className="adm-field__label">Giá trị / năm</label>
-                  <input
-                    type="number"
-                    className="adm-input"
-                    value={formValue}
-                    onChange={(e) => setFormValue(e.target.value)}
-                  />
-                </div>
-
-                <div className="adm-field">
-                  <label className="adm-field__label">Tiền tệ</label>
-                  <select
-                    className="adm-input"
-                    value={formCurrency}
-                    onChange={(e) => setFormCurrency(e.target.value as ContractCurrency)}
-                  >
-                    <option value="USD">USD ($)</option>
-                    <option value="VND">VNĐ (₫)</option>
-                  </select>
-                </div>
-
-                <div className="adm-field">
-                  <label className="adm-field__label">Số tòa nhà tối đa</label>
-                  <input
-                    type="number"
-                    className="adm-input"
-                    min={1}
-                    value={formMaxBuildings}
-                    onChange={(e) => setFormMaxBuildings(e.target.value)}
-                  />
-                </div>
-
-                <div className="adm-field">
-                  <label className="adm-field__label">Số tầng 3D tối đa</label>
-                  <input
-                    type="number"
-                    className="adm-input"
-                    min={1}
-                    value={formMaxFloors}
-                    onChange={(e) => setFormMaxFloors(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Scan File Upload */}
-              <div className="adm-field">
-                <label className="adm-field__label">
-                  Đính kèm bản scan hợp đồng (PDF hoặc Ảnh scan đã đóng dấu)
+                  <span>Gửi thông báo tới Chủ tòa nhà khi hoàn tất tải lên</span>
                 </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,image/*"
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
-                  />
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
                   <button
                     type="button"
-                    className="adm-btn adm-btn--sm"
-                    onClick={() => fileInputRef.current?.click()}
+                    className="adm-btn"
+                    onClick={() => setModalOpen(false)}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                      attach_file
-                    </span>
-                    <span>Chọn tệp scan từ máy tính</span>
+                    Hủy bỏ
                   </button>
-                  <span style={{ fontSize: 12, color: '#5de6ff' }}>
-                    {formScanFileName || 'Sử dụng mẫu hợp đồng điện tử có dấu chứng thực SpotWay'}
-                  </span>
+
+                  <button
+                    type="submit"
+                    className="cnt-submit-ocr-btn"
+                    disabled={saving}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 19 }}>
+                      document_scanner
+                    </span>
+                    <span>
+                      {saving ? 'Đang lưu & số hóa...' : 'Lưu hợp đồng & Số hóa'}
+                    </span>
+                  </button>
                 </div>
-              </div>
-
-              <div className="adm-field">
-                <label className="adm-field__label">Ghi chú lưu trữ &amp; Điều khoản riêng</label>
-                <textarea
-                  className="adm-input"
-                  style={{ minHeight: 68, paddingTop: 10, resize: 'vertical' }}
-                  value={formNotes}
-                  onChange={(e) => setFormNotes(e.target.value)}
-                  placeholder="Ghi chú phạm vi triển khai, nơi lưu bản cứng..."
-                />
-              </div>
-
-              <div className="adm-modal__footer">
-                <button
-                  type="button"
-                  className="adm-btn"
-                  onClick={() => setModalOpen(false)}
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="adm-btn adm-btn--primary"
-                  disabled={saving}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                    verified
-                  </span>
-                  <span>
-                    {saving
-                      ? 'Đang lưu hợp đồng...'
-                      : editingId
-                        ? 'Lưu thay đổi'
-                        : 'Xác nhận & Lưu hợp đồng'}
-                  </span>
-                </button>
               </div>
             </form>
           </div>
@@ -1155,4 +1413,3 @@ export function AdminContractsPage() {
 }
 
 export default AdminContractsPage
-
