@@ -27,6 +27,7 @@ import {
 } from '@ant-design/icons'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { resolvePublicQrToken } from '../../api/publicNavigation'
+import { claimEvacuationExit, getPublicIncident } from '../../api/incidents'
 import { RouteMap } from '../../components/navigation/RouteMap'
 import { QrScanModal } from '../../components/navigation/QrScanModal'
 import { RouteFloorsOverview } from '../../components/navigation/RouteFloorsOverview'
@@ -84,6 +85,9 @@ export function NavigationPage() {
     clearRoute,
     routeWarning,
     routeSource,
+    incident,
+    setIncident,
+    findEvacuationRoute,
     activeFireNodeIds,
     interactiveFireMode,
     toggleFireNode,
@@ -97,6 +101,51 @@ export function NavigationPage() {
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile')
   const [stepsDrawerOpen, setStepsDrawerOpen] = useState(false)
   const [scanOpen, setScanOpen] = useState(false)
+  const [incidentError, setIncidentError] = useState<string>()
+  const [claimError, setClaimError] = useState<string>()
+
+  useEffect(() => {
+    if (!buildingId || isTestLab) return
+    let cancelled = false
+    let inFlight = false
+    setIncident({ active: false })
+    const poll = async () => {
+      if (inFlight) return
+      inFlight = true
+      try {
+        const next = await getPublicIncident(buildingId)
+        if (!cancelled) { setIncident(next); setIncidentError(undefined) }
+      } catch {
+        if (!cancelled) setIncidentError('Không thể cập nhật cảnh báo sự cố. Vui lòng làm theo hướng dẫn tại tòa nhà.')
+      } finally { inFlight = false }
+    }
+    void poll()
+    const timer = window.setInterval(() => void poll(), 5000)
+    return () => { cancelled = true; window.clearInterval(timer) }
+  }, [buildingId, isTestLab, setIncident])
+
+  const exitNodeId = incident?.active && routeSource === 'api' && route?.effectiveMode === 'EVACUATION' ? route.nodeIds.at(-1) : undefined
+  useEffect(() => {
+    if (!buildingId || !exitNodeId || isTestLab) return
+    const key = 'spotway.evacuationDeviceId'
+    let deviceId = sessionStorage.getItem(key)
+    if (!deviceId) { deviceId = crypto.randomUUID(); sessionStorage.setItem(key, deviceId) }
+    let cancelled = false
+    let inFlight = false
+    const claim = async () => {
+      if (inFlight) return
+      inFlight = true
+      try {
+        await claimEvacuationExit(buildingId, deviceId, exitNodeId)
+        if (!cancelled) setClaimError(undefined)
+      } catch {
+        if (!cancelled) setClaimError('Không thể cập nhật số người tại lối thoát.')
+      } finally { inFlight = false }
+    }
+    void claim()
+    const timer = window.setInterval(() => void claim(), 10000)
+    return () => { cancelled = true; window.clearInterval(timer) }
+  }, [buildingId, exitNodeId, isTestLab])
 
   useEffect(() => {
     if (buildingId) void load(buildingId)
@@ -147,7 +196,8 @@ export function NavigationPage() {
   const currentStep: RouteStep | undefined = route?.steps[stepIndex]
   const nextStep: RouteStep | undefined = route?.steps[stepIndex + 1]
   const fromLocked = Boolean(qr) && qrLocked
-  const effectiveFromNodeId = (fromLocked ? qr?.nodeId : undefined) ?? fromNodeId ?? qr?.nodeId ?? paramFromNodeId ?? sourceOptions[0]?.value
+  const effectiveFromNodeId = (fromLocked ? qr?.nodeId : undefined) ?? fromNodeId ?? qr?.nodeId ?? paramFromNodeId ?? ((!isTestLab && incident?.active) ? undefined : sourceOptions[0]?.value)
+  const evacuationFromNodeId = (fromLocked ? qr?.nodeId : undefined) ?? fromNodeId ?? qr?.nodeId ?? paramFromNodeId
   const displayedFloorId = currentStep?.floorId ?? selectedFloorId ?? qr?.floorId ?? paramFloorId ?? floors[0]?.id
 
   const destinationObj = destinations.find((d) => d.id === destinationId)
@@ -163,7 +213,7 @@ export function NavigationPage() {
   const beginRoute = async (targetDestId?: string, targetFromId?: string) => {
     const from = targetFromId ?? effectiveFromNodeId
     const dest = targetDestId ?? destinationId
-    if (!from || !dest) return
+    if (!from || !dest || (!isTestLab && incident?.active)) return
     const result = await findRoute({
       fromNodeId: from,
       toStoreId: dest,
@@ -312,6 +362,9 @@ export function NavigationPage() {
           style={{ marginBottom: 16 }}
         />
       )}
+      {!isTestLab && incident?.active && <Alert type="error" showIcon message="Cảnh báo cháy" description={<Space orientation="vertical"><span>{incident.message || 'Có sự cố trong tòa nhà. Hãy làm theo hướng dẫn sơ tán.'}</span><span>Chọn vị trí hiện tại trước khi tìm lối thoát.</span><Button danger type="primary" loading={isRouting} disabled={!evacuationFromNodeId} onClick={() => { if (evacuationFromNodeId) void findEvacuationRoute(evacuationFromNodeId, wheelchairMode).then((result) => { if (result) { setStepIndex(0); setSelectedFloorId(result.steps[0]?.floorId) } }).catch(() => undefined) }}>Tìm đường sơ tán</Button></Space>} style={{ marginBottom: 16 }} />}
+      {incidentError && !isTestLab && <Alert type="warning" showIcon message={incidentError} style={{ marginBottom: 16 }} />}
+      {claimError && <Alert type="warning" showIcon message={claimError} style={{ marginBottom: 16 }} />}
       {qrError && <Alert type="warning" showIcon message="Không xác thực được mã QR" description={qrError} style={{ marginBottom: 16 }} />}
       {routeWarning && <Alert type={routeWarning.severity === 'CRITICAL' ? 'error' : 'warning'} showIcon message={routeWarning.message} description={routeWarning.destinationCancelled ? 'Đã hủy điểm đến và chuyển sang lộ trình thoát hiểm.' : undefined} style={{ marginBottom: 16 }} />}
       {routeSource === 'offline' && route && <Alert type="info" showIcon message="Đang dùng định tuyến trên thiết bị" description="Máy chủ không khả dụng hoặc tuyến đang được mô phỏng." style={{ marginBottom: 16 }} />}
@@ -396,7 +449,7 @@ export function NavigationPage() {
                       size="small"
                       block
                       loading={isRouting}
-                      disabled={!effectiveFromNodeId || !destinationId}
+                      disabled={!effectiveFromNodeId || !destinationId || (!isTestLab && Boolean(incident?.active))}
                       onClick={() => void beginRoute()}
                       style={{ background: '#2563eb' }}
                     >
@@ -579,7 +632,7 @@ export function NavigationPage() {
               size="large"
               icon={<SwapOutlined />}
               loading={isRouting}
-              disabled={!effectiveFromNodeId || !destinationId}
+              disabled={!effectiveFromNodeId || !destinationId || (!isTestLab && Boolean(incident?.active))}
               onClick={() => void beginRoute()}
               style={{ background: '#2563eb' }}
             >

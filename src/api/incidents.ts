@@ -19,3 +19,15 @@ export async function clearIncident(buildingId: string) {
   const { data } = await apiClient.delete<IncidentState>(`/buildings/${buildingId}/incident`)
   return data
 }
+
+export async function getPublicIncident(buildingId: string) {
+  const { data } = await apiClient.get<IncidentState>(`/public/buildings/${buildingId}/incident`)
+  return data
+}
+
+export async function claimEvacuationExit(buildingId: string, deviceId: string, exitNodeId: string) {
+  const { data } = await apiClient.post<{ active: boolean; loads: Record<string, number> }>(
+    `/public/buildings/${buildingId}/incident/evacuation/claim`, { deviceId, exitNodeId },
+  )
+  return data
+}

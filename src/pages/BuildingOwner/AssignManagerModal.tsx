@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { App as AntApp } from 'antd'
-import { assignManagerByEmail, createAndAssignManager } from '../../api/buildings'
+import { assignManager, createAndAssignManager } from '../../api/buildings'
+import { getTenantUsers } from '../../api/tenant'
 import './OwnerStaffPage.css'
 
 function generatePassword() {
@@ -62,7 +63,10 @@ export function AssignManagerModal({
         await createAndAssignManager(buildingId, trimmedEmail, password.trim())
         message.success('Đã tạo tài khoản và gán Quản lý vào tòa nhà thành công.')
       } else {
-        await assignManagerByEmail(buildingId, trimmedEmail)
+        const users = await getTenantUsers()
+        const manager = users.find((user) => user.role === 'building_manager' && user.email.toLowerCase() === trimmedEmail.toLowerCase())
+        if (!manager) throw new Error('Không tìm thấy Quản lý với email này trong không gian của bạn.')
+        await assignManager(buildingId, manager.id)
         message.success('Đã gán Quản lý vào tòa nhà thành công.')
       }
       onClose()

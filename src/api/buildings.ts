@@ -35,12 +35,14 @@ function toBuilding(building: any): Building {
 }
 
 export async function getBuildings(): Promise<Building[]> {
-  const { data } = await apiClient.get<any>('/buildings')
-  const items = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.items)
-      ? data.items
-      : []
+  const items: ApiBuilding[] = []
+  let page = 1
+  while (true) {
+    const { data } = await apiClient.get<{ items: ApiBuilding[]; pagination: { total: number } }>('/buildings', { params: { page, limit: 100 } })
+    items.push(...data.items)
+    if (items.length >= data.pagination.total || data.items.length === 0) break
+    page++
+  }
   return items.map(toBuilding)
 }
 
@@ -56,7 +58,7 @@ export async function updateBuilding(
   buildingId: string,
   payload: Partial<Pick<Building, 'name' | 'address' | 'status'>>,
 ) {
-  const { data } = await apiClient.patch<ApiBuilding>(`/buildings/${buildingId}`, payload)
+  const { data } = await apiClient.patch<ApiBuilding>(`/buildings/${buildingId}`, { ...payload, status: payload.status === undefined ? undefined : payload.status === 'active' ? 'ACTIVE' : 'INACTIVE' })
   return toBuilding(data)
 }
 
@@ -64,8 +66,8 @@ export async function deleteBuilding(buildingId: string) {
   await apiClient.delete(`/buildings/${buildingId}`)
 }
 
-export async function assignManagerByEmail(buildingId: string, email: string) {
-  const { data } = await apiClient.post(`/buildings/${buildingId}/managers/by-email`, { email })
+export async function assignManager(buildingId: string, userId: string) {
+  const { data } = await apiClient.post(`/buildings/${buildingId}/managers/${userId}`)
   return data
 }
 

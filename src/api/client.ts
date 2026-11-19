@@ -1,6 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "/api";
+export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 type TokenPair = {
   accessToken: string;
@@ -139,10 +139,7 @@ apiClient.interceptors.response.use(
       ? "Tính năng này chưa được máy chủ hỗ trợ"
       : rawMessage;
     return Promise.reject(
-      Object.assign(new Error(message), {
-        status: error.response?.status as number | undefined,
-        isMissingEndpoint,
-      }),
+      Object.assign(toApiError(Array.isArray(message) ? message.join(', ') : message, error.response?.status, error.response?.data?.error?.code), { isMissingEndpoint }),
     );
   },
 );

@@ -37,6 +37,11 @@ export async function login(email: string, password: string) {
   return normalizeTokenResponse(data)
 }
 
+export async function exchangeOAuthCode(code: string) {
+  const { data } = await apiClient.post<BeTokenResponse>('/auth/oauth/exchange', { code })
+  return normalizeTokenResponse(data)
+}
+
 export async function getCurrentUser() {
   const { data } = await apiClient.get<AuthUser>('/auth/me')
   return data

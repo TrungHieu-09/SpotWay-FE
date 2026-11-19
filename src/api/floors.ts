@@ -34,16 +34,17 @@ function toFloor(floor: any): Floor {
 }
 
 export async function getFloors(buildingId: string) {
-  const { data } = await apiClient.get<any>(
-    `/buildings/${buildingId}/floors`,
-  )
-  const items = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.items)
-      ? data.items
-      : []
-  const floors: Floor[] = items.map(toFloor)
-  return floors
+  const items: ApiFloor[] = []
+  let page = 1
+  while (true) {
+    const { data } = await apiClient.get<{ items: ApiFloor[]; pagination: { total: number } }>(
+      `/buildings/${buildingId}/floors`, { params: { page, limit: 100 } },
+    )
+    items.push(...data.items)
+    if (items.length >= data.pagination.total || data.items.length === 0) break
+    page++
+  }
+  return items.map(toFloor)
 }
 
 export async function createFloor(payload: CreateFloorPayload) {

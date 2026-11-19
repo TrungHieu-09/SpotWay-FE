@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { IncidentState } from '../api/incidents'
 import {
   createPublicRoute,
   getPublicFloorMap,
@@ -27,6 +28,7 @@ export type NavigationState = {
   routeTargetName?: string
   routeWarning?: RouteWarning
   routeSource?: 'api' | 'offline'
+  incident?: IncidentState
   emergencyMode: 'NONE' | 'FIRE'
   activeFireNodeIds: string[]
   blockedEdgeIds: string[]
@@ -39,6 +41,8 @@ export type NavigationState = {
   load: (buildingId: string) => Promise<void>
   search: (query: string) => Promise<void>
   findRoute: (input: { fromNodeId: string; toStoreId: string; wheelchairMode: boolean; transitions?: VerticalLinkKind[] }) => Promise<IndoorRoute | undefined>
+  setIncident: (incident: IncidentState) => void
+  findEvacuationRoute: (fromNodeId: string, wheelchairMode: boolean) => Promise<IndoorRoute | undefined>
   clearRoute: () => void
   toggleFireNode: (nodeId: string, currentNodeId?: string) => void
   setInteractiveFireMode: (enabled: boolean, currentNodeId?: string) => void
@@ -69,7 +73,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => {
   interactiveFireMode: false,
   isDemoRunning: false,
   async load(buildingId) {
-    set({ isLoading: true, error: undefined, route: undefined, routeWarning: undefined, routeSource: undefined, emergencyMode: 'NONE', activeFireNodeIds: [], blockedEdgeIds: [] })
+    set({ isLoading: true, error: undefined, route: undefined, routeWarning: undefined, routeSource: undefined, incident: undefined, emergencyMode: 'NONE', activeFireNodeIds: [], blockedEdgeIds: [] })
     try {
       const floors = await getPublicFloors(buildingId)
       const maps = await Promise.all(floors.map((floor) => getPublicFloorMap(floor.id)))
@@ -96,17 +100,20 @@ export const useNavigationStore = create<NavigationState>((set, get) => {
     set({ destinations })
   },
   async findRoute(input) {
+    if (get().incident?.active) throw new Error('Đang có sự cố. Hãy tìm đường sơ tán.')
     set({ isRouting: true, error: undefined })
     try {
       const picked = get().destinations.find((item) => item.id === input.toStoreId)
       const localRoute = () => picked && applyRoute(input.fromNodeId, picked.nodeId, { targetName: picked.name, wheelchairMode: input.wheelchairMode, allowedTransitions: input.transitions?.length ? new Set(input.transitions) : undefined })
       if (picked && (picked.type !== 'STORE' || input.transitions?.length) && Object.keys(get().mapsByFloorId).length > 0) return localRoute()
       try {
-        const route = await createPublicRoute({ ...input, ...(get().emergencyMode === 'FIRE' ? { mode: 'EVACUATION', hazardNodeIds: get().activeFireNodeIds } : {}) })
+        const route = await createPublicRoute({ fromNodeId: input.fromNodeId, toStoreId: input.toStoreId, wheelchairMode: input.wheelchairMode })
+        if (get().incident?.active) return undefined
         const warning = route.warnings?.find((item) => item.severity === 'CRITICAL')
         set({ route, routeSource: 'api', routeWarning: warning ? { code: warning.code, severity: 'CRITICAL', message: warning.message, destinationCancelled: route.destinationCancelled, requestedDestinationName: picked?.name } : undefined, routeTargetName: route.effectiveMode === 'EVACUATION' ? 'Lối thoát hiểm' : picked?.name, emergencyMode: route.effectiveMode === 'EVACUATION' ? 'FIRE' : get().emergencyMode })
         return route
       } catch (apiError) {
+        if (get().incident?.active) return undefined
         const offline = localRoute()
         if (offline || get().routeWarning) return offline
         throw apiError
@@ -114,6 +121,30 @@ export const useNavigationStore = create<NavigationState>((set, get) => {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Không thể tìm tuyến đường.'
       set({ error: message })
+      throw error
+    } finally {
+      set({ isRouting: false })
+    }
+  },
+  setIncident(incident) {
+    const previous = get().incident
+    const changed = incident.active !== previous?.active || (incident.active && (!previous?.active || incident.id !== previous.id || incident.nodeIds.join(',') !== previous.nodeIds.join(',')))
+    if (!changed) { set({ incident }); return }
+    set({ incident, emergencyMode: incident.active ? 'FIRE' : 'NONE', activeFireNodeIds: incident.active ? incident.nodeIds : [], route: undefined, routeSource: undefined, routeWarning: undefined, error: undefined })
+  },
+  async findEvacuationRoute(fromNodeId, wheelchairMode) {
+    const incident = get().incident
+    if (!incident?.active) return undefined
+    set({ isRouting: true, error: undefined, route: undefined, routeSource: undefined })
+    try {
+      const route = await createPublicRoute({ fromNodeId, wheelchairMode, mode: 'EVACUATION', hazardNodeIds: incident.nodeIds })
+      const current = get().incident
+      if (!current?.active || current.id !== incident.id || current.nodeIds.join(',') !== incident.nodeIds.join(',')) return undefined
+      set({ route, routeSource: 'api', routeTargetName: 'Lối thoát hiểm', routeWarning: undefined })
+      return route
+    } catch (error) {
+      const current = get().incident
+      if (current?.active && current.id === incident.id) set({ error: error instanceof Error ? error.message : 'Không thể tìm đường sơ tán.' })
       throw error
     } finally {
       set({ isRouting: false })

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { App as AntApp } from 'antd'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { ApiError } from '../../api/client'
+import { apiBaseUrl, ApiError } from '../../api/client'
 import { useAuthStore } from '../../auth/store'
 import './LoginPage.css'
 
@@ -99,6 +99,10 @@ export function LoginPage() {
   }
 
   const handleSsoClick = (provider: string) => {
+    if (provider === 'Google') {
+      window.location.assign(`${apiBaseUrl.replace(/\/$/, '')}/auth/google`)
+      return
+    }
     message.info(
       lang === 'EN'
         ? `Single Sign-On with ${provider} will be available in the upcoming release.`

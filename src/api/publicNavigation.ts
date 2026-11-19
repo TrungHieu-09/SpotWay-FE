@@ -61,7 +61,7 @@ export async function resolvePublicQrToken(
 
 export async function createPublicRoute(input: {
   fromNodeId: string
-  toStoreId: string
+  toStoreId?: string
   wheelchairMode: boolean
   mode?: 'NORMAL' | 'EVACUATION'
   hazardNodeIds?: string[]

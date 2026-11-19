@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import {
   changePassword as changePasswordRequest,
   getCurrentUser,
+  exchangeOAuthCode,
   login as loginRequest,
   logout as logoutRequest,
   updateProfile as updateProfileRequest,
@@ -18,6 +19,7 @@ type AuthState = {
   error: string | null
   initialize: () => Promise<void>
   login: (email: string, password: string) => Promise<void>
+  loginWithOAuth: (code: string) => Promise<void>
   logout: () => Promise<void>
   updateProfile: (name: string) => Promise<AuthUser>
   changePassword: (currentPassword: string | undefined, newPassword: string) => Promise<void>
@@ -88,8 +90,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     try {
       const user = await getCurrentUser()
-      saveToken(token, user.role, user)
-      set({ user, token, error: null })
+      const currentToken = window.localStorage.getItem('spotway.accessToken') ?? token
+      saveToken(currentToken, user.role, user)
+      set({ user, token: currentToken, error: null })
     } catch (error) {
       // Only an answered 401/403 means the session is dead; a BE restart or lost connection keeps the cached user.
       const status = (error as { status?: number; response?: { status?: number } })?.status ?? (error as { response?: { status?: number } })?.response?.status
@@ -123,6 +126,23 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
+  async loginWithOAuth(code) {
+    set({ isLoading: true, error: null })
+    try {
+      const result = await exchangeOAuthCode(code)
+      saveToken(result.token)
+      const user = await getCurrentUser()
+      saveToken(result.token, user.role, user)
+      set({ user, token: result.token })
+    } catch (error) {
+      saveToken(null)
+      set({ user: null, token: null })
+      throw error
+    } finally {
+      set({ isLoading: false })
+    }
+  },
+
   async logout() {
     try {
       await logoutRequest()
@@ -134,17 +154,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   async updateProfile(name) {
     const cleanName = name.trim()
-    let updatedUser: AuthUser | null = null
-    try {
-      const res = await updateProfileRequest({ name: cleanName })
-      if (res && res.id && res.email) {
-        updatedUser = res
-      }
-    } catch {
-      // Fallback to local state if backend endpoint is not yet restarted
-    }
-    const current = useAuthStore.getState().user
-    const merged: AuthUser = updatedUser ?? (current ? { ...current, name: cleanName } : ({ name: cleanName } as AuthUser))
+    const merged = await updateProfileRequest({ name: cleanName })
     const token =
       window.localStorage.getItem(AUTH_TOKEN_KEY) ??
       window.localStorage.getItem('spotway.accessToken')
@@ -154,21 +164,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   async changePassword(currentPassword, newPassword) {
-    const res = await changePasswordRequest({ currentPassword, newPassword })
-    const current = useAuthStore.getState().user
-    const nextUser: AuthUser | null =
-      res && res.id && res.email
-        ? res
-        : current
-        ? { ...current, mustChangePassword: false }
-        : null
-    if (nextUser) {
-      const token =
-        window.localStorage.getItem(AUTH_TOKEN_KEY) ??
-        window.localStorage.getItem('spotway.accessToken')
-      saveToken(token, nextUser.role, nextUser)
-      set({ user: nextUser })
-    }
+    await changePasswordRequest({ currentPassword, newPassword })
+    saveToken(null)
+    set({ user: null, token: null })
   },
 
   clearSession() {

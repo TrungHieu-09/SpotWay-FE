@@ -8,6 +8,7 @@ import { OwnerLayout } from '../components/layout/OwnerLayout'
 import { ProtectedRoute } from '../components/layout/ProtectedRoute'
 import { LandingPage } from '../pages/Landing/LandingPage'
 import { LoginPage } from '../pages/Auth/LoginPage'
+import { OAuthCallbackPage } from '../pages/Auth/OAuthCallbackPage'
 import { ForbiddenPage } from '../pages/Auth/ForbiddenPage'
 import { NotFoundPage } from '../pages/Auth/NotFoundPage'
 import { ChangePasswordPage } from '../pages/Auth/ChangePasswordPage'
@@ -122,6 +123,7 @@ export const router = createBrowserRouter([
   // ── SpotWay Premium Landing Page & Auth ──
   { path: '/', element: <LandingPage /> },
   { path: 'login', element: <LoginPage /> },
+  { path: 'auth/callback', element: <OAuthCallbackPage /> },
   { path: 'account', element: lazyElement(<AccountHomePage />) },
   { path: 'workspace/choose', element: lazyElement(<AccountHomePage />) },
   { path: 'profile', element: lazyElement(<ProfilePage />) },
