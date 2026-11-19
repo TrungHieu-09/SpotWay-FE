@@ -6,6 +6,7 @@ import { CanvasBoard } from './CanvasBoard'
 import { MaintenancePanel } from './MaintenancePanel'
 import { OperationsPanel } from './OperationsPanel'
 import { ShopPromotionsPanel } from './ShopPromotionsPanel'
+import { ActivityPanel } from './ActivityPanel'
 import { EditorShell } from '../../components/ui/EditorShell'
 import { useBuildingStore } from '../../store/useBuildingStore'
 import { useFloorStore } from '../../store/useFloorStore'
@@ -150,6 +151,11 @@ export function ManagerLayout() {
                         key: 'shops',
                         label: 'Gian hàng & khuyến mãi',
                         children: <ShopPromotionsPanel buildingId={buildingId} readOnly={isReadOnly} />,
+                      },
+                      {
+                        key: 'activity',
+                        label: 'Nhật ký',
+                        children: <ActivityPanel buildingId={buildingId} />,
                       },
                     ]
                   : []),
