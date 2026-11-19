@@ -52,12 +52,11 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
 </style>
 <div class="wrap"><header><h1>Sơ đồ SpotWay</h1><p class="sub">Use case, context, kiến trúc, ERD, trạng thái và tuần tự của nền tảng chỉ đường trong nhà SpotWay. Khớp mã nguồn nhánh final, cập nhật 19/11/2026.</p></header>
 <nav aria-label="Mục lục"><a href="#flow">Luồng tổng thể</a><a href="#usecase">Use case</a><a href="#context">Context diagram</a><a href="#arch">Kiến trúc</a><a href="#erd">ERD</a><a href="#state">Sơ đồ trạng thái</a><a href="#seq">Sơ đồ tuần tự</a></nav>
-<section id="flow"><h2>Luồng tổng thể</h2><p class="intro">Từ lúc khách đặt gói tới khi khách trong tòa nhận chỉ đường. Mỗi tòa có Manager riêng, dữ liệu mỗi tòa tách biệt.</p>
+<section id="flow"><h2>Luồng tổng thể</h2><p class="intro">Từ lúc Admin cấp workspace tới khi khách trong tòa nhận chỉ đường. Mỗi tòa có Manager riêng, dữ liệu mỗi tòa tách biệt.</p>
 <div class="card"><h3>Luồng nghiệp vụ end-to-end</h3>
 <p class="cap">Đường chính của dự án, theo thứ tự thực hiện.</p>
 <div class="diagram"><pre class="mermaid">flowchart TD
-  A["Khách đặt gói trên web và xác thực OTP email"] --&gt; B["Admin duyệt đơn"]
-  B --&gt; C["Hệ thống tạo Tenant và tài khoản Owner, gửi mật khẩu tạm"]
+  A["Admin tạo workspace (Tenant) và tài khoản Owner, nhận mật khẩu tạm"] --&gt; C["Admin chuyển mật khẩu tạm cho Owner, Owner đổi mật khẩu khi đăng nhập"]
   C --&gt; D["Owner tạo tòa nhà"]
   D --&gt; E["Owner tạo Manager và gán vào từng tòa (StaffAssignment)"]
   E --&gt; F["Manager tải ảnh sơ đồ và hiệu chuẩn tỉ lệ mét trên pixel"]
@@ -76,8 +75,7 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
   P --&gt; Q
   Q --&gt; R["Owner xem thống kê khách của tòa"]</pre></div>
 <details><summary>Mã Mermaid (dán vào mermaid.live hoặc draw.io)</summary><button class="copy" data-target="src1" type="button">Sao chép mã Mermaid</button><pre class="code" id="src1">flowchart TD
-  A["Khách đặt gói trên web và xác thực OTP email"] --&gt; B["Admin duyệt đơn"]
-  B --&gt; C["Hệ thống tạo Tenant và tài khoản Owner, gửi mật khẩu tạm"]
+  A["Admin tạo workspace (Tenant) và tài khoản Owner, nhận mật khẩu tạm"] --&gt; C["Admin chuyển mật khẩu tạm cho Owner, Owner đổi mật khẩu khi đăng nhập"]
   C --&gt; D["Owner tạo tòa nhà"]
   D --&gt; E["Owner tạo Manager và gán vào từng tòa (StaffAssignment)"]
   E --&gt; F["Manager tải ảnh sơ đồ và hiệu chuẩn tỉ lệ mét trên pixel"]
@@ -100,7 +98,6 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
 <div class="card"><h3>Biểu đồ use case</h3>
 <p class="cap">Đường nối là quan hệ tác nhân và chức năng. Hộp ngoài là ranh giới hệ thống.</p>
 <div class="diagram"><pre class="mermaid">flowchart LR
-  KH(["Khách đặt gói"])
   AD(["Admin"])
   OW(["Building Owner"])
   MG(["Building Manager"])
@@ -108,8 +105,7 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
   GU(["Khách mobile"])
   subgraph SYS["Hệ thống SpotWay"]
     direction TB
-    U1("Đặt gói và xác thực OTP")
-    U2("Duyệt đơn, tạo tenant và Owner")
+    U2("Tạo workspace và tài khoản Owner")
     U3("Khóa hoặc mở tenant, tài khoản")
     U4("Tạo và quản lý tòa nhà")
     U5("Tạo Manager, gán vào tòa")
@@ -132,7 +128,6 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
     U22("Gửi yêu cầu hỗ trợ")
     U23("Lập lộ trình nhiều điểm")
   end
-  KH --- U1
   AD --- U2
   AD --- U3
   OW --- U4
@@ -161,7 +156,6 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
   U20 -. "extend" .-&gt; U18
   U16 -. "include" .-&gt; U10</pre></div>
 <details><summary>Mã Mermaid (dán vào mermaid.live hoặc draw.io)</summary><button class="copy" data-target="src2" type="button">Sao chép mã Mermaid</button><pre class="code" id="src2">flowchart LR
-  KH(["Khách đặt gói"])
   AD(["Admin"])
   OW(["Building Owner"])
   MG(["Building Manager"])
@@ -169,8 +163,7 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
   GU(["Khách mobile"])
   subgraph SYS["Hệ thống SpotWay"]
     direction TB
-    U1("Đặt gói và xác thực OTP")
-    U2("Duyệt đơn, tạo tenant và Owner")
+    U2("Tạo workspace và tài khoản Owner")
     U3("Khóa hoặc mở tenant, tài khoản")
     U4("Tạo và quản lý tòa nhà")
     U5("Tạo Manager, gán vào tòa")
@@ -193,7 +186,6 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
     U22("Gửi yêu cầu hỗ trợ")
     U23("Lập lộ trình nhiều điểm")
   end
-  KH --- U1
   AD --- U2
   AD --- U3
   OW --- U4
@@ -224,7 +216,7 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
 </section>
 <section id="context"><h2>Context diagram</h2><p class="intro">Hệ thống là một khối; xung quanh là người dùng và dịch vụ ngoài.</p>
 <div class="card"><h3>Context diagram (mức 0)</h3>
-<p class="cap">Tên dịch vụ email, OAuth và lưu trữ ảnh nên đối chiếu lại với cấu hình triển khai thật của nhóm.</p>
+<p class="cap">Dịch vụ phân tích sơ đồ chỉ bật khi cấu hình FLOORPLAN_INTELLIGENCE_URL; OAuth chỉ bật khi có khóa Google.</p>
 <div class="diagram"><pre class="mermaid">flowchart LR
   AD(["Admin"])
   OW(["Building Owner"])
@@ -235,9 +227,9 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
   PG[("Supabase PostgreSQL")]
   ST[("Supabase Storage: ảnh sơ đồ và ảnh gian hàng")]
   MG2[("MongoDB Atlas: sự kiện phân tích")]
-  EM["Dịch vụ email: OTP, mật khẩu tạm"]
-  OA["Nhà cung cấp đăng nhập OAuth"]
-  AD --&gt;|"duyệt đơn, quản lý tenant"| SYS
+  OA["Google OAuth (tùy chọn)"]
+  FP["Dịch vụ phân tích sơ đồ (tùy chọn)"]
+  AD --&gt;|"tạo workspace và Owner, khóa mở tài khoản"| SYS
   OW --&gt;|"tòa nhà, nhân sự"| SYS
   MG --&gt;|"sơ đồ, gian hàng, sự cố, điều hành"| SYS
   SO --&gt;|"thông tin gian hàng"| SYS
@@ -247,8 +239,8 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
   SYS &lt;--&gt;|"dữ liệu nghiệp vụ"| PG
   SYS &lt;--&gt;|"ảnh"| ST
   SYS --&gt;|"sự kiện qua Outbox"| MG2
-  SYS --&gt;|"gửi OTP"| EM
-  OA --&gt;|"xác thực"| SYS</pre></div>
+  OA --&gt;|"xác thực"| SYS
+  SYS &lt;--&gt;|"ảnh sơ đồ, gợi ý node"| FP</pre></div>
 <details><summary>Mã Mermaid (dán vào mermaid.live hoặc draw.io)</summary><button class="copy" data-target="src3" type="button">Sao chép mã Mermaid</button><pre class="code" id="src3">flowchart LR
   AD(["Admin"])
   OW(["Building Owner"])
@@ -259,9 +251,9 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
   PG[("Supabase PostgreSQL")]
   ST[("Supabase Storage: ảnh sơ đồ và ảnh gian hàng")]
   MG2[("MongoDB Atlas: sự kiện phân tích")]
-  EM["Dịch vụ email: OTP, mật khẩu tạm"]
-  OA["Nhà cung cấp đăng nhập OAuth"]
-  AD --&gt;|"duyệt đơn, quản lý tenant"| SYS
+  OA["Google OAuth (tùy chọn)"]
+  FP["Dịch vụ phân tích sơ đồ (tùy chọn)"]
+  AD --&gt;|"tạo workspace và Owner, khóa mở tài khoản"| SYS
   OW --&gt;|"tòa nhà, nhân sự"| SYS
   MG --&gt;|"sơ đồ, gian hàng, sự cố, điều hành"| SYS
   SO --&gt;|"thông tin gian hàng"| SYS
@@ -271,8 +263,8 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
   SYS &lt;--&gt;|"dữ liệu nghiệp vụ"| PG
   SYS &lt;--&gt;|"ảnh"| ST
   SYS --&gt;|"sự kiện qua Outbox"| MG2
-  SYS --&gt;|"gửi OTP"| EM
-  OA --&gt;|"xác thực"| SYS</pre></details></div>
+  OA --&gt;|"xác thực"| SYS
+  SYS &lt;--&gt;|"ảnh sơ đồ, gợi ý node"| FP</pre></details></div>
 </section>
 <section id="arch"><h2>Kiến trúc</h2><p class="intro">Ba ứng dụng khách, một BE NestJS, hai cơ sở dữ liệu. Trạng thái trực tiếp (báo cháy, điều hành) nằm trong bộ nhớ BE.</p>
 <div class="card"><h3>Kiến trúc hệ thống</h3>
@@ -392,7 +384,7 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
 </section>
 <section id="erd"><h2>ERD</h2><p class="intro">Khớp schema.prisma. Chia ba cụm cho dễ đọc; Building, Floor, Node xuất hiện ở nhiều cụm.</p>
 <div class="card"><h3>Cụm tài khoản</h3>
-<p class="cap">Tenant, người dùng, phiên và đơn gói.</p>
+<p class="cap">Tenant, người dùng và phiên. PlanOrder và EmailOtp có trong schema nhưng chưa có chức năng nào dùng tới.</p>
 <div class="diagram"><pre class="mermaid">erDiagram
   Tenant ||--o{ User : "có"
   Tenant ||--o{ Building : "sở hữu"
@@ -792,13 +784,8 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
   CoDongCua --&gt; CoDongCua: bật hoặc tắt thêm mục khác
   CoDongCua --&gt; HoatDongBinhThuong: tắt hết hoặc Đưa về bình thường
   CoDongCua --&gt; HoatDongBinhThuong: BE khởi động lại</pre></details></div>
-<div class="card"><h3>Đơn gói, tenant, tài khoản</h3>
+<div class="card"><h3>Tenant và tài khoản</h3>
 <div class="diagram"><pre class="mermaid">stateDiagram-v2
-  state "Đơn gói" as O {
-    [*] --&gt; PENDING
-    PENDING --&gt; PAID: Admin duyệt
-    PENDING --&gt; CANCELLED: hủy
-  }
   state "Tenant" as T {
     [*] --&gt; ACTIVE
     ACTIVE --&gt; SUSPENDED: Admin khóa
@@ -810,11 +797,6 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
     LOCKED --&gt; UA: mở khóa
   }</pre></div>
 <details><summary>Mã Mermaid (dán vào mermaid.live hoặc draw.io)</summary><button class="copy" data-target="src12" type="button">Sao chép mã Mermaid</button><pre class="code" id="src12">stateDiagram-v2
-  state "Đơn gói" as O {
-    [*] --&gt; PENDING
-    PENDING --&gt; PAID: Admin duyệt
-    PENDING --&gt; CANCELLED: hủy
-  }
   state "Tenant" as T {
     [*] --&gt; ACTIVE
     ACTIVE --&gt; SUSPENDED: Admin khóa
@@ -1050,7 +1032,7 @@ button.copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; 
   MGO--&gt;&gt;BE: số liệu
   BE--&gt;&gt;OW: thẻ Hoạt động của khách</pre></details></div>
 </section>
-<div class="notes"><h2>Cần đối chiếu trước khi nộp báo cáo</h2><ul><li>Báo cháy và trạng thái điều hành lưu trong bộ nhớ của BE, chỉ chạy được một bản BE. Khởi động lại BE thì về bình thường.</li><li>Tên dịch vụ email, OAuth và nơi lưu ảnh trong sơ đồ context nên được đối chiếu với cấu hình triển khai thật trước khi đưa vào báo cáo.</li><li>Mobile mặc định mở SpotWay Plaza khi chưa quét QR (để nút xem thử hoạt động); quét QR của tòa khác thì đổi sang tòa đó.</li></ul></div></div>
+<div class="notes"><h2>Cần đối chiếu trước khi nộp báo cáo</h2><ul><li>Báo cháy và trạng thái điều hành lưu trong bộ nhớ của BE, chỉ chạy được một bản BE. Khởi động lại BE thì về bình thường.</li><li>Không có đăng ký tự phục vụ, đặt gói, OTP email hay thanh toán: tài khoản Owner do Admin cấp và mật khẩu tạm do Admin chuyển. Bảng plan_orders và email_otps có trong cơ sở dữ liệu nhưng chưa có code dùng.</li><li>Mobile mặc định mở SpotWay Plaza khi chưa quét QR (để nút xem thử hoạt động); quét QR của tòa khác thì đổi sang tòa đó.</li></ul></div></div>
 <script>
 document.querySelectorAll('button.copy').forEach(function (b) {
   b.addEventListener('click', function () {

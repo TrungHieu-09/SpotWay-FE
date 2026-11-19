@@ -4,7 +4,7 @@ Use case, context, kiến trúc, ERD, trạng thái và tuần tự của nền 
 
 ## Luồng tổng thể
 
-Từ lúc khách đặt gói tới khi khách trong tòa nhận chỉ đường. Mỗi tòa có Manager riêng, dữ liệu mỗi tòa tách biệt.
+Từ lúc Admin cấp workspace tới khi khách trong tòa nhận chỉ đường. Mỗi tòa có Manager riêng, dữ liệu mỗi tòa tách biệt.
 
 ### Luồng nghiệp vụ end-to-end
 
@@ -12,8 +12,7 @@ Từ lúc khách đặt gói tới khi khách trong tòa nhận chỉ đường.
 
 ```mermaid
 flowchart TD
-  A["Khách đặt gói trên web và xác thực OTP email"] --> B["Admin duyệt đơn"]
-  B --> C["Hệ thống tạo Tenant và tài khoản Owner, gửi mật khẩu tạm"]
+  A["Admin tạo workspace (Tenant) và tài khoản Owner, nhận mật khẩu tạm"] --> C["Admin chuyển mật khẩu tạm cho Owner, Owner đổi mật khẩu khi đăng nhập"]
   C --> D["Owner tạo tòa nhà"]
   D --> E["Owner tạo Manager và gán vào từng tòa (StaffAssignment)"]
   E --> F["Manager tải ảnh sơ đồ và hiệu chuẩn tỉ lệ mét trên pixel"]
@@ -43,7 +42,6 @@ Sáu tác nhân và các chức năng chính. Manager và Owner chỉ thao tác 
 
 ```mermaid
 flowchart LR
-  KH(["Khách đặt gói"])
   AD(["Admin"])
   OW(["Building Owner"])
   MG(["Building Manager"])
@@ -51,8 +49,7 @@ flowchart LR
   GU(["Khách mobile"])
   subgraph SYS["Hệ thống SpotWay"]
     direction TB
-    U1("Đặt gói và xác thực OTP")
-    U2("Duyệt đơn, tạo tenant và Owner")
+    U2("Tạo workspace và tài khoản Owner")
     U3("Khóa hoặc mở tenant, tài khoản")
     U4("Tạo và quản lý tòa nhà")
     U5("Tạo Manager, gán vào tòa")
@@ -75,7 +72,6 @@ flowchart LR
     U22("Gửi yêu cầu hỗ trợ")
     U23("Lập lộ trình nhiều điểm")
   end
-  KH --- U1
   AD --- U2
   AD --- U3
   OW --- U4
@@ -111,7 +107,7 @@ Hệ thống là một khối; xung quanh là người dùng và dịch vụ ngo
 
 ### Context diagram (mức 0)
 
-Tên dịch vụ email, OAuth và lưu trữ ảnh nên đối chiếu lại với cấu hình triển khai thật của nhóm.
+Dịch vụ phân tích sơ đồ chỉ bật khi cấu hình FLOORPLAN_INTELLIGENCE_URL; OAuth chỉ bật khi có khóa Google.
 
 ```mermaid
 flowchart LR
@@ -124,9 +120,9 @@ flowchart LR
   PG[("Supabase PostgreSQL")]
   ST[("Supabase Storage: ảnh sơ đồ và ảnh gian hàng")]
   MG2[("MongoDB Atlas: sự kiện phân tích")]
-  EM["Dịch vụ email: OTP, mật khẩu tạm"]
-  OA["Nhà cung cấp đăng nhập OAuth"]
-  AD -->|"duyệt đơn, quản lý tenant"| SYS
+  OA["Google OAuth (tùy chọn)"]
+  FP["Dịch vụ phân tích sơ đồ (tùy chọn)"]
+  AD -->|"tạo workspace và Owner, khóa mở tài khoản"| SYS
   OW -->|"tòa nhà, nhân sự"| SYS
   MG -->|"sơ đồ, gian hàng, sự cố, điều hành"| SYS
   SO -->|"thông tin gian hàng"| SYS
@@ -136,8 +132,8 @@ flowchart LR
   SYS <-->|"dữ liệu nghiệp vụ"| PG
   SYS <-->|"ảnh"| ST
   SYS -->|"sự kiện qua Outbox"| MG2
-  SYS -->|"gửi OTP"| EM
   OA -->|"xác thực"| SYS
+  SYS <-->|"ảnh sơ đồ, gợi ý node"| FP
 ```
 
 ## Kiến trúc
@@ -219,7 +215,7 @@ Khớp schema.prisma. Chia ba cụm cho dễ đọc; Building, Floor, Node xuấ
 
 ### Cụm tài khoản
 
-Tenant, người dùng, phiên và đơn gói.
+Tenant, người dùng và phiên. PlanOrder và EmailOtp có trong schema nhưng chưa có chức năng nào dùng tới.
 
 ```mermaid
 erDiagram
@@ -455,15 +451,10 @@ stateDiagram-v2
   CoDongCua --> HoatDongBinhThuong: BE khởi động lại
 ```
 
-### Đơn gói, tenant, tài khoản
+### Tenant và tài khoản
 
 ```mermaid
 stateDiagram-v2
-  state "Đơn gói" as O {
-    [*] --> PENDING
-    PENDING --> PAID: Admin duyệt
-    PENDING --> CANCELLED: hủy
-  }
   state "Tenant" as T {
     [*] --> ACTIVE
     ACTIVE --> SUSPENDED: Admin khóa
@@ -627,5 +618,5 @@ sequenceDiagram
 ## Cần đối chiếu trước khi nộp báo cáo
 
 - Báo cháy và trạng thái điều hành lưu trong bộ nhớ của BE, chỉ chạy được một bản BE. Khởi động lại BE thì về bình thường.
-- Tên dịch vụ email, OAuth và nơi lưu ảnh trong sơ đồ context nên được đối chiếu với cấu hình triển khai thật trước khi đưa vào báo cáo.
+- Không có đăng ký tự phục vụ, đặt gói, OTP email hay thanh toán: tài khoản Owner do Admin cấp và mật khẩu tạm do Admin chuyển. Bảng plan_orders và email_otps có trong cơ sở dữ liệu nhưng chưa có code dùng.
 - Mobile mặc định mở SpotWay Plaza khi chưa quét QR (để nút xem thử hoạt động); quét QR của tòa khác thì đổi sang tòa đó.

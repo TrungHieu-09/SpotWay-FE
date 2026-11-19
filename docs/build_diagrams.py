@@ -15,10 +15,9 @@ def section(sid, title, intro, items):
 
 
 # --------------------------------------------------------------------------------------------------------------
-section('flow', 'Luồng tổng thể', 'Từ lúc khách đặt gói tới khi khách trong tòa nhận chỉ đường. Mỗi tòa có Manager riêng, dữ liệu mỗi tòa tách biệt.', [
+section('flow', 'Luồng tổng thể', 'Từ lúc Admin cấp workspace tới khi khách trong tòa nhận chỉ đường. Mỗi tòa có Manager riêng, dữ liệu mỗi tòa tách biệt.', [
     ('Luồng nghiệp vụ end-to-end', 'Đường chính của dự án, theo thứ tự thực hiện.', '''flowchart TD
-  A["Khách đặt gói trên web và xác thực OTP email"] --> B["Admin duyệt đơn"]
-  B --> C["Hệ thống tạo Tenant và tài khoản Owner, gửi mật khẩu tạm"]
+  A["Admin tạo workspace (Tenant) và tài khoản Owner, nhận mật khẩu tạm"] --> C["Admin chuyển mật khẩu tạm cho Owner, Owner đổi mật khẩu khi đăng nhập"]
   C --> D["Owner tạo tòa nhà"]
   D --> E["Owner tạo Manager và gán vào từng tòa (StaffAssignment)"]
   E --> F["Manager tải ảnh sơ đồ và hiệu chuẩn tỉ lệ mét trên pixel"]
@@ -40,7 +39,6 @@ section('flow', 'Luồng tổng thể', 'Từ lúc khách đặt gói tới khi 
 
 section('usecase', 'Use case', 'Sáu tác nhân và các chức năng chính. Manager và Owner chỉ thao tác trong phạm vi tòa của mình.', [
     ('Biểu đồ use case', 'Đường nối là quan hệ tác nhân và chức năng. Hộp ngoài là ranh giới hệ thống.', '''flowchart LR
-  KH(["Khách đặt gói"])
   AD(["Admin"])
   OW(["Building Owner"])
   MG(["Building Manager"])
@@ -48,8 +46,7 @@ section('usecase', 'Use case', 'Sáu tác nhân và các chức năng chính. Ma
   GU(["Khách mobile"])
   subgraph SYS["Hệ thống SpotWay"]
     direction TB
-    U1("Đặt gói và xác thực OTP")
-    U2("Duyệt đơn, tạo tenant và Owner")
+    U2("Tạo workspace và tài khoản Owner")
     U3("Khóa hoặc mở tenant, tài khoản")
     U4("Tạo và quản lý tòa nhà")
     U5("Tạo Manager, gán vào tòa")
@@ -72,7 +69,6 @@ section('usecase', 'Use case', 'Sáu tác nhân và các chức năng chính. Ma
     U22("Gửi yêu cầu hỗ trợ")
     U23("Lập lộ trình nhiều điểm")
   end
-  KH --- U1
   AD --- U2
   AD --- U3
   OW --- U4
@@ -103,7 +99,7 @@ section('usecase', 'Use case', 'Sáu tác nhân và các chức năng chính. Ma
 ])
 
 section('context', 'Context diagram', 'Hệ thống là một khối; xung quanh là người dùng và dịch vụ ngoài.', [
-    ('Context diagram (mức 0)', 'Tên dịch vụ email, OAuth và lưu trữ ảnh nên đối chiếu lại với cấu hình triển khai thật của nhóm.', '''flowchart LR
+    ('Context diagram (mức 0)', 'Dịch vụ phân tích sơ đồ chỉ bật khi cấu hình FLOORPLAN_INTELLIGENCE_URL; OAuth chỉ bật khi có khóa Google.', '''flowchart LR
   AD(["Admin"])
   OW(["Building Owner"])
   MG(["Building Manager"])
@@ -113,9 +109,9 @@ section('context', 'Context diagram', 'Hệ thống là một khối; xung quanh
   PG[("Supabase PostgreSQL")]
   ST[("Supabase Storage: ảnh sơ đồ và ảnh gian hàng")]
   MG2[("MongoDB Atlas: sự kiện phân tích")]
-  EM["Dịch vụ email: OTP, mật khẩu tạm"]
-  OA["Nhà cung cấp đăng nhập OAuth"]
-  AD -->|"duyệt đơn, quản lý tenant"| SYS
+  OA["Google OAuth (tùy chọn)"]
+  FP["Dịch vụ phân tích sơ đồ (tùy chọn)"]
+  AD -->|"tạo workspace và Owner, khóa mở tài khoản"| SYS
   OW -->|"tòa nhà, nhân sự"| SYS
   MG -->|"sơ đồ, gian hàng, sự cố, điều hành"| SYS
   SO -->|"thông tin gian hàng"| SYS
@@ -125,8 +121,8 @@ section('context', 'Context diagram', 'Hệ thống là một khối; xung quanh
   SYS <-->|"dữ liệu nghiệp vụ"| PG
   SYS <-->|"ảnh"| ST
   SYS -->|"sự kiện qua Outbox"| MG2
-  SYS -->|"gửi OTP"| EM
-  OA -->|"xác thực"| SYS'''),
+  OA -->|"xác thực"| SYS
+  SYS <-->|"ảnh sơ đồ, gợi ý node"| FP'''),
 ])
 
 section('arch', 'Kiến trúc', 'Ba ứng dụng khách, một BE NestJS, hai cơ sở dữ liệu. Trạng thái trực tiếp (báo cháy, điều hành) nằm trong bộ nhớ BE.', [
@@ -188,7 +184,7 @@ section('arch', 'Kiến trúc', 'Ba ứng dụng khách, một BE NestJS, hai c�
 ])
 
 section('erd', 'ERD', 'Khớp schema.prisma. Chia ba cụm cho dễ đọc; Building, Floor, Node xuất hiện ở nhiều cụm.', [
-    ('Cụm tài khoản', 'Tenant, người dùng, phiên và đơn gói.', '''erDiagram
+    ('Cụm tài khoản', 'Tenant, người dùng và phiên. PlanOrder và EmailOtp có trong schema nhưng chưa có chức năng nào dùng tới.', '''erDiagram
   Tenant ||--o{ User : "có"
   Tenant ||--o{ Building : "sở hữu"
   Tenant ||--o{ PlanOrder : "đặt gói"
@@ -385,12 +381,7 @@ section('state', 'Sơ đồ trạng thái', 'Trạng thái của các đối tư
   CoDongCua --> CoDongCua: bật hoặc tắt thêm mục khác
   CoDongCua --> HoatDongBinhThuong: tắt hết hoặc Đưa về bình thường
   CoDongCua --> HoatDongBinhThuong: BE khởi động lại'''),
-    ('Đơn gói, tenant, tài khoản', '', '''stateDiagram-v2
-  state "Đơn gói" as O {
-    [*] --> PENDING
-    PENDING --> PAID: Admin duyệt
-    PENDING --> CANCELLED: hủy
-  }
+    ('Tenant và tài khoản', '', '''stateDiagram-v2
   state "Tenant" as T {
     [*] --> ACTIVE
     ACTIVE --> SUSPENDED: Admin khóa
@@ -514,7 +505,7 @@ section('seq', 'Sơ đồ tuần tự', 'Các luồng có nhiều bên tham gia.
 
 NOTES = [
     'Báo cháy và trạng thái điều hành lưu trong bộ nhớ của BE, chỉ chạy được một bản BE. Khởi động lại BE thì về bình thường.',
-    'Tên dịch vụ email, OAuth và nơi lưu ảnh trong sơ đồ context nên được đối chiếu với cấu hình triển khai thật trước khi đưa vào báo cáo.',
+    'Không có đăng ký tự phục vụ, đặt gói, OTP email hay thanh toán: tài khoản Owner do Admin cấp và mật khẩu tạm do Admin chuyển. Bảng plan_orders và email_otps có trong cơ sở dữ liệu nhưng chưa có code dùng.',
     'Mobile mặc định mở SpotWay Plaza khi chưa quét QR (để nút xem thử hoạt động); quét QR của tòa khác thì đổi sang tòa đó.',
 ]
 
