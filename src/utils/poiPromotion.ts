@@ -5,6 +5,8 @@ import type { PoiCategory } from '../types/poi.ts'
 /** Loại POI cần một node trung chuyển tương ứng để thuật toán đi xuyên tầng hoặc thoát hiểm. */
 export const NODE_TYPE_FOR_POI: Partial<Record<PoiCategory, NodeType>> = {
   elevator: 'ELEVATOR',
+  stair: 'STAIR',
+  escalator: 'ESCALATOR',
   exit: 'EXIT',
 }
 
