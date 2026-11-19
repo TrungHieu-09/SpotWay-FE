@@ -1,0 +1,413 @@
+/* ============================================================
+   ContractScanViewer.css — Realistic Scanned Contract Document Viewer
+   ============================================================ */
+
+.csv-viewer {
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  background: rgba(13, 13, 28, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.csv-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(41, 40, 57, 0.78);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.csv-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #e3e0f6;
+}
+
+.csv-toolbar__icon {
+  color: #f472b6;
+  font-size: 18px;
+}
+
+.csv-toolbar__controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.csv-ctrl-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(18, 18, 36, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 9px;
+  padding: 2px;
+}
+
+.csv-ctrl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: #cbc3d7;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.csv-ctrl-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.csv-ctrl-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.csv-ctrl-label {
+  padding: 0 7px;
+  font-family: 'Space Grotesk', monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #e3e0f6;
+}
+
+.csv-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(244, 114, 182, 0.35);
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.25) 0%, rgba(139, 92, 246, 0.28) 100%);
+  color: #fdf2f8;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.csv-download-btn:hover {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.42) 0%, rgba(139, 92, 246, 0.45) 100%);
+  border-color: rgba(244, 114, 182, 0.65);
+  box-shadow: 0 0 16px rgba(236, 72, 153, 0.3);
+}
+
+/* ── Paper Stage ── */
+.csv-stage {
+  position: relative;
+  width: 100%;
+  background: #171628;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 16px 16px;
+  padding: 20px 16px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: auto;
+  min-height: 350px;
+}
+
+.csv-paper {
+  position: relative;
+  width: 100%;
+  max-width: 470px;
+  background: #faf9f5;
+  color: #1e1e24;
+  padding: 26px 28px;
+  border-radius: 4px;
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: transform 0.2s ease;
+  transform-origin: top center;
+  overflow: hidden;
+}
+
+.csv-watermark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0.045;
+  transform: rotate(-32deg);
+  user-select: none;
+}
+
+.csv-watermark span {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 54px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #000000;
+  white-space: nowrap;
+}
+
+.csv-paper__header {
+  text-align: center;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #d6d3cd;
+}
+
+.csv-paper__country {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #2c2b30;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.csv-paper__motto {
+  font-size: 8.5px;
+  font-style: italic;
+  color: #525059;
+  margin: 2px 0 6px;
+}
+
+.csv-paper__divider {
+  width: 56px;
+  height: 1px;
+  background: #3a393e;
+  margin: 0 auto 10px;
+}
+
+.csv-paper__title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #111116;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.csv-paper__code {
+  font-size: 9px;
+  color: #6b6875;
+  margin: 3px 0 0;
+  font-weight: 600;
+}
+
+.csv-paper__body {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 9.5px;
+  line-height: 1.55;
+  color: #2c2b30;
+}
+
+.csv-paper__party {
+  background: rgba(0, 0, 0, 0.025);
+  border-left: 2.5px solid #6d3bd7;
+  padding: 6px 10px;
+  border-radius: 0 4px 4px 0;
+}
+
+.csv-paper__clause-title {
+  font-weight: 800;
+  font-size: 9.5px;
+  color: #111116;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.csv-paper__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 4px 0;
+  font-size: 8.8px;
+}
+
+.csv-paper__table th,
+.csv-paper__table td {
+  border: 1px solid #d6d3cd;
+  padding: 5px 7px;
+  text-align: left;
+}
+
+.csv-paper__table th {
+  background: #efede7;
+  font-weight: 700;
+  color: #1e1e24;
+}
+
+.csv-paper__signatures {
+  padding-top: 14px;
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  position: relative;
+}
+
+.csv-sig-col {
+  text-align: center;
+  width: 140px;
+  position: relative;
+}
+
+.csv-sig-role {
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #111116;
+  margin: 0;
+}
+
+.csv-sig-note {
+  font-size: 7.5px;
+  font-style: italic;
+  color: #6b6875;
+  margin: 1px 0 0;
+}
+
+.csv-sig-handwriting {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0b2e59;
+}
+
+.csv-red-seal {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: 2px dashed rgba(217, 56, 56, 0.82);
+  color: #d93838;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-12deg);
+  pointer-events: none;
+  opacity: 0.88;
+  background: rgba(217, 56, 56, 0.04);
+}
+
+.csv-red-seal__top {
+  font-size: 5px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.csv-red-seal__bottom {
+  font-size: 4.8px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+/* ── Uploaded Image Preview ── */
+.csv-uploaded-img {
+  max-width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  border-radius: 4px;
+  display: block;
+  margin: 0 auto;
+}
+
+/* ── Thumbnails Strip ── */
+.csv-thumbs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: rgba(30, 30, 48, 0.75);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.csv-thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  opacity: 0.65;
+  transition: all 0.2s ease;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.csv-thumb:hover {
+  opacity: 0.95;
+}
+
+.csv-thumb--active {
+  opacity: 1;
+}
+
+.csv-thumb__sheet {
+  width: 46px;
+  height: 60px;
+  border-radius: 4px;
+  background: #faf9f5;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  border: 2px solid transparent;
+}
+
+.csv-thumb--active .csv-thumb__sheet {
+  border-color: #f472b6;
+  box-shadow: 0 0 12px rgba(244, 114, 182, 0.45);
+}
+
+.csv-thumb__line {
+  height: 2px;
+  background: #d6d3cd;
+  border-radius: 1px;
+}
+
+.csv-thumb__seal {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(217, 56, 56, 0.35);
+  align-self: flex-end;
+}
+
+.csv-thumb__label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #958ea0;
+}
+
+.csv-thumb--active .csv-thumb__label {
+  color: #f472b6;
+  font-weight: 700;
+}
+

@@ -61,6 +61,11 @@ const OwnerStaffPage = lazy(() =>
     default: module.OwnerStaffPage,
   })),
 )
+const OwnerContractsPage = lazy(() =>
+  import('../pages/BuildingOwner/OwnerContractsPage').then((module) => ({
+    default: module.OwnerContractsPage,
+  })),
+)
 // ── Building Manager pages ──
 const ManagerLayout = lazy(() =>
   import('../pages/BuildingManager/ManagerLayout').then((module) => ({
@@ -103,6 +108,11 @@ const AdminAccountsPage = lazy(() =>
     default: module.AdminAccountsPage,
   })),
 )
+const AdminContractsPage = lazy(() =>
+  import('../pages/Admin/AdminContractsPage').then((module) => ({
+    default: module.AdminContractsPage,
+  })),
+)
 
 function lazyElement(element: ReactNode) {
   return (
@@ -143,6 +153,7 @@ export const router = createBrowserRouter([
           { path: 'owner/staff', element: lazyElement(<OwnerStaffPage />) },
           { path: 'owner/managers', element: lazyElement(<OwnerStaffPage />) },
           { path: 'owner/store-owners', element: lazyElement(<OwnerStaffPage />) },
+          { path: 'owner/contracts', element: lazyElement(<OwnerContractsPage />) },
           { path: 'owner/profile', element: lazyElement(<ProfilePage embedded />) },
         ],
       },
@@ -191,6 +202,7 @@ export const router = createBrowserRouter([
         children: [
           { path: 'admin', element: lazyElement(<AdminOverviewPage />) },
           { path: 'admin/accounts', element: lazyElement(<AdminAccountsPage />) },
+          { path: 'admin/contracts', element: lazyElement(<AdminContractsPage />) },
           { path: 'admin/profile', element: lazyElement(<ProfilePage embedded />) },
         ],
       },

@@ -65,12 +65,13 @@ export function OwnerDashboardPage() {
     {
       id: 'ws',
       stepNumber: 1,
-      title: 'Khởi tạo không gian',
+      title: 'Hợp đồng & Cấp quyền không gian',
       description: overview?.tenant?.subdomain
-        ? `Đã liên kết ${overview.tenant.subdomain}.spotway.app`
-        : 'Không gian làm việc đã được kích hoạt thành công',
+        ? `Hợp đồng hiệu lực với Admin · ${overview.tenant.subdomain}.spotway.app`
+        : 'Hợp đồng dịch vụ với Admin đã được kích hoạt thành công',
       completed: true,
-      actionLabel: 'Đã hoàn tất',
+      link: '/owner/contracts',
+      actionLabel: 'Xem hợp đồng',
     },
     {
       id: 'bldg',
@@ -146,12 +147,20 @@ export function OwnerDashboardPage() {
         </div>
 
         <div className="odp-header__actions">
-          {overview?.tenant?.subdomain && (
-            <div className="odp-domain-badge" title="Tên miền định danh không gian của bạn">
-              <span className="odp-domain-badge__dot" />
-              <span>{overview.tenant.subdomain}.spotway.app</span>
-            </div>
-          )}
+          <Link
+            to="/owner/contracts"
+            className="odp-domain-badge"
+            title="Xem hợp đồng dịch vụ ký kết với Admin"
+            style={{ textDecoration: 'none', cursor: 'pointer' }}
+          >
+            <span className="odp-domain-badge__dot" />
+            <span>
+              Hợp đồng dịch vụ ·{' '}
+              {overview?.tenant?.subdomain
+                ? `${overview.tenant.subdomain}.spotway.app`
+                : 'Đang hiệu lực'}
+            </span>
+          </Link>
           <Button
             type="primary"
             icon={<PlusOutlined />}

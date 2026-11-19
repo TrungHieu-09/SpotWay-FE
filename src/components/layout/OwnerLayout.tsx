@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-do
 import {
   ApartmentOutlined,
   DashboardOutlined,
+  FileTextOutlined,
   HomeOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -48,6 +49,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: <ShopOutlined />,
     label: 'Chủ gian hàng',
     matchPrefixes: ['/owner/store-owners'],
+  },
+  {
+    path: '/owner/contracts',
+    icon: <FileTextOutlined />,
+    label: 'Hợp đồng dịch vụ',
+    matchPrefixes: ['/owner/contracts'],
   },
   {
     path: '/owner/profile',

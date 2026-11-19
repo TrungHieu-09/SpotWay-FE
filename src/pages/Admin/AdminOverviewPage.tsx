@@ -104,6 +104,16 @@ export function AdminOverviewPage() {
           <button
             type="button"
             className="adm-btn"
+            onClick={() => navigate('/admin/contracts')}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+              description
+            </span>
+            <span>Quản lý hợp đồng</span>
+          </button>
+          <button
+            type="button"
+            className="adm-btn"
             onClick={() => navigate('/admin/accounts')}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>

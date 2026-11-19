@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   BarChartOutlined,
+  FileTextOutlined,
   TeamOutlined,
   UserOutlined,
   LogoutOutlined,
@@ -32,6 +33,11 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
     path: '/admin/accounts',
     icon: <TeamOutlined />,
     label: 'Quản lý tài khoản',
+  },
+  {
+    path: '/admin/contracts',
+    icon: <FileTextOutlined />,
+    label: 'Hợp đồng',
   },
   {
     path: '/admin/profile',
