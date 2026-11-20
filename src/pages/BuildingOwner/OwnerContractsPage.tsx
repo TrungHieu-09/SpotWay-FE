@@ -195,18 +195,19 @@ export function OwnerContractsPage() {
               <span className="ocp-code-highlight">
                 #{selectedContract.contractCode}
               </span>
-              <span style={{ color: '#494454' }}>•</span>
-              <span className="ocp-mesh-tag">
-                <span
-                  className="material-symbols-outlined"
-                  style={{ fontSize: 16, color: '#34d399' }}
-                >
-                  verified_user
-                </span>
-                <span>
-                  Không gian định danh: <strong>{selectedContract.workspaceDomain}</strong>
-                </span>
-              </span>
+              {selectedContract.workspaceDomain && (
+                <>
+                  <span style={{ color: '#494454' }}>•</span>
+                  <span className="ocp-mesh-tag">
+                    <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#34d399' }}>
+                      verified_user
+                    </span>
+                    <span>
+                      Không gian định danh: <strong>{selectedContract.workspaceDomain}</strong>
+                    </span>
+                  </span>
+                </>
+              )}
             </div>
 
             <h1 className="ocp-contract-title">
@@ -226,8 +227,12 @@ export function OwnerContractsPage() {
                   {selectedContract.customerName}
                 </strong>
               </span>
-              <span style={{ color: '#958ea0' }}>·</span>
-              <span>Đại diện: {selectedContract.representative}</span>
+              {selectedContract.representative && (
+                <>
+                  <span style={{ color: '#958ea0' }}>·</span>
+                  <span>Đại diện: {selectedContract.representative}</span>
+                </>
+              )}
             </div>
           </div>
 
@@ -335,28 +340,30 @@ export function OwnerContractsPage() {
               <div className="ocp-data-pill__label">Giá trị hợp đồng</div>
               <div className="ocp-data-pill__value">
                 {formatContractValue(selectedContract)}{' '}
-                {!selectedContract.billingLabel && '/ năm'}
+
               </div>
             </div>
           </div>
 
-          <div className="ocp-data-pill">
-            <div
-              className="ocp-data-pill__icon"
-              style={{ background: 'rgba(160, 120, 255, 0.16)', color: '#d0bcff' }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
-                domain
-              </span>
-            </div>
-            <div>
-              <div className="ocp-data-pill__label">Hạn mức Tòa nhà &amp; Sàn 3D</div>
-              <div className="ocp-data-pill__value">
-                {usedBuildings}/{selectedContract.maxBuildings} tòa · {usedFloors}/
-                {selectedContract.maxFloors} tầng
+          {(selectedContract.maxBuildings > 0 || selectedContract.maxFloors > 0) && (
+            <div className="ocp-data-pill">
+              <div
+                className="ocp-data-pill__icon"
+                style={{ background: 'rgba(160, 120, 255, 0.16)', color: '#d0bcff' }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                  domain
+                </span>
+              </div>
+              <div>
+                <div className="ocp-data-pill__label">Hạn mức Tòa nhà &amp; Sàn 3D</div>
+                <div className="ocp-data-pill__value">
+                  {usedBuildings}/{selectedContract.maxBuildings} tòa · {usedFloors}/
+                  {selectedContract.maxFloors} tầng
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div className="ocp-data-pill">
             <div
@@ -449,8 +456,8 @@ export function OwnerContractsPage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 4 }}>
             <span className="cnt-info-label">
-              Tài nguyên &amp; Tòa nhà liên kết ({usedBuildings} /{' '}
-              {selectedContract.maxBuildings} tòa nhà)
+              Tòa nhà của tôi ({usedBuildings}
+              {selectedContract.maxBuildings > 0 ? ` / ${selectedContract.maxBuildings}` : ''} tòa nhà)
             </span>
             <div className="ocp-building-chips">
               {buildings.length > 0 ? (
@@ -597,110 +604,107 @@ export function OwnerContractsPage() {
         </div>
       </section>
 
-      {/* ── MODAL: Gửi yêu cầu gia hạn tới Quản trị viên ── */}
+      {/* ── Dialog: yêu cầu gia hạn gửi Quản trị viên ── */}
       {renewOpen && (
         <div
-          className="adm-modal-backdrop"
+          className="adm-modal-overlay"
           onClick={() => !sendingRenew && setRenewOpen(false)}
           role="presentation"
         >
-          <div
-            className="adm-modal"
-            style={{ maxWidth: 480 }}
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="adm-modal__header">
-              <div className="adm-modal__header-left">
-                <div className="adm-modal__icon">
-                  <span className="material-symbols-outlined">autorenew</span>
+          <div className="adm-modal-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <div className="adm-modal-card__topline" />
+            <div className="adm-modal-card__head">
+              <div className="adm-modal-card__head-left">
+                <div className="adm-modal-card__badge">
+                  <span className="material-symbols-outlined" style={{ fontSize: 22 }}>
+                    autorenew
+                  </span>
                 </div>
                 <div>
-                  <h2 className="adm-modal__title">Yêu cầu gia hạn hợp đồng</h2>
-                  <p className="adm-modal__subtitle">
+                  <h2 className="adm-modal-card__title">Yêu cầu gia hạn</h2>
+                  <p className="adm-modal-card__subtitle">
                     Hợp đồng #{selectedContract.contractCode} · hết hạn {lifecycle.formattedEndDate}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                className="adm-modal__close"
+                className="adm-modal-card__close"
                 onClick={() => setRenewOpen(false)}
                 disabled={sendingRenew}
+                aria-label="Đóng"
               >
-                <span className="material-symbols-outlined">close</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  close
+                </span>
               </button>
             </div>
 
-            <div className="adm-modal__body" style={{ gap: 12 }}>
-              <label className="cnt-info-label" htmlFor="renew-note">
-                Nội dung gửi Quản trị viên (không bắt buộc)
-              </label>
-              <textarea
-                id="renew-note"
-                className="adm-input"
-                rows={4}
-                maxLength={500}
-                placeholder="Ví dụ: Muốn gia hạn thêm 12 tháng và tăng hạn mức lên 5 tòa nhà."
-                value={renewNote}
-                onChange={(e) => setRenewNote(e.target.value)}
-                style={{ resize: 'vertical' }}
-              />
-              <div className="adm-modal__footer">
+            <form
+              className="adm-modal-form"
+              onSubmit={(e) => {
+                e.preventDefault()
+                void handleSendRenewal()
+              }}
+            >
+              <div className="adm-field">
+                <label className="adm-field__label" htmlFor="renew-note">
+                  <span>Nội dung gửi Quản trị viên (không bắt buộc)</span>
+                </label>
+                <textarea
+                  id="renew-note"
+                  className="adm-input"
+                  rows={4}
+                  maxLength={500}
+                  placeholder="Ví dụ: Muốn gia hạn thêm 12 tháng."
+                  value={renewNote}
+                  onChange={(e) => setRenewNote(e.target.value)}
+                  style={{ resize: 'vertical', padding: 12, height: 'auto' }}
+                />
+              </div>
+              <div className="adm-modal-footer">
                 <button type="button" className="adm-btn" onClick={() => setRenewOpen(false)} disabled={sendingRenew}>
                   Hủy
                 </button>
-                <button
-                  type="button"
-                  className="adm-btn adm-btn--primary"
-                  onClick={() => void handleSendRenewal()}
-                  disabled={sendingRenew}
-                >
+                <button type="submit" className="adm-btn adm-btn--primary" disabled={sendingRenew}>
                   {sendingRenew ? 'Đang gửi...' : 'Gửi yêu cầu'}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* ── MODAL: Xem danh sách hợp đồng đã ký (nếu có nhiều hợp đồng) ── */}
+      {/* ── Dialog: chọn một trong các hợp đồng đã ký ── */}
       {historyModalOpen && (
-        <div
-          className="adm-modal-backdrop"
-          onClick={() => setHistoryModalOpen(false)}
-          role="presentation"
-        >
-          <div
-            className="adm-modal"
-            style={{ maxWidth: 540 }}
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="adm-modal__header">
-              <div className="adm-modal__header-left">
-                <div className="adm-modal__icon">
-                  <span className="material-symbols-outlined">history_edu</span>
+        <div className="adm-modal-overlay" onClick={() => setHistoryModalOpen(false)} role="presentation">
+          <div className="adm-modal-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <div className="adm-modal-card__topline" />
+            <div className="adm-modal-card__head">
+              <div className="adm-modal-card__head-left">
+                <div className="adm-modal-card__badge">
+                  <span className="material-symbols-outlined" style={{ fontSize: 22 }}>
+                    history_edu
+                  </span>
                 </div>
                 <div>
-                  <h2 className="adm-modal__title">Hợp đồng đã ký với Admin</h2>
-                  <p className="adm-modal__subtitle">
-                    Chọn một hợp đồng để xem bản scan chi tiết
-                  </p>
+                  <h2 className="adm-modal-card__title">Hợp đồng của tôi</h2>
+                  <p className="adm-modal-card__subtitle">Chọn một hợp đồng để xem bản scan</p>
                 </div>
               </div>
               <button
                 type="button"
-                className="adm-modal__close"
+                className="adm-modal-card__close"
                 onClick={() => setHistoryModalOpen(false)}
+                aria-label="Đóng"
               >
-                <span className="material-symbols-outlined">close</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  close
+                </span>
               </button>
             </div>
 
-            <div className="adm-modal__body" style={{ gap: 10 }}>
+            <div className="adm-modal-form">
               {contracts.map((c) => {
                 const lf = getContractLifecycle(c)
                 return (
@@ -709,29 +713,19 @@ export function OwnerContractsPage() {
                     className="ocp-legal-cell"
                     style={{
                       cursor: 'pointer',
-                      borderColor:
-                        c.id === selectedContract.id
-                          ? 'rgba(93, 230, 255, 0.5)'
-                          : undefined,
+                      borderColor: c.id === selectedContract.id ? 'rgba(93, 230, 255, 0.5)' : undefined,
                     }}
                     onClick={() => {
                       setSelectedId(c.id)
                       setHistoryModalOpen(false)
                     }}
                   >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
                       <strong style={{ color: '#5de6ff', fontSize: 14 }}>
-                        #{c.contractCode} — {formatContractValue(c)}
+                        #{c.contractCode}
+                        {c.annualValue > 0 ? ` — ${formatContractValue(c)}` : ''}
                       </strong>
-                      <span className={`cnt-status-pill cnt-status-pill--${lf.status}`}>
-                        {lf.statusLabel}
-                      </span>
+                      <span className={`cnt-status-pill cnt-status-pill--${lf.status}`}>{lf.statusLabel}</span>
                     </div>
                     <span style={{ fontSize: 12, color: '#958ea0' }}>
                       Thời hạn: {lf.formattedStartDate} – {lf.formattedEndDate}

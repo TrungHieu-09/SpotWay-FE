@@ -41,16 +41,11 @@ export interface ServiceContract {
 export interface CreateServiceContractPayload {
   contractCode: string
   ownerId: string
-  customerName: string
-  representative: string
-  workspaceDomain: string
   startDate: string
   endDate: string
   annualValue: number
   currency: ContractCurrency
   paymentStatus: ContractPaymentStatus
-  maxBuildings: number
-  maxFloors: number
   scanPages: ContractScanPage[]
   notes: string
 }

@@ -87,9 +87,6 @@ export function AdminContractsPage() {
   // Form fields
   const [formCode, setFormCode] = useState('')
   const [formOwnerId, setFormOwnerId] = useState('')
-  const [formCustomerName, setFormCustomerName] = useState('')
-  const [formRepresentative, setFormRepresentative] = useState('')
-  const [formDomain, setFormDomain] = useState('')
   const [formStartDate, setFormStartDate] = useState(() =>
     new Date().toISOString().slice(0, 10),
   )
@@ -101,8 +98,6 @@ export function AdminContractsPage() {
   const [formValue, setFormValue] = useState('24000')
   const [formCurrency, setFormCurrency] = useState<ContractCurrency>('USD')
   const [formPaymentStatus, setFormPaymentStatus] = useState<ContractPaymentStatus>('paid')
-  const [formMaxBuildings, setFormMaxBuildings] = useState('3')
-  const [formMaxFloors, setFormMaxFloors] = useState('15')
   const [formScanPages, setFormScanPages] = useState<ScanPageFileItem[]>([])
   const [formNotes, setFormNotes] = useState('')
 
@@ -111,23 +106,20 @@ export function AdminContractsPage() {
   const reload = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
-    try {
-      const cntList = await getAdminContracts()
-      setContracts(cntList)
-      if (cntList.length > 0 && !selectedId) {
-        setSelectedId(cntList[0].id)
-      }
-      try {
-        const userList = await getAdminUsers()
-        setOwners(userList.filter((u) => u.role === 'building_owner'))
-      } catch (err) {
-        message.warning(`Không tải được danh sách Chủ tòa nhà: ${(err as Error).message}`)
-      }
-    } catch (err) {
-      setLoadError((err as Error).message || 'Không tải được danh sách hợp đồng.')
-    } finally {
-      setLoading(false)
+    const [contractsResult, usersResult] = await Promise.allSettled([getAdminContracts(), getAdminUsers()])
+    if (contractsResult.status === 'fulfilled') {
+      setContracts(contractsResult.value)
+      if (contractsResult.value.length > 0 && !selectedId) setSelectedId(contractsResult.value[0].id)
+    } else {
+      const reason = contractsResult.reason as Error
+      setLoadError(reason.message || 'Không tải được danh sách hợp đồng.')
     }
+    if (usersResult.status === 'fulfilled') {
+      setOwners(usersResult.value.filter((u) => u.role === 'building_owner'))
+    } else {
+      message.warning(`Không tải được danh sách Chủ tòa nhà: ${(usersResult.reason as Error).message}`)
+    }
+    setLoading(false)
   }, [selectedId, message])
 
   useEffect(() => {
@@ -177,6 +169,10 @@ export function AdminContractsPage() {
   }, [contracts, filteredContracts, selectedId])
 
   function openCreateModal() {
+    if (loading) {
+      message.info('Đang tải dữ liệu, vui lòng thử lại sau giây lát.')
+      return
+    }
     if (owners.length === 0) {
       message.warning('Chưa có tài khoản Chủ tòa nhà. Hãy tạo tài khoản Chủ tòa nhà trước khi tạo hợp đồng.')
       navigate('/admin/accounts?create=1')
@@ -184,25 +180,15 @@ export function AdminContractsPage() {
     }
     setEditingId(null)
     setFormCode(nextContractCode(contracts))
-    const defaultOwner = owners[0]
-    setFormOwnerId(defaultOwner.id)
-    setFormCustomerName(defaultOwner.tenantName || defaultOwner.name)
-    setFormRepresentative(`${defaultOwner.name} (Chủ tòa nhà)`)
-    setFormDomain(
-      `${(defaultOwner.tenantName || defaultOwner.name || 'workspace')
-        .toLowerCase()
-        .replace(/[^a-z0-9-]+/g, '-')}.spotway.app`,
-    )
+    setFormOwnerId(owners[0].id)
     const today = new Date().toISOString().slice(0, 10)
     const nextYear = new Date()
     nextYear.setFullYear(nextYear.getFullYear() + 1)
     setFormStartDate(today)
     setFormEndDate(nextYear.toISOString().slice(0, 10))
     setFormValue('')
-    setFormCurrency('USD')
+    setFormCurrency('VND')
     setFormPaymentStatus('pending')
-    setFormMaxBuildings('3')
-    setFormMaxFloors('15')
     setFormScanPages([])
     setFormNotes('')
     setScansDirty(false)
@@ -213,16 +199,11 @@ export function AdminContractsPage() {
     setEditingId(c.id)
     setFormCode(c.contractCode)
     setFormOwnerId(c.ownerId ?? '')
-    setFormCustomerName(c.customerName)
-    setFormRepresentative(c.representative)
-    setFormDomain(c.workspaceDomain)
     setFormStartDate(c.startDate)
     setFormEndDate(c.endDate)
     setFormValue(String(c.annualValue))
     setFormCurrency(c.currency)
     setFormPaymentStatus(c.paymentStatus)
-    setFormMaxBuildings(String(c.maxBuildings))
-    setFormMaxFloors(String(c.maxFloors))
     setFormScanPages([])
     setFormNotes(c.notes)
     setScansDirty(false)
@@ -247,20 +228,6 @@ export function AdminContractsPage() {
       )
       .catch((err: Error) => message.error(`Không tải được bản scan hiện có: ${err.message}`))
       .finally(() => setLoadingScans(false))
-  }
-
-  function handleSelectOwnerPreset(val: string) {
-    setFormOwnerId(val)
-    const found = owners.find((o) => o.id === val)
-    if (found) {
-      setFormCustomerName(found.tenantName || found.name || found.email.split('@')[0])
-      setFormRepresentative(`${found.name || found.email.split('@')[0]} (Chủ tòa nhà)`)
-      setFormDomain(
-        `${(found.tenantName || found.name || 'workspace')
-          .toLowerCase()
-          .replace(/[^a-z0-9-]+/g, '-')}.spotway.app`,
-      )
-    }
   }
 
   const MAX_SCAN_BYTES = 10 * 1024 * 1024
@@ -356,16 +323,11 @@ export function AdminContractsPage() {
       const base = {
         contractCode: formCode.trim() || nextContractCode(contracts),
         ownerId: matchedOwner.id,
-        customerName: formCustomerName.trim() || matchedOwner.tenantName || matchedOwner.name,
-        representative: formRepresentative.trim() || matchedOwner.name,
-        workspaceDomain: formDomain.trim(),
         startDate: formStartDate,
         endDate: formEndDate,
         annualValue: Number(String(formValue).replace(/[^0-9.]/g, '')) || 0,
         currency: formCurrency,
         paymentStatus: formPaymentStatus,
-        maxBuildings: Math.max(1, Number(formMaxBuildings) || 3),
-        maxFloors: Math.max(1, Number(formMaxFloors) || 15),
         notes: formNotes.trim(),
       }
       const scanPages = formScanPages.map((p) => ({
@@ -694,7 +656,7 @@ export function AdminContractsPage() {
                             </div>
                             <div>
                               <div className="cnt-customer-name">{c.customerName}</div>
-                              <div className="cnt-customer-sub">{c.workspaceDomain}</div>
+                              <div className="cnt-customer-sub">{c.ownerEmail}</div>
                             </div>
                           </div>
                         </td>
@@ -739,16 +701,13 @@ export function AdminContractsPage() {
 
                         <td>
                           <div style={{ fontWeight: 700, color: '#ffffff' }}>
-                            {formatContractValue(c)}{' '}
-                            {!c.billingLabel && (
-                              <span style={{ fontWeight: 400, fontSize: 11, color: '#958ea0' }}>
-                                /năm
-                              </span>
-                            )}
+                            {formatContractValue(c)}
                           </div>
-                          <div style={{ fontSize: 11, color: '#958ea0' }}>
-                            {c.maxBuildings} tòa nhà · {c.maxFloors} tầng 3D
-                          </div>
+                          {(c.maxBuildings > 0 || c.maxFloors > 0) && (
+                            <div style={{ fontSize: 11, color: '#958ea0' }}>
+                              {c.maxBuildings} tòa nhà · {c.maxFloors} tầng 3D
+                            </div>
+                          )}
                         </td>
 
                         <td>
@@ -870,20 +829,13 @@ export function AdminContractsPage() {
                 <span className="cnt-info-value" style={{ color: '#5de6ff' }}>
                   {selectedContract.customerName}
                 </span>
-                <span className="cnt-info-sub">
-                  Đại diện: {selectedContract.representative}
-                </span>
+                <span className="cnt-info-sub">{selectedContract.ownerEmail}</span>
               </div>
 
               <div className="cnt-info-item">
                 <span className="cnt-info-label">Giá trị hợp đồng</span>
                 <span className="cnt-info-value">
-                  {formatContractValue(selectedContract)}{' '}
-                  {!selectedContract.billingLabel && (
-                    <span style={{ fontSize: 12, fontWeight: 400, color: '#958ea0' }}>
-                      / năm
-                    </span>
-                  )}
+                  {formatContractValue(selectedContract)}
                 </span>
                 <span
                   className="cnt-info-sub"
@@ -967,7 +919,7 @@ export function AdminContractsPage() {
       {/* ── Focused High-End 2-Column Glassmorphism Upload & Create Contract Modal ── */}
       {modalOpen && (
         <div
-          className="adm-modal-backdrop"
+          className="adm-modal-overlay"
           onClick={() => !saving && setModalOpen(false)}
           role="presentation"
         >
@@ -992,14 +944,11 @@ export function AdminContractsPage() {
                   <div className="cnt-upload-modal__title-row">
                     <h2 className="cnt-upload-modal__title">
                       {editingId
-                        ? 'Cập nhật & Lưu trữ hợp đồng'
-                        : 'Tải lên & Lưu trữ hợp đồng mới'}
+                        ? 'Sửa hợp đồng'
+                        : 'Tải hợp đồng lên'}
                     </h2>
                   </div>
-                  <p className="cnt-upload-modal__subtitle">
-                    Khai báo thông tin cơ bản và lưu trữ bản scan hợp đồng đã ký ngoại tuyến với Chủ
-                    tòa nhà.
-                  </p>
+                  <p className="cnt-upload-modal__subtitle">Nhập thông tin hợp đồng đã ký và tải bản scan lên.</p>
                 </div>
               </div>
 
@@ -1025,7 +974,7 @@ export function AdminContractsPage() {
                         <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
                           feed
                         </span>
-                        <span>1. Thông tin văn bản &amp; Đối tác</span>
+                        <span>Thông tin hợp đồng</span>
                       </div>
                     </div>
 
@@ -1033,29 +982,16 @@ export function AdminContractsPage() {
                     <div className="cnt-upload-field">
                       <div className="cnt-upload-label-row">
                         <label className="cnt-upload-label">
-                          Khách hàng / Doanh nghiệp (Chủ tòa nhà){' '}
+                          Chủ tòa nhà{' '}
                           <span style={{ color: '#f8acff' }}>*</span>
                         </label>
-                        <button
-                          type="button"
-                          className="cnt-upload-label-link"
-                          onClick={() => {
-                            setModalOpen(false)
-                            navigate('/admin/accounts?create=1')
-                          }}
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-                            add_circle
-                          </span>
-                          <span>+ Thêm khách hàng mới</span>
-                        </button>
                       </div>
 
                       <div className="cnt-upload-input-wrap">
                         <select
                           className="cnt-upload-select"
                           value={formOwnerId}
-                          onChange={(e) => handleSelectOwnerPreset(e.target.value)}
+                          onChange={(e) => setFormOwnerId(e.target.value)}
                         >
                           <option value="" disabled>
                             {owners.length ? '-- Chọn tài khoản Chủ tòa nhà --' : 'Chưa có tài khoản Chủ tòa nhà nào'}
@@ -1072,7 +1008,7 @@ export function AdminContractsPage() {
                     {/* Số hợp đồng ngoại tuyến */}
                     <div className="cnt-upload-field">
                       <label className="cnt-upload-label">
-                        Số hợp đồng ngoại tuyến <span style={{ color: '#f8acff' }}>*</span>
+                        Số hợp đồng <span style={{ color: '#f8acff' }}>*</span>
                       </label>
                       <div className="cnt-upload-input-wrap">
                         <input
@@ -1097,7 +1033,7 @@ export function AdminContractsPage() {
                         </span>
                       </div>
                       <span className="cnt-upload-hint">
-                        Định dạng chuẩn: [TIỀN TỐ]-[NĂM]-[MÃ 3 CHỮ SỐ]
+                        Gợi ý số tiếp theo, có thể sửa cho khớp bản giấy.
                       </span>
                     </div>
 
@@ -1143,7 +1079,7 @@ export function AdminContractsPage() {
                     {/* Giá trị hợp đồng & Trạng thái thanh toán */}
                     <div className="cnt-upload-field">
                       <label className="cnt-upload-label">
-                        Giá trị hợp đồng (Tùy chọn)
+                        Giá trị hợp đồng
                       </label>
                       <div className="cnt-value-row">
                         <div className="cnt-upload-input-wrap" style={{ flex: 1 }}>
@@ -1183,14 +1119,14 @@ export function AdminContractsPage() {
                     {/* Ghi chú & Vị trí lưu trữ bản gốc */}
                     <div className="cnt-upload-field">
                       <label className="cnt-upload-label">
-                        Ghi chú &amp; Vị trí lưu trữ bản gốc
+                        Ghi chú
                       </label>
                       <textarea
                         className="cnt-upload-textarea"
                         rows={3}
                         value={formNotes}
                         onChange={(e) => setFormNotes(e.target.value)}
-                        placeholder="Nhập ghi chú pháp lý, vị trí tủ hồ sơ vật lý hoặc người phụ trách..."
+                        placeholder="Ví dụ: vị trí lưu bản gốc, người phụ trách..."
                       />
                     </div>
                   </div>
@@ -1202,7 +1138,7 @@ export function AdminContractsPage() {
                         <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
                           cloud_upload
                         </span>
-                        <span>2. Upload &amp; Quản lý tệp scan</span>
+                        <span>Bản scan hợp đồng</span>
                       </div>
                       <span
                         style={{
@@ -1212,7 +1148,7 @@ export function AdminContractsPage() {
                           color: '#f8acff',
                         }}
                       >
-                        {formScanPages.length} trang đã sẵn sàng
+                        {loadingScans ? 'Đang tải tệp...' : `${formScanPages.length} tệp`}
                       </span>
                     </div>
 
