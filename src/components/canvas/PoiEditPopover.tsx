@@ -7,10 +7,12 @@ import { percentToPixel } from '../../utils/canvasCoordinates'
 const POI_CATEGORY_OPTIONS: Array<{ value: PoiCategory; label: string }> = [
   { value: 'restroom', label: 'Nhà vệ sinh' },
   { value: 'elevator', label: 'Thang máy' },
+  { value: 'stair', label: 'Cầu thang bộ' },
+  { value: 'escalator', label: 'Thang cuốn' },
   { value: 'exit', label: 'Lối thoát' },
   { value: 'info', label: 'Quầy thông tin' },
   { value: 'parking', label: 'Bãi đỗ xe' },
-  { value: 'custom', label: 'Khác' },
+  { value: 'custom', label: 'Gian hàng / điểm khác' },
 ]
 
 const POI_ICON_OPTIONS = ['wc', 'elevator', 'exit', 'info', 'parking', 'atm', 'cafe', 'shop'].map((value) => ({ value }))

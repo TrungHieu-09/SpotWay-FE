@@ -4,6 +4,9 @@ import { ApartmentOutlined } from '@ant-design/icons'
 import { FloorSelector } from './FloorSelector'
 import { CanvasBoard } from './CanvasBoard'
 import { MaintenancePanel } from './MaintenancePanel'
+import { OperationsPanel } from './OperationsPanel'
+import { ShopPromotionsPanel } from './ShopPromotionsPanel'
+import { ActivityPanel } from './ActivityPanel'
 import { EditorShell } from '../../components/ui/EditorShell'
 import { useBuildingStore } from '../../store/useBuildingStore'
 import { useFloorStore } from '../../store/useFloorStore'
@@ -137,6 +140,25 @@ export function ManagerLayout() {
                   label: 'Bảo trì lối đi',
                   children: <MaintenancePanel readOnly={isReadOnly} />,
                 },
+                ...(buildingId
+                  ? [
+                      {
+                        key: 'operations',
+                        label: 'Điều hành',
+                        children: <OperationsPanel buildingId={buildingId} readOnly={isReadOnly} />,
+                      },
+                      {
+                        key: 'shops',
+                        label: 'Gian hàng & khuyến mãi',
+                        children: <ShopPromotionsPanel buildingId={buildingId} readOnly={isReadOnly} />,
+                      },
+                      {
+                        key: 'activity',
+                        label: 'Nhật ký',
+                        children: <ActivityPanel buildingId={buildingId} />,
+                      },
+                    ]
+                  : []),
               ]}
             />
           </EditorShell>

@@ -103,9 +103,8 @@ export function BuildingOverviewPage() {
         ? overview?.floors
         : overview?.floors.filter((floor) => floor.id === selectedFloorId)
       )?.filter((floor) => floor.mapImageUrl) ?? []
-      const results = await Promise.allSettled(floors.map((floor) => analyzeFloorPlan(floor.id)))
-      const failed = results.find((result) => result.status === 'rejected')
-      if (failed?.status === 'rejected') throw failed.reason
+      // Dịch vụ phân tích chạy mô hình trên CPU và xử lý lần lượt từng ảnh, nên gửi song song chỉ làm tầng sau chờ quá hạn.
+      for (const floor of floors) await analyzeFloorPlan(floor.id)
       if (buildingId) setOverview(await getBuildingOverview(buildingId))
       setVisibleLayers((prev) => ({ ...prev, walls: true }))
       setExtrusionVersion((version) => version + 1)

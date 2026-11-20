@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Form, Input, Modal, Select, Space, Switch, message } from 'antd'
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons'
 import { graphGateway } from '../../api/graphGateway'
@@ -33,8 +33,14 @@ export function ConnectorFormModal({ open, floors, defaultFloorId, onSubmit, onC
   const [submitting, setSubmitting] = useState(false)
   const kind = Form.useWatch('kind', form) ?? 'ELEVATOR'
 
+  // Danh sách node chỉ đúng tại lúc tải: bỏ đi khi đóng để lần mở sau lấy lại, thấy ngay node vừa đổi loại.
+  useEffect(() => {
+    if (!open) setNodesByFloor({})
+  }, [open])
+
   async function loadFloorNodes(floorId: string) {
     if (nodesByFloor[floorId]) return
+    // Tải lại mỗi lần chọn tầng khi chưa có trong lần mở này; lần mở mới luôn bắt đầu từ danh sách rỗng.
     const floor = floors.find((item) => item.id === floorId)
     if (!floor) return
     try {

@@ -44,7 +44,7 @@ export type FloorPlanRevision = {
 
 export async function analyzeFloorPlan(floorId: string) {
   const { data } = await apiClient.post<FloorPlanRevision>(`/floors/${floorId}/analysis`, undefined, {
-    timeout: 120_000,
+    timeout: 300_000,
   })
   return data
 }

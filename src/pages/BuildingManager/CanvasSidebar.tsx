@@ -258,11 +258,27 @@ export function CanvasSidebar({
                 locale={{ emptyText: 'Tầng này chưa có thang máy/cầu thang liên kết tầng khác' }}
                 style={{ maxHeight: 520, overflowY: 'auto' }}
                 renderItem={(connector) => (
-                  <List.Item
-                    style={{ padding: '6px 8px' }}
-                    actions={[
+                  <List.Item style={{ padding: '6px 8px', display: 'block' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                      <Tag color={CONNECTOR_STYLE[connector.kind].color} style={{ marginInlineEnd: 0, flexShrink: 0 }}>{CONNECTOR_STYLE[connector.kind].label}</Tag>
+                      <AntText
+                        strong
+                        ellipsis
+                        style={{ fontSize: 12, flex: 1, minWidth: 0 }}
+                        editable={
+                          readOnly
+                            ? false
+                            : {
+                                onChange: (value) => {
+                                  const name = value.trim()
+                                  if (name && name !== connector.name) onUpdateConnector(connector.id, { name })
+                                },
+                              }
+                        }
+                      >
+                        {connector.name}
+                      </AntText>
                       <Popconfirm
-                        key="delete"
                         title="Xóa connector này?"
                         description="Các node vẫn giữ nguyên, chỉ gỡ liên kết giữa các tầng."
                         onConfirm={() => onDeleteConnector(connector.id)}
@@ -270,42 +286,22 @@ export function CanvasSidebar({
                         cancelText="Hủy"
                         okButtonProps={{ danger: true }}
                       >
-                        <Button danger size="small" type="text" icon={<DeleteOutlined />} />
-                      </Popconfirm>,
-                    ]}
-                  >
-                    <Space orientation="vertical" size={1}>
-                      <Space>
-                        <Tag color={CONNECTOR_STYLE[connector.kind].color}>{CONNECTOR_STYLE[connector.kind].label}</Tag>
-                        <AntText
-                          strong
-                          style={{ fontSize: 12 }}
-                          editable={
-                            readOnly
-                              ? false
-                              : {
-                                  onChange: (value) => {
-                                    const name = value.trim()
-                                    if (name && name !== connector.name) onUpdateConnector(connector.id, { name })
-                                  },
-                                }
-                          }
-                        >
-                          {connector.name}
-                        </AntText>
-                        <Switch
-                          size="small"
-                          checked={connector.accessible}
-                          disabled={readOnly}
-                          checkedChildren="Xe lăn"
-                          unCheckedChildren="Không"
-                          onChange={(accessible) => onUpdateConnector(connector.id, { accessible })}
-                        />
-                      </Space>
-                      <AntText type="secondary" style={{ fontSize: 11 }}>
+                        <Button danger size="small" type="text" icon={<DeleteOutlined />} disabled={readOnly} style={{ flexShrink: 0 }} />
+                      </Popconfirm>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, minWidth: 0 }}>
+                      <Switch
+                        size="small"
+                        checked={connector.accessible}
+                        disabled={readOnly}
+                        checkedChildren="Xe lăn"
+                        unCheckedChildren="Không"
+                        onChange={(accessible) => onUpdateConnector(connector.id, { accessible })}
+                      />
+                      <AntText type="secondary" ellipsis style={{ fontSize: 11, flex: 1, minWidth: 0 }}>
                         Nối: {connector.stops.map((stop) => floorNameById.get(stop.floorId) ?? '?').join(' ↔ ')}
                       </AntText>
-                    </Space>
+                    </div>
                   </List.Item>
                 )}
               />

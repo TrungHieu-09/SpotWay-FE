@@ -27,30 +27,30 @@ type AuthState = {
 
 function saveToken(token: string | null, role?: string | null, user?: AuthUser | null) {
   if (token) {
-    window.localStorage.setItem(AUTH_TOKEN_KEY, token)
-    window.localStorage.setItem('spotway.accessToken', token)
+    window.sessionStorage.setItem(AUTH_TOKEN_KEY, token)
+    window.sessionStorage.setItem('spotway.accessToken', token)
     if (role) {
-      window.localStorage.setItem('spotway.role', role)
+      window.sessionStorage.setItem('spotway.role', role)
     }
     if (user) {
-      window.localStorage.setItem('spotway.user', JSON.stringify(user))
+      window.sessionStorage.setItem('spotway.user', JSON.stringify(user))
     }
   } else {
-    window.localStorage.removeItem(AUTH_TOKEN_KEY)
-    window.localStorage.removeItem('spotway.accessToken')
-    window.localStorage.removeItem('spotway.refreshToken')
-    window.localStorage.removeItem('spotway.role')
-    window.localStorage.removeItem('spotway.user')
+    window.sessionStorage.removeItem(AUTH_TOKEN_KEY)
+    window.sessionStorage.removeItem('spotway.accessToken')
+    window.sessionStorage.removeItem('spotway.refreshToken')
+    window.sessionStorage.removeItem('spotway.role')
+    window.sessionStorage.removeItem('spotway.user')
   }
 }
 
 function getStoredUser(): AuthUser | null {
   try {
-    const raw = window.localStorage.getItem('spotway.user')
+    const raw = window.sessionStorage.getItem('spotway.user')
     if (!raw) return null
     const parsed = JSON.parse(raw) as AuthUser
     if (parsed.name === 'Elena Rostova' || parsed.email === 'elena@metro.com') {
-      window.localStorage.removeItem('spotway.user')
+      window.sessionStorage.removeItem('spotway.user')
       return null
     }
     return parsed
@@ -72,15 +72,15 @@ const initialSavedUser = getStoredUser()
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: initialSavedUser,
-  token: window.localStorage.getItem(AUTH_TOKEN_KEY) ?? window.localStorage.getItem('spotway.accessToken'),
-  isInitializing: !initialSavedUser && Boolean(window.localStorage.getItem(AUTH_TOKEN_KEY) ?? window.localStorage.getItem('spotway.accessToken')),
+  token: window.sessionStorage.getItem(AUTH_TOKEN_KEY) ?? window.sessionStorage.getItem('spotway.accessToken'),
+  isInitializing: !initialSavedUser && Boolean(window.sessionStorage.getItem(AUTH_TOKEN_KEY) ?? window.sessionStorage.getItem('spotway.accessToken')),
   isLoading: false,
   error: null,
 
   async initialize() {
     const token =
-      window.localStorage.getItem(AUTH_TOKEN_KEY) ??
-      window.localStorage.getItem('spotway.accessToken')
+      window.sessionStorage.getItem(AUTH_TOKEN_KEY) ??
+      window.sessionStorage.getItem('spotway.accessToken')
     if (!token) {
       saveToken(null)
       set({ user: null, token: null, isInitializing: false })
@@ -149,8 +149,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     const current = useAuthStore.getState().user
     const merged: AuthUser = updatedUser ?? (current ? { ...current, name: cleanName } : ({ name: cleanName } as AuthUser))
     const token =
-      window.localStorage.getItem(AUTH_TOKEN_KEY) ??
-      window.localStorage.getItem('spotway.accessToken')
+      window.sessionStorage.getItem(AUTH_TOKEN_KEY) ??
+      window.sessionStorage.getItem('spotway.accessToken')
     saveToken(token, merged.role, merged)
     set({ user: merged })
     return merged
@@ -167,8 +167,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         : null
     if (nextUser) {
       const token =
-        window.localStorage.getItem(AUTH_TOKEN_KEY) ??
-        window.localStorage.getItem('spotway.accessToken')
+        window.sessionStorage.getItem(AUTH_TOKEN_KEY) ??
+        window.sessionStorage.getItem('spotway.accessToken')
       saveToken(token, nextUser.role, nextUser)
       set({ user: nextUser })
     }

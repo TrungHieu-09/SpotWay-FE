@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Alert, Button, Input, List, message, Modal, Popconfirm, QRCode, Space, Typography } from 'antd'
-import { CopyOutlined, DeleteOutlined, DownloadOutlined } from '@ant-design/icons'
+import { CopyOutlined, DeleteOutlined, DownloadOutlined, PrinterOutlined } from '@ant-design/icons'
 import {
   createQrAnchor,
   deleteQrAnchor,
@@ -69,6 +69,40 @@ export function QrAnchorModal({ open, buildingId, node, onClose }: QrAnchorModal
     link.click()
   }
 
+  /** A4 poster to stick at the spot: where you are, a big code, how to use it. Opens the browser's print dialog. */
+  function printPoster() {
+    const canvas = document.querySelector<HTMLCanvasElement>('#qr-anchor-preview canvas')
+    if (!canvas || !created) return
+    const escape = (text: string) => text.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c)
+    const page = window.open('', '_blank', 'width=900,height=1100')
+    if (!page) {
+      message.warning('Trình duyệt chặn cửa sổ in. Hãy cho phép cửa sổ bật lên rồi thử lại.')
+      return
+    }
+    page.document.write(`<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Poster QR - ${escape(created.label)}</title>
+<style>
+  @page { size: A4; margin: 0 }
+  * { box-sizing: border-box }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; color: #14212e; }
+  .sheet { width: 210mm; height: 297mm; padding: 22mm 18mm; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10mm; border: 3mm solid #0b6e8a; }
+  .brand { font-size: 14pt; letter-spacing: .3em; text-transform: uppercase; color: #0b6e8a; font-weight: 700 }
+  h1 { font-size: 34pt; line-height: 1.15; margin: 0 }
+  .here { font-size: 22pt; margin: 0 }
+  .here b { color: #0b6e8a }
+  img { width: 120mm; height: 120mm; image-rendering: pixelated }
+  ol { text-align: left; font-size: 15pt; line-height: 1.7; margin: 0; padding-left: 10mm }
+  .foot { margin-top: auto; font-size: 11pt; color: #5a6b7b }
+</style></head><body><div class="sheet">
+  <div class="brand">SpotWay</div>
+  <h1>Quét mã để được chỉ đường trong tòa nhà</h1>
+  <p class="here">Bạn đang ở: <b>${escape(created.label)}</b></p>
+  <img src="${canvas.toDataURL('image/png')}" alt="Mã QR">
+  <ol><li>Mở ứng dụng SpotWay hoặc camera điện thoại.</li><li>Quét mã này.</li><li>Chọn nơi bạn muốn đến, ứng dụng chỉ đường từ chính chỗ bạn đứng.</li></ol>
+  <div class="foot">Cần hỗ trợ? Liên hệ quầy thông tin hoặc ban quản lý tòa nhà.</div>
+</div><script>window.onload = function () { setTimeout(function () { window.print() }, 250) }<\/script></body></html>`)
+    page.document.close()
+  }
+
   return (
     <Modal
       title={`Mã QR định vị${node?.name ? ` — ${node.name}` : ''}`}
@@ -108,6 +142,9 @@ export function QrAnchorModal({ open, buildingId, node, onClose }: QrAnchorModal
               </Button>
               <Button icon={<DownloadOutlined />} onClick={downloadPng}>
                 Tải ảnh QR
+              </Button>
+              <Button type="primary" icon={<PrinterOutlined />} onClick={printPoster}>
+                In poster A4
               </Button>
               <Button href={url} target="_blank">
                 Mở thử

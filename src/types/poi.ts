@@ -1,7 +1,7 @@
 import type { PercentPoint } from './geometry'
 
 /** Khớp enum `PoiCategory` của BE (viết thường). */
-export type PoiCategory = 'restroom' | 'elevator' | 'exit' | 'info' | 'parking' | 'custom'
+export type PoiCategory = 'restroom' | 'elevator' | 'stair' | 'escalator' | 'exit' | 'info' | 'parking' | 'custom'
 
 /** POI là entity độc lập: có toạ độ riêng; `nearestNodeId` là điểm đồ thị dùng để dẫn đường tới nó. */
 export type Poi = PercentPoint & {
@@ -25,7 +25,9 @@ export type PoiType = 'entrance' | 'shop' | 'store' | 'service' | 'elevator' | '
 export function poiVisualType(category: PoiCategory): PoiType {
   switch (category) {
     case 'restroom': return 'toilet'
-    case 'elevator': return 'elevator'
+    case 'elevator':
+    case 'stair':
+    case 'escalator': return 'elevator'
     case 'exit': return 'exit'
     case 'info':
     case 'parking': return 'service'
@@ -36,8 +38,10 @@ export function poiVisualType(category: PoiCategory): PoiType {
 export const POI_CATEGORY_LABEL: Record<PoiCategory, string> = {
   restroom: 'Nhà vệ sinh',
   elevator: 'Thang máy',
+  stair: 'Cầu thang bộ',
+  escalator: 'Thang cuốn',
   exit: 'Lối ra',
   info: 'Quầy thông tin',
   parking: 'Bãi đỗ xe',
-  custom: 'Khác',
+  custom: 'Gian hàng / điểm khác',
 }

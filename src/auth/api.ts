@@ -20,7 +20,7 @@ function normalizeTokenResponse(raw: BeTokenResponse): LoginResponse {
   // Real backend format — user will be fetched via /auth/me separately
   const token = raw.accessToken ?? raw.token ?? ''
   if (raw.refreshToken) {
-    window.localStorage.setItem('spotway.refreshToken', raw.refreshToken)
+    window.sessionStorage.setItem('spotway.refreshToken', raw.refreshToken)
   }
   // Return with a placeholder user that will be replaced by /auth/me call
   return {
@@ -43,7 +43,7 @@ export async function getCurrentUser() {
 }
 
 export async function logout() {
-  const refreshToken = window.localStorage.getItem('spotway.refreshToken')
+  const refreshToken = window.sessionStorage.getItem('spotway.refreshToken')
   await apiClient.post('/auth/logout', refreshToken ? { refreshToken } : {})
 }
 

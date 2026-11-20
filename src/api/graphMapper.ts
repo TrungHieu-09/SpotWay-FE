@@ -54,7 +54,7 @@ export type ConnectorDto = {
 
 type NodePositionDto = { x: number; y: number }
 
-const POI_CATEGORIES: readonly PoiCategory[] = ['restroom', 'elevator', 'exit', 'info', 'parking', 'custom']
+const POI_CATEGORIES: readonly PoiCategory[] = ['restroom', 'elevator', 'stair', 'escalator', 'exit', 'info', 'parking', 'custom']
 
 function assertMapSize(size: MapSize) {
   if (!(size.width > 0) || !(size.height > 0)) {

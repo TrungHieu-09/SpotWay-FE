@@ -16,6 +16,11 @@ describe('planPoiPromotions', () => {
     ])
   })
 
+  it('POI cầu thang bộ và thang cuốn được nâng thành node STAIR / ESCALATOR', () => {
+    const plans = planPoiPromotions([poi('s', 'stair', 'n1'), poi('e', 'escalator', 'n1', 30, 40)], [node('n1')])
+    assert.deepEqual(plans.map((plan) => [plan.poiId, plan.nodeType]), [['s', 'STAIR'], ['e', 'ESCALATOR']])
+  })
+
   it('bỏ qua POI loại khác (nhà vệ sinh, thông tin, đỗ xe, tuỳ chọn)', () => {
     const pois = (['restroom', 'info', 'parking', 'custom'] as const).map((category, i) => poi(`p${i}`, category, 'n1'))
     assert.deepEqual(planPoiPromotions(pois, [node('n1')]), [])
