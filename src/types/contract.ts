@@ -2,6 +2,13 @@ export type ContractLifecycleStatus = 'active' | 'expiring' | 'expired'
 export type ContractPaymentStatus = 'paid' | 'pending' | 'custom'
 export type ContractCurrency = 'USD' | 'VND'
 
+export interface ContractScanPage {
+  fileName: string
+  sizeText: string
+  mime: string
+  dataUrl: string
+}
+
 export interface ServiceContract {
   id: string
   contractCode: string
@@ -20,35 +27,37 @@ export interface ServiceContract {
   maxBuildings: number
   maxFloors: number
   pageCount: number
+  /** True when a scan is stored. List responses leave `scanPages` empty; the detail endpoints fill it in. */
+  hasScan: boolean
   scanFileName?: string | null
-  scanDataUrl?: string | null
+  scanPages: ContractScanPage[]
   notes: string
   renewalRequested?: boolean
   renewalNote?: string | null
   createdAt: string
-  updatedAt?: string
+  updatedAt: string
 }
 
 export interface CreateServiceContractPayload {
   contractCode: string
-  ownerId?: string | null
-  tenantId?: string | null
+  ownerId: string
   customerName: string
-  ownerEmail: string
   representative: string
   workspaceDomain: string
   startDate: string
   endDate: string
   annualValue: number
   currency: ContractCurrency
-  billingLabel?: string | null
   paymentStatus: ContractPaymentStatus
   maxBuildings: number
   maxFloors: number
-  pageCount?: number
-  scanFileName?: string | null
-  scanDataUrl?: string | null
+  scanPages: ContractScanPage[]
   notes: string
+}
+
+export type UpdateServiceContractPayload = Partial<CreateServiceContractPayload> & {
+  renewalRequested?: boolean
+  renewalNote?: string | null
 }
 
 export interface ContractLifecycleInfo {

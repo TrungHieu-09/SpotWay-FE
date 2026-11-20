@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { App as AntApp } from 'antd'
 import { Link } from 'react-router-dom'
-import { getOwnerContracts } from '../../api/contracts'
+import { getOwnerContract, getOwnerContracts, submitContractRenewalRequest } from '../../api/contracts'
 import { getTenantOverview } from '../../api/tenant'
-import { useAuthStore } from '../../auth/store'
 import { useBuildingStore } from '../../store/useBuildingStore'
 import { ContractScanViewer } from '../../components/contracts/ContractScanViewer'
 import type { ServiceContract } from '../../types/contract'
@@ -17,7 +16,6 @@ import '../Admin/ContractsPage.css'
 
 export function OwnerContractsPage() {
   const { message } = AntApp.useApp()
-  const user = useAuthStore((s) => s.user)
   const buildings = useBuildingStore((s) => s.buildings)
   const loadBuildings = useBuildingStore((s) => s.loadBuildings)
 
@@ -26,17 +24,22 @@ export function OwnerContractsPage() {
   const [overview, setOverview] = useState<TenantOverview | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Support Contact Modal
-  const [contactModalOpen, setContactModalOpen] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  // Renewal request dialog
+  const [renewOpen, setRenewOpen] = useState(false)
+  const [renewNote, setRenewNote] = useState('')
+  const [sendingRenew, setSendingRenew] = useState(false)
 
   // Contract History Modal
   const [historyModalOpen, setHistoryModalOpen] = useState(false)
 
   const reload = useCallback(async () => {
     setLoading(true)
+    setLoadError(null)
     try {
       const [cntList, ov] = await Promise.all([
-        getOwnerContracts(user),
+        getOwnerContracts(),
         getTenantOverview().catch(() => null),
         loadBuildings().catch(() => undefined),
       ])
@@ -45,10 +48,12 @@ export function OwnerContractsPage() {
       if (cntList.length > 0 && !selectedId) {
         setSelectedId(cntList[0].id)
       }
+    } catch (err) {
+      setLoadError((err as Error).message || 'Không tải được hợp đồng.')
     } finally {
       setLoading(false)
     }
-  }, [user, loadBuildings, selectedId])
+  }, [loadBuildings, selectedId])
 
   useEffect(() => {
     void reload()
@@ -61,12 +66,20 @@ export function OwnerContractsPage() {
   const usedBuildings = buildings.length || overview?.usage.buildings || 0
   const usedFloors = overview?.usage.floors ?? 0
 
-  function handleQuickDownload() {
+  async function handleSendRenewal() {
     if (!selectedContract) return
-    message.info(
-      `Đang mở bản in / xuất PDF hợp đồng #${selectedContract.contractCode}...`,
-    )
-    window.print()
+    setSendingRenew(true)
+    try {
+      await submitContractRenewalRequest(selectedContract.id, renewNote.trim())
+      message.success('Đã gửi yêu cầu gia hạn tới Quản trị viên.')
+      setRenewOpen(false)
+      setRenewNote('')
+      await reload()
+    } catch (err) {
+      message.error((err as Error).message || 'Không gửi được yêu cầu. Vui lòng thử lại.')
+    } finally {
+      setSendingRenew(false)
+    }
   }
 
   if (loading && !selectedContract) {
@@ -77,6 +90,19 @@ export function OwnerContractsPage() {
           style={{ padding: 56, textAlign: 'center', color: '#958ea0' }}
         >
           Đang tải hồ sơ hợp đồng dịch vụ...
+        </div>
+      </div>
+    )
+  }
+
+  if (loadError && !selectedContract) {
+    return (
+      <div className="adm-page">
+        <div className="adm-glass-card" style={{ padding: 56, textAlign: 'center', color: '#f87171' }}>
+          <p style={{ marginTop: 0 }}>Không tải được hợp đồng: {loadError}</p>
+          <button type="button" className="adm-btn" onClick={() => void reload()}>
+            Thử lại
+          </button>
         </div>
       </div>
     )
@@ -100,6 +126,12 @@ export function OwnerContractsPage() {
     Math.min(lifecycle.totalDays, lifecycle.totalDays - Math.max(0, lifecycle.daysRemaining)),
   )
   const isWarning = lifecycle.status === 'expiring' || lifecycle.status === 'expired'
+  const payLabel =
+    selectedContract.paymentStatus === 'paid'
+      ? 'Đã thanh toán'
+      : selectedContract.paymentStatus === 'pending'
+        ? 'Chờ thanh toán'
+        : 'Thỏa thuận riêng'
 
   return (
     <div className="adm-page">
@@ -124,7 +156,7 @@ export function OwnerContractsPage() {
                   : 'Hợp đồng đã ký kết với Quản trị viên (Admin)'}
               </span>
               <span className="ocp-alert-banner__tag">
-                {lifecycle.daysRemaining <= 45 ? 'Cảnh báo kỳ hạn' : 'Đã đối soát pháp lý'}
+                {lifecycle.daysRemaining <= 45 ? 'Cảnh báo kỳ hạn' : 'Đang hiệu lực'}
               </span>
             </div>
 
@@ -133,24 +165,24 @@ export function OwnerContractsPage() {
               <strong style={{ color: isWarning ? '#fcd34d' : '#6ee7b7' }}>
                 {Math.max(0, lifecycle.daysRemaining)} ngày hiệu lực
               </strong>{' '}
-              (kết thúc ngày {lifecycle.formattedEndDate}). Đây là bản lưu trữ điện tử chính thức do
-              Admin tải lên và chứng thực; nếu cần gia hạn hoặc điều chỉnh điều khoản, vui lòng liên
-              hệ trực tiếp Quản trị viên hệ thống.
+              (kết thúc ngày {lifecycle.formattedEndDate}). Đây là bản scan do Quản trị viên tải lên; nếu cần gia hạn hoặc điều chỉnh điều khoản, hãy gửi yêu cầu gia hạn.
             </p>
           </div>
         </div>
 
         <div className="ocp-alert-banner__actions">
-          <button
-            type="button"
-            className="adm-btn"
-            onClick={() => setContactModalOpen(true)}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-              support_agent
+          {selectedContract.renewalRequested ? (
+            <span style={{ color: '#fbbf24', fontSize: 13, fontWeight: 600 }}>
+              Đã gửi yêu cầu gia hạn, đang chờ Quản trị viên xử lý
             </span>
-            <span>Liên hệ quản trị viên</span>
-          </button>
+          ) : (
+            <button type="button" className="adm-btn" onClick={() => setRenewOpen(true)}>
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                autorenew
+              </span>
+              <span>Gửi yêu cầu gia hạn</span>
+            </button>
+          )}
         </div>
       </section>
 
@@ -212,21 +244,6 @@ export function OwnerContractsPage() {
               {lifecycle.statusLabel}
             </span>
 
-            <button
-              type="button"
-              className="adm-btn"
-              onClick={handleQuickDownload}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: 18, color: '#5de6ff' }}
-              >
-                cloud_download
-              </span>
-              <span>
-                Tải trọn bộ bản scan (PDF, {selectedContract.pageCount} trang)
-              </span>
-            </button>
           </div>
         </div>
 
@@ -351,8 +368,8 @@ export function OwnerContractsPage() {
               </span>
             </div>
             <div>
-              <div className="ocp-data-pill__label">Đơn vị ký kết (Bên A)</div>
-              <div className="ocp-data-pill__value">CTCP SpotWay Spatial</div>
+              <div className="ocp-data-pill__label">Thanh toán</div>
+              <div className="ocp-data-pill__value">{payLabel}</div>
             </div>
           </div>
 
@@ -366,9 +383,9 @@ export function OwnerContractsPage() {
               </span>
             </div>
             <div>
-              <div className="ocp-data-pill__label">Pháp lý bản gốc</div>
-              <div className="ocp-data-pill__value" style={{ color: '#6ee7b7' }}>
-                Ký số &amp; Mộc đỏ
+              <div className="ocp-data-pill__label">Bản scan</div>
+              <div className="ocp-data-pill__value" style={{ color: selectedContract.hasScan ? '#6ee7b7' : '#f87171' }}>
+                {selectedContract.hasScan ? `${selectedContract.pageCount} tệp` : 'Chưa có'}
               </div>
             </div>
           </div>
@@ -377,7 +394,7 @@ export function OwnerContractsPage() {
 
       {/* ── 3. LARGE DOCUMENT VIEWER ("Bản scan hợp đồng") ── */}
       <section>
-        <ContractScanViewer contract={selectedContract} large />
+        <ContractScanViewer contract={selectedContract} loadDetail={getOwnerContract} large />
       </section>
 
       {/* ── 4. BOTTOM INFO CARDS (Thời hạn & Pháp lý + Ghi chú từ Quản trị viên) ── */}
@@ -402,43 +419,30 @@ export function OwnerContractsPage() {
                 </div>
                 <h2 className="ocp-info-card__title">Thời hạn &amp; Pháp lý</h2>
               </div>
-              <span
-                style={{
-                  padding: '3px 10px',
-                  borderRadius: 999,
-                  background: 'rgba(52, 51, 68, 0.85)',
-                  color: '#5de6ff',
-                  fontSize: 10.5,
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                }}
-              >
-                Cấp độ 4
-              </span>
             </div>
 
             <div className="ocp-legal-cells">
               <div className="ocp-legal-cell">
-                <span className="cnt-info-label">Ngày ký văn bản</span>
+                <span className="cnt-info-label">Ngày bắt đầu</span>
                 <span className="cnt-info-value">
-                  {lifecycle.formattedStartDate} 09:14
-                </span>
-              </div>
-              <div className="ocp-legal-cell">
-                <span className="cnt-info-label">Ngày hiệu lực chính thức</span>
-                <span className="cnt-info-value" style={{ color: '#34d399' }}>
                   {lifecycle.formattedStartDate}
                 </span>
               </div>
               <div className="ocp-legal-cell">
-                <span className="cnt-info-label">Thời hạn kết thúc</span>
-                <span className="cnt-info-value" style={{ color: '#fcd34d' }}>
-                  {lifecycle.formattedEndDate} (23:59)
+                <span className="cnt-info-label">Thời hạn hợp đồng</span>
+                <span className="cnt-info-value" style={{ color: '#34d399' }}>
+                  {lifecycle.durationMonths} tháng
                 </span>
               </div>
               <div className="ocp-legal-cell">
-                <span className="cnt-info-label">Hình thức thanh toán</span>
-                <span className="cnt-info-value">Chuyển khoản doanh nghiệp</span>
+                <span className="cnt-info-label">Ngày kết thúc</span>
+                <span className="cnt-info-value" style={{ color: '#fcd34d' }}>
+                  {lifecycle.formattedEndDate}
+                </span>
+              </div>
+              <div className="ocp-legal-cell">
+                <span className="cnt-info-label">Tình trạng thanh toán</span>
+                <span className="cnt-info-value">{payLabel}</span>
               </div>
             </div>
           </div>
@@ -505,7 +509,7 @@ export function OwnerContractsPage() {
                 </h2>
               </div>
               <span style={{ fontSize: 11, color: '#958ea0', fontWeight: 600 }}>
-                Chứng thực bởi Admin
+                Do Quản trị viên nhập
               </span>
             </div>
 
@@ -535,49 +539,10 @@ export function OwnerContractsPage() {
                     color: '#cbc3d7',
                   }}
                 >
-                  {selectedContract.notes ||
-                    'Hợp đồng áp dụng chính sách hỗ trợ kỹ thuật 24/7 chuyên biệt và cập nhật thuật toán dẫn đường 3D A* miễn phí trong suốt thời hạn hợp đồng.'}
+                  {selectedContract.notes || 'Quản trị viên chưa để ghi chú cho hợp đồng này.'}
                 </p>
               </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 18,
-                  flexWrap: 'wrap',
-                  paddingTop: 6,
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                }}
-              >
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    color: '#34d399',
-                  }}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                    call
-                  </span>
-                  <span>Hotline kỹ thuật: 1900 8928 (Nhánh 2)</span>
-                </span>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    color: '#5de6ff',
-                  }}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                    mail
-                  </span>
-                  <span>admin@spotway.local</span>
-                </span>
-              </div>
             </div>
           </div>
 
@@ -632,16 +597,16 @@ export function OwnerContractsPage() {
         </div>
       </section>
 
-      {/* ── MODAL: Liên hệ Quản trị viên ── */}
-      {contactModalOpen && (
+      {/* ── MODAL: Gửi yêu cầu gia hạn tới Quản trị viên ── */}
+      {renewOpen && (
         <div
           className="adm-modal-backdrop"
-          onClick={() => setContactModalOpen(false)}
+          onClick={() => !sendingRenew && setRenewOpen(false)}
           role="presentation"
         >
           <div
             className="adm-modal"
-            style={{ maxWidth: 460 }}
+            style={{ maxWidth: 480 }}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -649,49 +614,50 @@ export function OwnerContractsPage() {
             <div className="adm-modal__header">
               <div className="adm-modal__header-left">
                 <div className="adm-modal__icon">
-                  <span className="material-symbols-outlined">support_agent</span>
+                  <span className="material-symbols-outlined">autorenew</span>
                 </div>
                 <div>
-                  <h2 className="adm-modal__title">Liên hệ Ban Quản trị SpotWay</h2>
+                  <h2 className="adm-modal__title">Yêu cầu gia hạn hợp đồng</h2>
                   <p className="adm-modal__subtitle">
-                    Hỗ trợ pháp lý &amp; đối soát hợp đồng #{selectedContract.contractCode}
+                    Hợp đồng #{selectedContract.contractCode} · hết hạn {lifecycle.formattedEndDate}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 className="adm-modal__close"
-                onClick={() => setContactModalOpen(false)}
+                onClick={() => setRenewOpen(false)}
+                disabled={sendingRenew}
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
             <div className="adm-modal__body" style={{ gap: 12 }}>
-              <div className="ocp-legal-cell">
-                <span className="cnt-info-label">Đơn vị quản lý hợp đồng</span>
-                <span className="cnt-info-value">Ban Quản trị &amp; Pháp chế SpotWay (Admin)</span>
-              </div>
-              <div className="ocp-legal-cell">
-                <span className="cnt-info-label">Email trực tiếp</span>
-                <span className="cnt-info-value" style={{ color: '#5de6ff' }}>
-                  admin@spotway.local
-                </span>
-              </div>
-              <div className="ocp-legal-cell">
-                <span className="cnt-info-label">Hotline Doanh nghiệp 24/7</span>
-                <span className="cnt-info-value" style={{ color: '#34d399' }}>
-                  1900 8928 (Nhánh 2 — Khối Chủ tòa nhà)
-                </span>
-              </div>
-
+              <label className="cnt-info-label" htmlFor="renew-note">
+                Nội dung gửi Quản trị viên (không bắt buộc)
+              </label>
+              <textarea
+                id="renew-note"
+                className="adm-input"
+                rows={4}
+                maxLength={500}
+                placeholder="Ví dụ: Muốn gia hạn thêm 12 tháng và tăng hạn mức lên 5 tòa nhà."
+                value={renewNote}
+                onChange={(e) => setRenewNote(e.target.value)}
+                style={{ resize: 'vertical' }}
+              />
               <div className="adm-modal__footer">
+                <button type="button" className="adm-btn" onClick={() => setRenewOpen(false)} disabled={sendingRenew}>
+                  Hủy
+                </button>
                 <button
                   type="button"
-                  className="adm-btn"
-                  onClick={() => setContactModalOpen(false)}
+                  className="adm-btn adm-btn--primary"
+                  onClick={() => void handleSendRenewal()}
+                  disabled={sendingRenew}
                 >
-                  Đóng
+                  {sendingRenew ? 'Đang gửi...' : 'Gửi yêu cầu'}
                 </button>
               </div>
             </div>

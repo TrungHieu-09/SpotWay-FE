@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   createAdminContract,
   deleteAdminContract,
+  getAdminContract,
   getAdminContracts,
   updateAdminContract,
 } from '../../api/contracts'
@@ -28,11 +29,16 @@ interface ScanPageFileItem {
   id: string
   fileName: string
   sizeText: string
+  mime: string
   statusText: string
   iconName: 'check_circle' | 'verified_user'
   iconColor: string
-  dataUrl?: string | null
+  dataUrl: string
 }
+
+const ALLOWED_SCAN_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp']
+/** Mirrors the server limit for all scan pages together (base64 characters). */
+const MAX_TOTAL_CHARS = 36_000_000
 
 function getInitials(name: string): string {
   const parts = name
@@ -55,35 +61,6 @@ function nextContractCode(existing: ServiceContract[]): string {
   return `HD-${year}-${String(maxNum + 1).padStart(3, '0')}`
 }
 
-function buildDefaultScanPages(codeSlug: string): ScanPageFileItem[] {
-  const slug = codeSlug.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'mta'
-  return [
-    {
-      id: 'p-1',
-      fileName: `hop_dong_${slug}_trang1.pdf`,
-      sizeText: '1.8 MB',
-      statusText: 'Hoàn tất 100%',
-      iconName: 'check_circle',
-      iconColor: '#5de6ff',
-    },
-    {
-      id: 'p-2',
-      fileName: `hop_dong_${slug}_trang2.pdf`,
-      sizeText: '1.4 MB',
-      statusText: 'Hoàn tất 100%',
-      iconName: 'check_circle',
-      iconColor: '#5de6ff',
-    },
-    {
-      id: 'p-3',
-      fileName: `phu_luc_ky_ten_${slug}.png`,
-      sizeText: '2.1 MB · Ký tên & Con dấu',
-      statusText: 'Hợp lệ',
-      iconName: 'verified_user',
-      iconColor: '#f8acff',
-    },
-  ]
-}
 
 export function AdminContractsPage() {
   const { message } = AntApp.useApp()
@@ -103,13 +80,14 @@ export function AdminContractsPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
-  const [notifyOwner, setNotifyOwner] = useState(true)
+  const [scansDirty, setScansDirty] = useState(false)
+  const [loadingScans, setLoadingScans] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   // Form fields
   const [formCode, setFormCode] = useState('')
   const [formOwnerId, setFormOwnerId] = useState('')
   const [formCustomerName, setFormCustomerName] = useState('')
-  const [formOwnerEmail, setFormOwnerEmail] = useState('')
   const [formRepresentative, setFormRepresentative] = useState('')
   const [formDomain, setFormDomain] = useState('')
   const [formStartDate, setFormStartDate] = useState(() =>
@@ -125,29 +103,32 @@ export function AdminContractsPage() {
   const [formPaymentStatus, setFormPaymentStatus] = useState<ContractPaymentStatus>('paid')
   const [formMaxBuildings, setFormMaxBuildings] = useState('3')
   const [formMaxFloors, setFormMaxFloors] = useState('15')
-  const [formScanPages, setFormScanPages] = useState<ScanPageFileItem[]>(() =>
-    buildDefaultScanPages('mta'),
-  )
+  const [formScanPages, setFormScanPages] = useState<ScanPageFileItem[]>([])
   const [formNotes, setFormNotes] = useState('')
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const reload = useCallback(async () => {
     setLoading(true)
+    setLoadError(null)
     try {
-      const [cntList, userList] = await Promise.all([
-        getAdminContracts(),
-        getAdminUsers().catch(() => [] as AdminUser[]),
-      ])
+      const cntList = await getAdminContracts()
       setContracts(cntList)
-      setOwners(userList.filter((u) => u.role === 'building_owner'))
       if (cntList.length > 0 && !selectedId) {
         setSelectedId(cntList[0].id)
       }
+      try {
+        const userList = await getAdminUsers()
+        setOwners(userList.filter((u) => u.role === 'building_owner'))
+      } catch (err) {
+        message.warning(`Không tải được danh sách Chủ tòa nhà: ${(err as Error).message}`)
+      }
+    } catch (err) {
+      setLoadError((err as Error).message || 'Không tải được danh sách hợp đồng.')
     } finally {
       setLoading(false)
     }
-  }, [selectedId])
+  }, [selectedId, message])
 
   useEffect(() => {
     void reload()
@@ -196,42 +177,35 @@ export function AdminContractsPage() {
   }, [contracts, filteredContracts, selectedId])
 
   function openCreateModal() {
+    if (owners.length === 0) {
+      message.warning('Chưa có tài khoản Chủ tòa nhà. Hãy tạo tài khoản Chủ tòa nhà trước khi tạo hợp đồng.')
+      navigate('/admin/accounts?create=1')
+      return
+    }
     setEditingId(null)
-    const nextCode = nextContractCode(contracts)
-    setFormCode(nextCode)
+    setFormCode(nextContractCode(contracts))
     const defaultOwner = owners[0]
-    setFormOwnerId(defaultOwner?.id ?? '')
-    setFormCustomerName(
-      defaultOwner?.tenantName ||
-        defaultOwner?.name ||
-        'Metro Transit Authority - Sân bay & Ga quốc tế',
-    )
-    setFormOwnerEmail(defaultOwner?.email || 'owner@spotway.app')
-    setFormRepresentative(
-      defaultOwner ? `${defaultOwner.name} (Chủ tòa nhà)` : 'Elena Rostova (GĐ Vận hành)',
-    )
+    setFormOwnerId(defaultOwner.id)
+    setFormCustomerName(defaultOwner.tenantName || defaultOwner.name)
+    setFormRepresentative(`${defaultOwner.name} (Chủ tòa nhà)`)
     setFormDomain(
-      defaultOwner
-        ? `${(defaultOwner.tenantName || defaultOwner.name || 'metro-transit')
-            .toLowerCase()
-            .replace(/[^a-z0-9-]+/g, '-')}.spotway.app`
-        : 'metro-transit.spotway.app',
+      `${(defaultOwner.tenantName || defaultOwner.name || 'workspace')
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, '-')}.spotway.app`,
     )
     const today = new Date().toISOString().slice(0, 10)
     const nextYear = new Date()
     nextYear.setFullYear(nextYear.getFullYear() + 1)
     setFormStartDate(today)
     setFormEndDate(nextYear.toISOString().slice(0, 10))
-    setFormValue('24000')
+    setFormValue('')
     setFormCurrency('USD')
-    setFormPaymentStatus('paid')
+    setFormPaymentStatus('pending')
     setFormMaxBuildings('3')
     setFormMaxFloors('15')
-    setFormScanPages(buildDefaultScanPages(defaultOwner?.name || 'mta'))
-    setFormNotes(
-      'Tủ lưu trữ hồ sơ A-3, ngăn số 08 (Tòa nhà Điều hành Trung tâm). Người thụ lý bàn giao: Nguyễn Văn An - Ban Pháp chế.',
-    )
-    setNotifyOwner(true)
+    setFormScanPages([])
+    setFormNotes('')
+    setScansDirty(false)
     setModalOpen(true)
   }
 
@@ -240,7 +214,6 @@ export function AdminContractsPage() {
     setFormCode(c.contractCode)
     setFormOwnerId(c.ownerId ?? '')
     setFormCustomerName(c.customerName)
-    setFormOwnerEmail(c.ownerEmail)
     setFormRepresentative(c.representative)
     setFormDomain(c.workspaceDomain)
     setFormStartDate(c.startDate)
@@ -250,17 +223,36 @@ export function AdminContractsPage() {
     setFormPaymentStatus(c.paymentStatus)
     setFormMaxBuildings(String(c.maxBuildings))
     setFormMaxFloors(String(c.maxFloors))
-    setFormScanPages(buildDefaultScanPages(c.customerName))
+    setFormScanPages([])
     setFormNotes(c.notes)
-    setNotifyOwner(true)
+    setScansDirty(false)
     setModalOpen(true)
+
+    if (!c.hasScan) return
+    setLoadingScans(true)
+    getAdminContract(c.id)
+      .then((detail) =>
+        setFormScanPages(
+          detail.scanPages.map((p, i) => ({
+            id: `exist-${c.id}-${i}`,
+            fileName: p.fileName,
+            sizeText: p.sizeText,
+            mime: p.mime,
+            statusText: 'Đã lưu',
+            iconName: p.mime === 'application/pdf' ? 'check_circle' : 'verified_user',
+            iconColor: p.mime === 'application/pdf' ? '#5de6ff' : '#f8acff',
+            dataUrl: p.dataUrl,
+          })),
+        ),
+      )
+      .catch((err: Error) => message.error(`Không tải được bản scan hiện có: ${err.message}`))
+      .finally(() => setLoadingScans(false))
   }
 
   function handleSelectOwnerPreset(val: string) {
     setFormOwnerId(val)
     const found = owners.find((o) => o.id === val)
     if (found) {
-      setFormOwnerEmail(found.email)
       setFormCustomerName(found.tenantName || found.name || found.email.split('@')[0])
       setFormRepresentative(`${found.name || found.email.split('@')[0]} (Chủ tòa nhà)`)
       setFormDomain(
@@ -268,70 +260,64 @@ export function AdminContractsPage() {
           .toLowerCase()
           .replace(/[^a-z0-9-]+/g, '-')}.spotway.app`,
       )
-      return
-    }
-    if (val === 'preset-vingroup') {
-      setFormCustomerName('Vincom Mega Mall Smart City')
-      setFormOwnerEmail('owner.smartcity@vincom.vn')
-      setFormRepresentative('Nguyễn Hoàng Minh (GĐ Tổ hợp)')
-      setFormDomain('smartcity-vincom.spotway.app')
-    } else if (val === 'preset-saigon') {
-      setFormCustomerName('Saigon Mega Mall - Central Atrium Ops')
-      setFormOwnerEmail('ops@saigonmegamall.vn')
-      setFormRepresentative('Trần Minh Quân (GĐ Vận hành)')
-      setFormDomain('saigon-atrium.spotway.app')
-    } else if (val === 'preset-noibai') {
-      setFormCustomerName('Cảng Hàng không Quốc tế Nội Bài T2')
-      setFormOwnerEmail('spatial.ops@noibai.aero')
-      setFormRepresentative('Lê Quang Đạo (Trưởng ban Khai thác)')
-      setFormDomain('noibai-t2.spotway.app')
     }
   }
+
+  const MAX_SCAN_BYTES = 10 * 1024 * 1024
+  const MAX_SCAN_PAGES = 10
 
   function processUploadedFiles(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return
     Array.from(fileList).forEach((file) => {
-      const sizeMb = Math.max(0.2, file.size / (1024 * 1024)).toFixed(1)
-      const isImg = file.type.startsWith('image/')
-      const itemId = `scan-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
-
-      if (isImg) {
-        const reader = new FileReader()
-        reader.onload = () => {
-          setFormScanPages((prev) => [
-            ...prev,
-            {
-              id: itemId,
-              fileName: file.name,
-              sizeText: `${sizeMb} MB · Ký tên & Con dấu`,
-              statusText: 'Hợp lệ',
-              iconName: 'verified_user',
-              iconColor: '#f8acff',
-              dataUrl: typeof reader.result === 'string' ? reader.result : null,
-            },
-          ])
-        }
-        reader.readAsDataURL(file)
-      } else {
-        setFormScanPages((prev) => [
+      const okType = ALLOWED_SCAN_TYPES.includes(file.type)
+      if (!okType) {
+        message.error(`"${file.name}" không được hỗ trợ. Chỉ nhận PDF, JPG, PNG, WEBP.`)
+        return
+      }
+      if (file.size > MAX_SCAN_BYTES) {
+        message.error(`"${file.name}" vượt quá 10MB.`)
+        return
+      }
+      if (formScanPages.length + 1 > MAX_SCAN_PAGES) {
+        message.error(`Chỉ được tải tối đa ${MAX_SCAN_PAGES} tệp cho mỗi hợp đồng.`)
+        return
+      }
+      const sizeMb = Math.max(0.01, file.size / (1024 * 1024)).toFixed(2)
+      const reader = new FileReader()
+      reader.onload = () => {
+        if (typeof reader.result !== 'string') return
+        const result = reader.result
+        setScansDirty(true)
+        const isPdf = file.type === 'application/pdf'
+        setFormScanPages((prev) => {
+          if (prev.reduce((n, p) => n + p.dataUrl.length, 0) + result.length > MAX_TOTAL_CHARS) {
+            message.error('Tổng dung lượng các tệp scan quá lớn (tối đa khoảng 26 MB).')
+            return prev
+          }
+          return [
           ...prev,
           {
-            id: itemId,
+            id: `scan-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
             fileName: file.name,
             sizeText: `${sizeMb} MB`,
-            statusText: 'Hoàn tất 100%',
-            iconName: 'check_circle',
-            iconColor: '#5de6ff',
-            dataUrl: null,
+            mime: file.type,
+            statusText: 'Đã sẵn sàng',
+            iconName: isPdf ? 'check_circle' : 'verified_user',
+            iconColor: isPdf ? '#5de6ff' : '#f8acff',
+            dataUrl: result,
           },
-        ])
+        ]
+        })
       }
+      reader.onerror = () => message.error(`Không đọc được tệp "${file.name}".`)
+      reader.readAsDataURL(file)
     })
   }
 
   function handleMovePage(index: number, direction: -1 | 1) {
     const targetIdx = index + direction
     if (targetIdx < 0 || targetIdx >= formScanPages.length) return
+    setScansDirty(true)
     setFormScanPages((prev) => {
       const copy = [...prev]
       const temp = copy[index]
@@ -342,66 +328,67 @@ export function AdminContractsPage() {
   }
 
   function handleRemovePage(id: string) {
+    setScansDirty(true)
     setFormScanPages((prev) => prev.filter((p) => p.id !== id))
   }
 
   async function handleSaveContract(e: React.FormEvent) {
     e.preventDefault()
-    if (!formCustomerName.trim()) {
-      message.error('Vui lòng chọn hoặc nhập tên Khách hàng / Chủ tòa nhà.')
+    const matchedOwner = owners.find((o) => o.id === formOwnerId)
+    if (!matchedOwner) {
+      message.error('Vui lòng chọn tài khoản Chủ tòa nhà đã có trong hệ thống.')
+      return
+    }
+    if (loadingScans) {
+      message.warning('Đang tải bản scan hiện có, vui lòng đợi giây lát.')
+      return
+    }
+    if ((!editingId || scansDirty) && formScanPages.length === 0) {
+      message.error('Vui lòng tải lên ít nhất 1 tệp scan hợp đồng (PDF / JPG / PNG).')
+      return
+    }
+    if (formEndDate < formStartDate) {
+      message.error('Ngày kết thúc phải sau ngày bắt đầu.')
       return
     }
     setSaving(true)
     try {
-      const matchedOwner = owners.find(
-        (o) =>
-          o.id === formOwnerId ||
-          o.email.toLowerCase() === formOwnerEmail.trim().toLowerCase(),
-      )
-      const firstImgPage = formScanPages.find((p) => p.dataUrl)
-      const payload = {
+      const base = {
         contractCode: formCode.trim() || nextContractCode(contracts),
-        ownerId: matchedOwner?.id ?? (owners[0]?.id || null),
-        tenantId: matchedOwner?.tenantId ?? (owners[0]?.tenantId || null),
-        customerName: formCustomerName.trim(),
-        ownerEmail:
-          formOwnerEmail.trim() || matchedOwner?.email || 'owner@spotway.app',
-        representative: formRepresentative.trim() || formCustomerName.trim(),
-        workspaceDomain: formDomain.trim() || 'workspace.spotway.app',
+        ownerId: matchedOwner.id,
+        customerName: formCustomerName.trim() || matchedOwner.tenantName || matchedOwner.name,
+        representative: formRepresentative.trim() || matchedOwner.name,
+        workspaceDomain: formDomain.trim(),
         startDate: formStartDate,
         endDate: formEndDate,
         annualValue: Number(String(formValue).replace(/[^0-9.]/g, '')) || 0,
         currency: formCurrency,
-        billingLabel: null,
         paymentStatus: formPaymentStatus,
         maxBuildings: Math.max(1, Number(formMaxBuildings) || 3),
         maxFloors: Math.max(1, Number(formMaxFloors) || 15),
-        pageCount: Math.max(1, formScanPages.length || 3),
-        scanFileName:
-          formScanPages[0]?.fileName || `${formCode.trim()}-Signed.pdf`,
-        scanDataUrl: firstImgPage?.dataUrl ?? null,
         notes: formNotes.trim(),
       }
+      const scanPages = formScanPages.map((p) => ({
+        fileName: p.fileName,
+        sizeText: p.sizeText,
+        mime: p.mime,
+        dataUrl: p.dataUrl,
+      }))
 
       if (editingId) {
-        const updated = await updateAdminContract(editingId, payload)
+        // Scans are only re-sent when they were changed, so editing a note does not re-upload megabytes.
+        const updated = await updateAdminContract(editingId, scansDirty ? { ...base, scanPages } : base)
         setContracts((prev) => prev.map((c) => (c.id === editingId ? updated : c)))
-        message.success(
-          notifyOwner
-            ? `Đã lưu hợp đồng ${updated.contractCode} và đồng bộ sang cổng Chủ tòa nhà!`
-            : `Đã cập nhật hợp đồng ${updated.contractCode}!`,
-        )
+        message.success(`Đã cập nhật hợp đồng ${updated.contractCode}!`)
       } else {
-        const created = await createAdminContract(payload)
+        const created = await createAdminContract({ ...base, scanPages })
         setContracts((prev) => [created, ...prev])
         setSelectedId(created.id)
-        message.success(
-          notifyOwner
-            ? `Đã số hóa hợp đồng ${created.contractCode} và gửi thông báo tới Chủ tòa nhà!`
-            : `Đã tạo và lưu trữ hợp đồng ${created.contractCode}!`,
-        )
+        message.success(`Đã lưu hợp đồng ${created.contractCode} vào hệ thống!`)
       }
       setModalOpen(false)
+    } catch (err) {
+      message.error((err as Error).message || 'Không thể lưu hợp đồng. Vui lòng thử lại.')
     } finally {
       setSaving(false)
     }
@@ -413,25 +400,29 @@ export function AdminContractsPage() {
     baseDate.setFullYear(baseDate.getFullYear() + 1)
     const nextEndDate = baseDate.toISOString().slice(0, 10)
 
-    const updated = await updateAdminContract(c.id, {
-      endDate: nextEndDate,
-      renewalRequested: false,
-      renewalNote: null,
-    })
-    setContracts((prev) => prev.map((item) => (item.id === c.id ? updated : item)))
-    message.success(
-      `Đã gia hạn hợp đồng ${c.contractCode} đến ngày ${formatDateVN(nextEndDate)}!`,
-    )
+    try {
+      const updated = await updateAdminContract(c.id, {
+        endDate: nextEndDate,
+        renewalRequested: false,
+        renewalNote: null,
+      })
+      setContracts((prev) => prev.map((item) => (item.id === c.id ? updated : item)))
+      message.success(`Đã gia hạn hợp đồng ${c.contractCode} đến ngày ${formatDateVN(nextEndDate)}!`)
+    } catch (err) {
+      message.error((err as Error).message || 'Không thể gia hạn hợp đồng.')
+    }
   }
 
   async function handleDeleteContract(id: string) {
-    await deleteAdminContract(id)
-    const remaining = contracts.filter((c) => c.id !== id)
-    setContracts(remaining)
-    if (selectedId === id && remaining.length > 0) {
-      setSelectedId(remaining[0].id)
+    try {
+      await deleteAdminContract(id)
+      const remaining = contracts.filter((c) => c.id !== id)
+      setContracts(remaining)
+      if (selectedId === id) setSelectedId(remaining[0]?.id ?? '')
+      message.success('Đã xóa hồ sơ hợp đồng.')
+    } catch (err) {
+      message.error((err as Error).message || 'Không thể xóa hợp đồng.')
     }
-    message.success('Đã xóa hồ sơ hợp đồng.')
   }
 
   return (
@@ -448,22 +439,11 @@ export function AdminContractsPage() {
             <span className="adm-count-pill">{contracts.length} hợp đồng</span>
           </div>
           <p className="adm-hero__subtitle">
-            Kho lưu trữ và số hóa bản scan hợp đồng dịch vụ ký ngoại tuyến với Chủ tòa nhà.
+            Kho lưu trữ bản scan hợp đồng dịch vụ đã ký ngoại tuyến với Chủ tòa nhà.
           </p>
         </div>
 
         <div className="adm-hero__actions">
-          <button
-            type="button"
-            className="adm-btn"
-            onClick={openCreateModal}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-              upload_file
-            </span>
-            <span>+ Nhập hàng loạt</span>
-          </button>
-
           <button
             type="button"
             className="adm-btn adm-btn--primary"
@@ -476,6 +456,16 @@ export function AdminContractsPage() {
           </button>
         </div>
       </header>
+
+      {loadError ? (
+        <div className="adm-glass-card" style={{ padding: 18, display: 'flex', alignItems: 'center', gap: 14, color: '#f87171' }}>
+          <span className="material-symbols-outlined">error</span>
+          <span style={{ flex: 1 }}>Không tải được danh sách hợp đồng: {loadError}</span>
+          <button type="button" className="adm-btn adm-btn--sm" onClick={() => void reload()}>
+            Thử lại
+          </button>
+        </div>
+      ) : null}
 
       {/* ── 3 Horizontal KPI Stat Cards ── */}
       <section className="cnt-stat-grid" aria-label="Thống kê hợp đồng">
@@ -686,6 +676,11 @@ export function AdminContractsPage() {
                         <td>
                           <div className="cnt-code-cell">
                             <span className="cnt-code-text">{c.contractCode}</span>
+                            {c.renewalRequested && (
+                              <span className="cnt-selected-badge" style={{ background: 'rgba(245, 158, 11, 0.18)', color: '#fbbf24' }}>
+                                Xin gia hạn
+                              </span>
+                            )}
                             {isSelected && (
                               <span className="cnt-selected-badge">Đang chọn</span>
                             )}
@@ -776,9 +771,9 @@ export function AdminContractsPage() {
                               className="material-symbols-outlined"
                               style={{ fontSize: 15, color: '#f472b6' }}
                             >
-                              picture_as_pdf
+                              {c.hasScan ? 'picture_as_pdf' : 'block'}
                             </span>
-                            <span>{c.pageCount} trang</span>
+                            <span>{c.hasScan ? `${c.pageCount} tệp` : 'Chưa có'}</span>
                           </span>
                         </td>
                       </tr>
@@ -832,7 +827,7 @@ export function AdminContractsPage() {
                     </span>
                   </div>
                   <div style={{ fontSize: 12, color: '#958ea0', marginTop: 2 }}>
-                    Ký kết ngày {formatDateVN(selectedContract.startDate)} · Hồ sơ thẩm định điện tử
+                    Hiệu lực từ {formatDateVN(selectedContract.startDate)}
                   </div>
                 </div>
               </div>
@@ -849,6 +844,24 @@ export function AdminContractsPage() {
                 <span>Gia hạn +1 năm</span>
               </button>
             </div>
+
+            {selectedContract.renewalRequested && (
+              <div
+                className="cnt-note-box"
+                style={{ margin: '0 0 12px', borderColor: 'rgba(245, 158, 11, 0.45)', background: 'rgba(245, 158, 11, 0.08)' }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#fbbf24', marginTop: 1 }}>
+                  notification_important
+                </span>
+                <div>
+                  <strong style={{ color: '#fbbf24' }}>Chủ tòa nhà xin gia hạn: </strong>
+                  <span>“{selectedContract.renewalNote || 'Không có ghi chú'}”</span>
+                  <div style={{ fontSize: 12, color: '#958ea0', marginTop: 4 }}>
+                    Bấm “Gia hạn +1 năm” để duyệt, yêu cầu sẽ tự được gỡ.
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Compact Info List */}
             <div className="cnt-info-grid">
@@ -915,7 +928,7 @@ export function AdminContractsPage() {
             </div>
 
             {/* Scanned Contract Document Viewer */}
-            <ContractScanViewer contract={selectedContract} />
+            <ContractScanViewer contract={selectedContract} loadDetail={getAdminContract} />
 
             {/* Sticky Footer Actions */}
             <div className="cnt-drawer__footer">
@@ -982,7 +995,6 @@ export function AdminContractsPage() {
                         ? 'Cập nhật & Lưu trữ hợp đồng'
                         : 'Tải lên & Lưu trữ hợp đồng mới'}
                     </h2>
-                    <span className="cnt-upload-modal__ocr-badge">OFFLINE OCR SYNC</span>
                   </div>
                   <p className="cnt-upload-modal__subtitle">
                     Khai báo thông tin cơ bản và lưu trữ bản scan hợp đồng đã ký ngoại tuyến với Chủ
@@ -1045,23 +1057,14 @@ export function AdminContractsPage() {
                           value={formOwnerId}
                           onChange={(e) => handleSelectOwnerPreset(e.target.value)}
                         >
+                          <option value="" disabled>
+                            {owners.length ? '-- Chọn tài khoản Chủ tòa nhà --' : 'Chưa có tài khoản Chủ tòa nhà nào'}
+                          </option>
                           {owners.map((o) => (
                             <option key={o.id} value={o.id}>
                               {o.tenantName || o.name} ({o.email})
                             </option>
                           ))}
-                          <option value="preset-mta">
-                            Metro Transit Authority - Sân bay &amp; Ga quốc tế
-                          </option>
-                          <option value="preset-vingroup">
-                            Vincom Mega Mall Smart City - Vingroup Retail
-                          </option>
-                          <option value="preset-saigon">
-                            Saigon Mega Mall - Central Atrium Ops
-                          </option>
-                          <option value="preset-noibai">
-                            Cảng Hàng không Quốc tế Nội Bài T2
-                          </option>
                         </select>
                       </div>
                     </div>
@@ -1232,7 +1235,7 @@ export function AdminContractsPage() {
                         ref={fileInputRef}
                         type="file"
                         multiple
-                        accept=".pdf,image/*"
+                        accept=".pdf,image/png,image/jpeg,image/webp"
                         style={{ display: 'none' }}
                         onChange={(e) => processUploadedFiles(e.target.files)}
                       />
@@ -1245,7 +1248,7 @@ export function AdminContractsPage() {
                         Kéo thả ảnh hoặc PDF hợp đồng vào đây
                       </span>
                       <span className="cnt-dropzone__sub">
-                        Hỗ trợ tệp định dạng JPG, PNG, PDF (tối đa 10MB mỗi tệp)
+                        Hỗ trợ PDF, JPG, PNG, WEBP (tối đa 10MB mỗi tệp, 10 tệp mỗi hợp đồng)
                       </span>
                       <button
                         type="button"
@@ -1361,8 +1364,7 @@ export function AdminContractsPage() {
                         info
                       </span>
                       <span>
-                        Sắp xếp lại thứ tự các trang trong bản scan hợp nhất. Hệ thống sẽ tự động
-                        ghép thành 1 file PDF lưu trữ vĩnh viễn và hiển thị cho Chủ tòa nhà.
+                        Sắp xếp thứ tự các tệp scan. Chủ tòa nhà sẽ xem và tải đúng các tệp này trong mục Hợp đồng của họ.
                       </span>
                     </div>
                   </div>
@@ -1371,16 +1373,6 @@ export function AdminContractsPage() {
 
               {/* Modal Footer */}
               <div className="cnt-upload-modal__footer">
-                <label className="cnt-notify-check">
-                  <input
-                    type="checkbox"
-                    checked={notifyOwner}
-                    onChange={(e) => setNotifyOwner(e.target.checked)}
-                    style={{ accentColor: '#a078ff', width: 16, height: 16 }}
-                  />
-                  <span>Gửi thông báo tới Chủ tòa nhà khi hoàn tất tải lên</span>
-                </label>
-
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
                   <button
                     type="button"
@@ -1396,10 +1388,10 @@ export function AdminContractsPage() {
                     disabled={saving}
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 19 }}>
-                      document_scanner
+                      save
                     </span>
                     <span>
-                      {saving ? 'Đang lưu & số hóa...' : 'Lưu hợp đồng & Số hóa'}
+                      {saving ? 'Đang tải lên & lưu...' : 'Lưu hợp đồng'}
                     </span>
                   </button>
                 </div>
