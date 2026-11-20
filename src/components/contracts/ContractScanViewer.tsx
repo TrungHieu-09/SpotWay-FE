@@ -167,15 +167,19 @@ export function ContractScanViewer({ contract, loadDetail, large = false }: Cont
           {canBrowse ? (
             <div className="csv-toolbar__controls">
               <div className="csv-ctrl-group">
-                <button type="button" className="csv-ctrl-btn" title="Tệp trước" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 17 }}>chevron_left</span>
-                </button>
-                <span className="csv-ctrl-label">Tệp {Math.min(page, totalPages)} / {totalPages}</span>
-                <button type="button" className="csv-ctrl-btn" title="Tệp tiếp" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 17 }}>chevron_right</span>
-                </button>
+                {totalPages > 1 && (
+                  <>
+                    <button type="button" className="csv-ctrl-btn" title="Tệp trước" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 17 }}>chevron_left</span>
+                    </button>
+                    <span className="csv-ctrl-label">Tệp {Math.min(page, totalPages)} / {totalPages}</span>
+                    <button type="button" className="csv-ctrl-btn" title="Tệp tiếp" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 17 }}>chevron_right</span>
+                    </button>
 
-                <div className="csv-ctrl-divider" />
+                    <div className="csv-ctrl-divider" />
+                  </>
+                )}
 
                 <button type="button" className="csv-ctrl-btn" title="Thu nhỏ" disabled={zoom <= 75} onClick={() => setZoom((z) => Math.max(75, z - 10))}>
                   <span className="material-symbols-outlined" style={{ fontSize: 17 }}>zoom_out</span>
@@ -191,17 +195,17 @@ export function ContractScanViewer({ contract, loadDetail, large = false }: Cont
 
               <button type="button" className="csv-fullscreen-btn" title="Xem toàn màn hình" onClick={() => setFullscreenOpen(true)}>
                 <span className="material-symbols-outlined" style={{ fontSize: 17 }}>fullscreen</span>
-                <span>Toàn màn hình</span>
+                {large && <span>Toàn màn hình</span>}
               </button>
 
               <button
                 type="button"
                 className="csv-download-btn"
                 onClick={() => (totalPages > 1 ? downloadAll() : current && downloadPage(contract, current, 0))}
-                title="Tải xuống bản scan"
+                title={totalPages > 1 ? `Tải ${totalPages} tệp` : 'Tải xuống bản scan'}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 17 }}>download</span>
-                <span>{totalPages > 1 ? `Tải ${totalPages} tệp` : 'Tải xuống'}</span>
+                {large && <span>{totalPages > 1 ? `Tải ${totalPages} tệp` : 'Tải xuống'}</span>}
               </button>
             </div>
           ) : null}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   ApartmentOutlined,
@@ -13,6 +13,8 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../../auth/store'
+import { useContractAlertStore } from '../../store/useContractAlertStore'
+import { ContractExpiryBanner } from '../contracts/ContractExpiryBanner'
 import './SpotWayNavbar.css'
 import './OwnerLayout.css'
 import '../../pages/BuildingOwner/OwnerStaffPage.css'
@@ -88,6 +90,12 @@ export function OwnerLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const logout = useAuthStore((s) => s.logout)
+  const contractAlert = useContractAlertStore((s) => s.alert)
+  const loadContractAlert = useContractAlertStore((s) => s.load)
+
+  useEffect(() => {
+    void loadContractAlert()
+  }, [loadContractAlert])
 
   async function handleLogout() {
     try {
@@ -173,6 +181,9 @@ export function OwnerLayout() {
               >
                 <span className="ol-nav-item__icon">{item.icon}</span>
                 {!collapsed && <span className="ol-nav-item__label">{item.label}</span>}
+                {item.path === '/owner/contracts' && contractAlert && !contractAlert.contract.renewalRequested && (
+                  <span className="ol-nav-item__alert" title="Hợp đồng sắp hết hạn" />
+                )}
                 {active && !collapsed && <span className="ol-nav-item__indicator" />}
               </NavLink>
             )
@@ -261,6 +272,7 @@ export function OwnerLayout() {
 
         {/* Page Content */}
         <div className="ol-content">
+          {!location.pathname.startsWith('/owner/contracts') && <ContractExpiryBanner />}
           <Outlet />
         </div>
       </div>

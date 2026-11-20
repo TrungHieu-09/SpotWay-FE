@@ -7,6 +7,7 @@ import {
   updateProfile as updateProfileRequest,
 } from './api'
 import type { AuthUser, Role } from '../types/auth'
+import { useServiceLockStore } from '../store/useServiceLockStore'
 
 export const AUTH_TOKEN_KEY = 'auth:token'
 
@@ -103,6 +104,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   async login(email, password) {
+    useServiceLockStore.getState().clear()
     set({ isLoading: true, error: null })
     try {
       const result = await loginRequest(email, password)
@@ -127,6 +129,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       await logoutRequest()
     } finally {
+      useServiceLockStore.getState().clear()
       saveToken(null)
       set({ user: null, token: null, error: null })
     }

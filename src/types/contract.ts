@@ -1,6 +1,15 @@
 export type ContractLifecycleStatus = 'active' | 'expiring' | 'expired'
 export type ContractPaymentStatus = 'paid' | 'pending' | 'custom'
 export type ContractCurrency = 'USD' | 'VND'
+export type RenewalUnit = 'day' | 'month'
+
+/** A contract counts as "expiring soon" (and the owner is warned) this many days before it ends. */
+export const EXPIRING_SOON_DAYS = 30
+
+/** "45 ngày" / "6 tháng" */
+export function formatRenewalAmount(amount: number, unit: RenewalUnit): string {
+  return `${amount} ${unit === 'day' ? 'ngày' : 'tháng'}`
+}
 
 export interface ContractScanPage {
   fileName: string
@@ -34,6 +43,9 @@ export interface ServiceContract {
   notes: string
   renewalRequested?: boolean
   renewalNote?: string | null
+  /** How much time the owner asked to add, in `renewalUnit` (only while a request is open). */
+  renewalAmount?: number | null
+  renewalUnit?: RenewalUnit | null
   createdAt: string
   updatedAt: string
 }
@@ -77,10 +89,29 @@ export function formatContractValue(contract: ServiceContract): string {
   if (contract.billingLabel && contract.billingLabel.trim().length > 0) {
     return contract.billingLabel
   }
+  if (!(contract.annualValue > 0)) return 'Chưa ghi giá trị'
   if (contract.currency === 'VND') {
     return `${contract.annualValue.toLocaleString('vi-VN')} ₫`
   }
   return `$${contract.annualValue.toLocaleString('en-US')}`
+}
+
+export interface ContractAlert {
+  contract: ServiceContract
+  daysRemaining: number
+}
+
+/**
+ * The contract an owner should be warned about: only when the one that lasts longest is about to end
+ * (an older, already expired contract next to a running one is not an alarm).
+ */
+export function getContractAlert(contracts: ServiceContract[]): ContractAlert | null {
+  let current: ContractAlert | null = null
+  for (const contract of contracts) {
+    const { daysRemaining } = getContractLifecycle(contract)
+    if (!current || daysRemaining > current.daysRemaining) current = { contract, daysRemaining }
+  }
+  return current && current.daysRemaining <= EXPIRING_SOON_DAYS ? current : null
 }
 
 export function getContractLifecycle(contract: ServiceContract): ContractLifecycleInfo {
@@ -103,7 +134,7 @@ export function getContractLifecycle(contract: ServiceContract): ContractLifecyc
   if (daysRemaining < 0) {
     status = 'expired'
     statusLabel = 'Hết hạn'
-  } else if (daysRemaining <= 45) {
+  } else if (daysRemaining <= EXPIRING_SOON_DAYS) {
     status = 'expiring'
     statusLabel = `Sắp hết hạn (${daysRemaining} ngày)`
   }

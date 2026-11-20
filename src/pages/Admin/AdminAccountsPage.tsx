@@ -35,8 +35,8 @@ const assignableRoleCards: Array<{
     desc: 'Sở hữu & quản lý tòa nhà, mặt sàn và đội ngũ',
     icon: 'domain',
     activeClass: 'adm-role-card--active-owner',
-    iconBg: 'rgba(16, 185, 129, 0.16)',
-    iconColor: '#34d399',
+    iconBg: 'rgba(34,211,238, 0.16)',
+    iconColor: '#22d3ee',
   },
   {
     role: 'building_manager',
@@ -44,8 +44,8 @@ const assignableRoleCards: Array<{
     desc: 'Vận hành khu vực & bản đồ mặt sàn',
     icon: 'corporate_fare',
     activeClass: 'adm-role-card--active-manager',
-    iconBg: 'rgba(168, 85, 247, 0.16)',
-    iconColor: '#c084fc',
+    iconBg: 'rgba(96,165,250, 0.16)',
+    iconColor: '#60a5fa',
   },
   {
     role: 'store_owner',
@@ -53,8 +53,8 @@ const assignableRoleCards: Array<{
     desc: 'Quản lý gian hàng, điểm thuê & ưu đãi',
     icon: 'storefront',
     activeClass: 'adm-role-card--active-store',
-    iconBg: 'rgba(245, 158, 11, 0.16)',
-    iconColor: '#fbbf24',
+    iconBg: 'rgba(129,140,248, 0.16)',
+    iconColor: '#818cf8',
   },
 ]
 
@@ -354,7 +354,7 @@ export function AdminAccountsPage() {
             </div>
           </div>
           <div className="adm-stat-card__bottom">
-            <span className="adm-stat-card__meta" style={{ color: '#f472b6' }}>
+            <span className="adm-stat-card__meta" style={{ color: '#a78bfa' }}>
               Tổng số tài khoản
             </span>
           </div>
@@ -375,7 +375,7 @@ export function AdminAccountsPage() {
             </div>
           </div>
           <div className="adm-stat-card__bottom">
-            <span className="adm-stat-card__meta" style={{ color: '#34d399' }}>
+            <span className="adm-stat-card__meta" style={{ color: '#22d3ee' }}>
               Chủ sở hữu
             </span>
           </div>
@@ -391,12 +391,12 @@ export function AdminAccountsPage() {
               <p className="adm-stat-card__label">Quản lý tòa nhà</p>
               <h3 className="adm-stat-card__value">{roleCounts.building_manager}</h3>
             </div>
-            <div className="adm-stat-card__icon adm-stat-card__icon--purple">
+            <div className="adm-stat-card__icon adm-stat-card__icon--blue">
               <span className="material-symbols-outlined">corporate_fare</span>
             </div>
           </div>
           <div className="adm-stat-card__bottom">
-            <span className="adm-stat-card__meta" style={{ color: '#c084fc' }}>
+            <span className="adm-stat-card__meta" style={{ color: '#60a5fa' }}>
               Vận hành khu vực
             </span>
           </div>
@@ -412,12 +412,12 @@ export function AdminAccountsPage() {
               <p className="adm-stat-card__label">Chủ gian hàng</p>
               <h3 className="adm-stat-card__value">{roleCounts.store_owner}</h3>
             </div>
-            <div className="adm-stat-card__icon adm-stat-card__icon--amber">
+            <div className="adm-stat-card__icon adm-stat-card__icon--indigo">
               <span className="material-symbols-outlined">storefront</span>
             </div>
           </div>
           <div className="adm-stat-card__bottom">
-            <span className="adm-stat-card__meta" style={{ color: '#fbbf24' }}>
+            <span className="adm-stat-card__meta" style={{ color: '#818cf8' }}>
               Điểm thuê &amp; Kiosk
             </span>
           </div>
@@ -438,7 +438,7 @@ export function AdminAccountsPage() {
             </div>
           </div>
           <div className="adm-stat-card__bottom">
-            <span className="adm-stat-card__meta" style={{ color: '#f472b6' }}>
+            <span className="adm-stat-card__meta" style={{ color: '#a78bfa' }}>
               Toàn quyền hệ thống
             </span>
           </div>
@@ -517,7 +517,7 @@ export function AdminAccountsPage() {
               </span>
             </div>
             <span>
-              Đã chọn <strong style={{ color: '#f472b6' }}>{selectedIds.length}</strong> tài khoản
+              Đã chọn <strong style={{ color: '#a78bfa' }}>{selectedIds.length}</strong> tài khoản
             </span>
           </div>
 
@@ -560,7 +560,7 @@ export function AdminAccountsPage() {
                     checked={allPageSelected}
                     onChange={toggleSelectAllPage}
                     disabled={selectablePageUsers.length === 0}
-                    style={{ cursor: 'pointer', accentColor: '#ec4899' }}
+                    style={{ cursor: 'pointer', accentColor: '#8b5cf6' }}
                   />
                 </th>
                 <th>Người dùng</th>
@@ -602,7 +602,7 @@ export function AdminAccountsPage() {
                           onChange={() => toggleSelectOne(user.id)}
                           style={{
                             cursor: isSelf ? 'not-allowed' : 'pointer',
-                            accentColor: '#ec4899',
+                            accentColor: '#8b5cf6',
                           }}
                         />
                       </td>

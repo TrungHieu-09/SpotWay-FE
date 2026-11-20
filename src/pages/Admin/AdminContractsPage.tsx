@@ -15,11 +15,14 @@ import type {
   ContractCurrency,
   ContractLifecycleStatus,
   ContractPaymentStatus,
+  RenewalUnit,
   ServiceContract,
 } from '../../types/contract'
 import {
+  EXPIRING_SOON_DAYS,
   formatContractValue,
   formatDateVN,
+  formatRenewalAmount,
   getContractLifecycle,
 } from '../../types/contract'
 import './AdminPages.css'
@@ -39,6 +42,36 @@ interface ScanPageFileItem {
 const ALLOWED_SCAN_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp']
 /** Mirrors the server limit for all scan pages together (base64 characters). */
 const MAX_TOTAL_CHARS = 36_000_000
+
+/** Adds months to a YYYY-MM-DD day (end of month is kept: 31 Jan + 1 month = 28/29 Feb). */
+function addMonthsToDay(day: string, months: number): string {
+  const [y, m, d] = day.split('-').map(Number)
+  const target = new Date(Date.UTC(y, m - 1 + months, 1))
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate()
+  target.setUTCDate(Math.min(d, lastDay))
+  return target.toISOString().slice(0, 10)
+}
+
+function addToDay(day: string, amount: number, unit: RenewalUnit): string {
+  if (unit === 'month') return addMonthsToDay(day, amount)
+  const date = new Date(day + 'T00:00:00Z')
+  date.setUTCDate(date.getUTCDate() + amount)
+  return date.toISOString().slice(0, 10)
+}
+
+/** Quick picks for the renewal dialog: what the owner asked for first, then common lengths. */
+function renewChoices(c: ServiceContract): Array<{ amount: number; unit: RenewalUnit; requested: boolean }> {
+  const common = [3, 6, 12, 24].map((amount) => ({ amount, unit: 'month' as const, requested: false }))
+  if (!c.renewalAmount || !c.renewalUnit) return common
+  const asked = { amount: c.renewalAmount, unit: c.renewalUnit, requested: true }
+  return [asked, ...common.filter((x) => !(x.amount === asked.amount && x.unit === asked.unit))]
+}
+
+function nextDay(day: string): string {
+  const date = new Date(day + 'T00:00:00Z')
+  date.setUTCDate(date.getUTCDate() + 1)
+  return date.toISOString().slice(0, 10)
+}
 
 function getInitials(name: string): string {
   const parts = name
@@ -81,6 +114,9 @@ export function AdminContractsPage() {
   const [saving, setSaving] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [scansDirty, setScansDirty] = useState(false)
+  const [renewTarget, setRenewTarget] = useState<ServiceContract | null>(null)
+  const [renewEnd, setRenewEnd] = useState('')
+  const [renewing, setRenewing] = useState(false)
   const [loadingScans, setLoadingScans] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -221,7 +257,7 @@ export function AdminContractsPage() {
             mime: p.mime,
             statusText: 'Đã lưu',
             iconName: p.mime === 'application/pdf' ? 'check_circle' : 'verified_user',
-            iconColor: p.mime === 'application/pdf' ? '#5de6ff' : '#f8acff',
+            iconColor: p.mime === 'application/pdf' ? '#22d3ee' : '#c4b5fd',
             dataUrl: p.dataUrl,
           })),
         ),
@@ -270,7 +306,7 @@ export function AdminContractsPage() {
             mime: file.type,
             statusText: 'Đã sẵn sàng',
             iconName: isPdf ? 'check_circle' : 'verified_user',
-            iconColor: isPdf ? '#5de6ff' : '#f8acff',
+            iconColor: isPdf ? '#22d3ee' : '#c4b5fd',
             dataUrl: result,
           },
         ]
@@ -356,22 +392,41 @@ export function AdminContractsPage() {
     }
   }
 
-  async function handleQuickRenew(c: ServiceContract) {
-    const currentEnd = new Date(c.endDate)
-    const baseDate = currentEnd.getTime() > Date.now() ? currentEnd : new Date()
-    baseDate.setFullYear(baseDate.getFullYear() + 1)
-    const nextEndDate = baseDate.toISOString().slice(0, 10)
+  /** The extension is agreed outside the app, so the admin picks the exact new end date. */
+  function openRenewDialog(c: ServiceContract) {
+    setRenewTarget(c)
+    setRenewEnd('')
+  }
 
+  const renewBase = (c: ServiceContract) => {
+    const today = new Date().toISOString().slice(0, 10)
+    return c.endDate > today ? c.endDate : today
+  }
+
+  async function handleRenew(clearOnly = false) {
+    if (!renewTarget) return
+    if (!clearOnly && renewEnd <= renewTarget.endDate) {
+      message.error('Ngày kết thúc mới phải sau ngày kết thúc hiện tại.')
+      return
+    }
+    setRenewing(true)
     try {
-      const updated = await updateAdminContract(c.id, {
-        endDate: nextEndDate,
+      const updated = await updateAdminContract(renewTarget.id, {
+        ...(clearOnly ? {} : { endDate: renewEnd }),
         renewalRequested: false,
         renewalNote: null,
       })
-      setContracts((prev) => prev.map((item) => (item.id === c.id ? updated : item)))
-      message.success(`Đã gia hạn hợp đồng ${c.contractCode} đến ngày ${formatDateVN(nextEndDate)}!`)
+      setContracts((prev) => prev.map((item) => (item.id === renewTarget.id ? updated : item)))
+      message.success(
+        clearOnly
+          ? `Đã bỏ qua yêu cầu gia hạn của hợp đồng ${renewTarget.contractCode}.`
+          : `Đã gia hạn hợp đồng ${renewTarget.contractCode} đến ngày ${formatDateVN(renewEnd)}.`,
+      )
+      setRenewTarget(null)
     } catch (err) {
       message.error((err as Error).message || 'Không thể gia hạn hợp đồng.')
+    } finally {
+      setRenewing(false)
     }
   }
 
@@ -441,11 +496,11 @@ export function AdminContractsPage() {
         >
           <div
             className="cnt-stat-card__glow"
-            style={{ background: 'rgba(16, 185, 129, 0.16)' }}
+            style={{ background: 'rgba(34,211,238, 0.16)' }}
           />
           <div className="cnt-stat-card__info">
             <span className="cnt-stat-card__label">Đang hiệu lực</span>
-            <span className="cnt-stat-card__value" style={{ color: '#10b981' }}>
+            <span className="cnt-stat-card__value" style={{ color: '#22d3ee' }}>
               {String(counts.active).padStart(2, '0')}
             </span>
             <span className="cnt-stat-card__sub">Hợp đồng trong hạn cam kết</span>
@@ -453,8 +508,8 @@ export function AdminContractsPage() {
           <div
             className="cnt-stat-card__icon"
             style={{
-              background: 'rgba(16, 185, 129, 0.15)',
-              color: '#10b981',
+              background: 'rgba(34,211,238, 0.15)',
+              color: '#22d3ee',
             }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 30 }}>
@@ -473,20 +528,20 @@ export function AdminContractsPage() {
         >
           <div
             className="cnt-stat-card__glow"
-            style={{ background: 'rgba(245, 158, 11, 0.16)' }}
+            style={{ background: 'rgba(251,191,36, 0.16)' }}
           />
           <div className="cnt-stat-card__info">
             <span className="cnt-stat-card__label">Sắp hết hạn</span>
-            <span className="cnt-stat-card__value" style={{ color: '#f59e0b' }}>
+            <span className="cnt-stat-card__value" style={{ color: '#fbbf24' }}>
               {String(counts.expiring).padStart(2, '0')}
             </span>
-            <span className="cnt-stat-card__sub">Cần gia hạn trong &lt; 45 ngày</span>
+            <span className="cnt-stat-card__sub">Còn từ {EXPIRING_SOON_DAYS} ngày trở xuống</span>
           </div>
           <div
             className="cnt-stat-card__icon"
             style={{
-              background: 'rgba(245, 158, 11, 0.15)',
-              color: '#f59e0b',
+              background: 'rgba(251,191,36, 0.15)',
+              color: '#fbbf24',
             }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 30 }}>
@@ -505,11 +560,11 @@ export function AdminContractsPage() {
         >
           <div
             className="cnt-stat-card__glow"
-            style={{ background: 'rgba(239, 68, 68, 0.16)' }}
+            style={{ background: 'rgba(248,113,113, 0.16)' }}
           />
           <div className="cnt-stat-card__info">
             <span className="cnt-stat-card__label">Hết hạn</span>
-            <span className="cnt-stat-card__value" style={{ color: '#ef4444' }}>
+            <span className="cnt-stat-card__value" style={{ color: '#f87171' }}>
               {String(counts.expired).padStart(2, '0')}
             </span>
             <span className="cnt-stat-card__sub">Hết hiệu lực pháp lý</span>
@@ -517,8 +572,8 @@ export function AdminContractsPage() {
           <div
             className="cnt-stat-card__icon"
             style={{
-              background: 'rgba(239, 68, 68, 0.15)',
-              color: '#ef4444',
+              background: 'rgba(248,113,113, 0.15)',
+              color: '#f87171',
             }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 30 }}>
@@ -545,7 +600,7 @@ export function AdminContractsPage() {
             className={`cnt-chip ${statusFilter === 'active' ? 'cnt-chip--active' : ''}`}
             onClick={() => setStatusFilter('active')}
           >
-            <span className="cnt-chip__dot" style={{ background: '#10b981' }} />
+            <span className="cnt-chip__dot" style={{ background: '#22d3ee' }} />
             <span>Đang hiệu lực</span>
             <span className="cnt-chip__count">{counts.active}</span>
           </button>
@@ -555,7 +610,7 @@ export function AdminContractsPage() {
             className={`cnt-chip ${statusFilter === 'expiring' ? 'cnt-chip--active' : ''}`}
             onClick={() => setStatusFilter('expiring')}
           >
-            <span className="cnt-chip__dot" style={{ background: '#f59e0b' }} />
+            <span className="cnt-chip__dot" style={{ background: '#fbbf24' }} />
             <span>Sắp hết hạn</span>
             <span className="cnt-chip__count">{counts.expiring}</span>
           </button>
@@ -565,7 +620,7 @@ export function AdminContractsPage() {
             className={`cnt-chip ${statusFilter === 'expired' ? 'cnt-chip--active' : ''}`}
             onClick={() => setStatusFilter('expired')}
           >
-            <span className="cnt-chip__dot" style={{ background: '#ef4444' }} />
+            <span className="cnt-chip__dot" style={{ background: '#f87171' }} />
             <span>Hết hạn</span>
             <span className="cnt-chip__count">{counts.expired}</span>
           </button>
@@ -639,8 +694,8 @@ export function AdminContractsPage() {
                           <div className="cnt-code-cell">
                             <span className="cnt-code-text">{c.contractCode}</span>
                             {c.renewalRequested && (
-                              <span className="cnt-selected-badge" style={{ background: 'rgba(245, 158, 11, 0.18)', color: '#fbbf24' }}>
-                                Xin gia hạn
+                              <span className="cnt-selected-badge" style={{ background: 'rgba(251,191,36, 0.18)', color: '#fbbf24' }}>
+                                Xin gia hạn{c.renewalAmount && c.renewalUnit ? ` +${formatRenewalAmount(c.renewalAmount, c.renewalUnit)}` : ''}
                               </span>
                             )}
                             {isSelected && (
@@ -673,10 +728,10 @@ export function AdminContractsPage() {
                                   width: `${lf.elapsedPercent}%`,
                                   background:
                                     lf.status === 'expired'
-                                      ? '#ef4444'
+                                      ? '#f87171'
                                       : lf.status === 'expiring'
-                                        ? '#f59e0b'
-                                        : 'linear-gradient(90deg, #5de6ff, #a078ff)',
+                                        ? '#fbbf24'
+                                        : 'linear-gradient(90deg, #22d3ee, #8b5cf6)',
                                 }}
                               />
                             </div>
@@ -689,7 +744,7 @@ export function AdminContractsPage() {
                                     ? '#f87171'
                                     : lf.status === 'expiring'
                                       ? '#fbbf24'
-                                      : '#5de6ff',
+                                      : '#22d3ee',
                               }}
                             >
                               {lf.daysRemaining >= 0
@@ -728,7 +783,7 @@ export function AdminContractsPage() {
                           <span className="cnt-scan-chip">
                             <span
                               className="material-symbols-outlined"
-                              style={{ fontSize: 15, color: '#f472b6' }}
+                              style={{ fontSize: 15, color: '#a78bfa' }}
                             >
                               {c.hasScan ? 'picture_as_pdf' : 'block'}
                             </span>
@@ -794,39 +849,44 @@ export function AdminContractsPage() {
               <button
                 type="button"
                 className="adm-btn adm-btn--sm"
-                onClick={() => handleQuickRenew(selectedContract)}
-                title="Gia hạn hợp đồng thêm 12 tháng"
+                onClick={() => openRenewDialog(selectedContract)}
+                title="Chọn ngày kết thúc mới cho hợp đồng"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
                   autorenew
                 </span>
-                <span>Gia hạn +1 năm</span>
+                <span>Gia hạn</span>
               </button>
             </div>
 
             {selectedContract.renewalRequested && (
               <div
                 className="cnt-note-box"
-                style={{ margin: '0 0 12px', borderColor: 'rgba(245, 158, 11, 0.45)', background: 'rgba(245, 158, 11, 0.08)' }}
+                style={{ margin: '0 0 12px', borderColor: 'rgba(251,191,36, 0.45)', background: 'rgba(251,191,36, 0.08)' }}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#fbbf24', marginTop: 1 }}>
                   notification_important
                 </span>
                 <div>
-                  <strong style={{ color: '#fbbf24' }}>Chủ tòa nhà xin gia hạn: </strong>
-                  <span>“{selectedContract.renewalNote || 'Không có ghi chú'}”</span>
+                  <strong style={{ color: '#fbbf24' }}>
+                    Chủ tòa nhà xin gia hạn{selectedContract.renewalAmount && selectedContract.renewalUnit ? ` thêm ${formatRenewalAmount(selectedContract.renewalAmount, selectedContract.renewalUnit)}` : ''}
+                  </strong>
+                  {selectedContract.renewalNote && <span>: “{selectedContract.renewalNote}”</span>}
                   <div style={{ fontSize: 12, color: '#958ea0', marginTop: 4 }}>
-                    Bấm “Gia hạn +1 năm” để duyệt, yêu cầu sẽ tự được gỡ.
+                    Bấm “Gia hạn” để chọn ngày kết thúc mới; yêu cầu sẽ tự được gỡ.
                   </div>
                 </div>
               </div>
             )}
 
+            {/* Scan first: it is what the admin opens a contract for */}
+            <ContractScanViewer contract={selectedContract} loadDetail={getAdminContract} />
+
             {/* Compact Info List */}
             <div className="cnt-info-grid">
               <div className="cnt-info-item">
                 <span className="cnt-info-label">Khách hàng</span>
-                <span className="cnt-info-value" style={{ color: '#5de6ff' }}>
+                <span className="cnt-info-value" style={{ color: '#22d3ee' }}>
                   {selectedContract.customerName}
                 </span>
                 <span className="cnt-info-sub">{selectedContract.ownerEmail}</span>
@@ -839,7 +899,7 @@ export function AdminContractsPage() {
                 </span>
                 <span
                   className="cnt-info-sub"
-                  style={{ color: '#10b981', fontWeight: 600 }}
+                  style={{ color: '#22d3ee', fontWeight: 600 }}
                 >
                   ✓{' '}
                   {selectedContract.paymentStatus === 'paid'
@@ -865,22 +925,21 @@ export function AdminContractsPage() {
                 </span>
               </div>
 
-              <div className="cnt-note-box">
-                <span
-                  className="material-symbols-outlined"
-                  style={{ fontSize: 18, color: '#f472b6', marginTop: 1 }}
-                >
-                  sticky_note_2
-                </span>
-                <div>
-                  <strong style={{ color: '#ffffff' }}>Ghi chú lưu trữ: </strong>
-                  <span>“{selectedContract.notes}”</span>
+              {selectedContract.notes && (
+                <div className="cnt-note-box">
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 18, color: '#a78bfa', marginTop: 1 }}
+                  >
+                    sticky_note_2
+                  </span>
+                  <div>
+                    <strong style={{ color: '#ffffff' }}>Ghi chú: </strong>
+                    <span>{selectedContract.notes}</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
-
-            {/* Scanned Contract Document Viewer */}
-            <ContractScanViewer contract={selectedContract} loadDetail={getAdminContract} />
 
             {/* Sticky Footer Actions */}
             <div className="cnt-drawer__footer">
@@ -983,7 +1042,7 @@ export function AdminContractsPage() {
                       <div className="cnt-upload-label-row">
                         <label className="cnt-upload-label">
                           Chủ tòa nhà{' '}
-                          <span style={{ color: '#f8acff' }}>*</span>
+                          <span style={{ color: '#c4b5fd' }}>*</span>
                         </label>
                       </div>
 
@@ -1008,7 +1067,7 @@ export function AdminContractsPage() {
                     {/* Số hợp đồng ngoại tuyến */}
                     <div className="cnt-upload-field">
                       <label className="cnt-upload-label">
-                        Số hợp đồng <span style={{ color: '#f8acff' }}>*</span>
+                        Số hợp đồng <span style={{ color: '#c4b5fd' }}>*</span>
                       </label>
                       <div className="cnt-upload-input-wrap">
                         <input
@@ -1026,7 +1085,7 @@ export function AdminContractsPage() {
                             position: 'absolute',
                             right: 12,
                             fontSize: 18,
-                            color: '#5de6ff',
+                            color: '#22d3ee',
                           }}
                         >
                           verified
@@ -1047,7 +1106,7 @@ export function AdminContractsPage() {
                     >
                       <div className="cnt-upload-field">
                         <label className="cnt-upload-label">
-                          Ngày bắt đầu <span style={{ color: '#f8acff' }}>*</span>
+                          Ngày bắt đầu <span style={{ color: '#c4b5fd' }}>*</span>
                         </label>
                         <div className="cnt-upload-input-wrap">
                           <input
@@ -1062,7 +1121,7 @@ export function AdminContractsPage() {
 
                       <div className="cnt-upload-field">
                         <label className="cnt-upload-label">
-                          Ngày kết thúc <span style={{ color: '#f8acff' }}>*</span>
+                          Ngày kết thúc <span style={{ color: '#c4b5fd' }}>*</span>
                         </label>
                         <div className="cnt-upload-input-wrap">
                           <input
@@ -1109,7 +1168,7 @@ export function AdminContractsPage() {
                             onChange={(e) =>
                               setFormPaymentStatus(e.target.checked ? 'paid' : 'pending')
                             }
-                            style={{ accentColor: '#a078ff', width: 16, height: 16 }}
+                            style={{ accentColor: '#8b5cf6', width: 16, height: 16 }}
                           />
                           <span>Đã thanh toán</span>
                         </label>
@@ -1145,7 +1204,7 @@ export function AdminContractsPage() {
                           fontFamily: "'Space Grotesk', sans-serif",
                           fontSize: 11,
                           fontWeight: 700,
-                          color: '#f8acff',
+                          color: '#c4b5fd',
                         }}
                       >
                         {loadingScans ? 'Đang tải tệp...' : `${formScanPages.length} tệp`}
@@ -1247,7 +1306,7 @@ export function AdminContractsPage() {
                             <div className="cnt-page-item__meta">
                               <span>{pg.sizeText}</span>
                               <span>•</span>
-                              <span style={{ color: '#5de6ff', fontWeight: 600 }}>
+                              <span style={{ color: '#22d3ee', fontWeight: 600 }}>
                                 {pg.statusText}
                               </span>
                             </div>
@@ -1295,7 +1354,7 @@ export function AdminContractsPage() {
                     <div className="cnt-helper-note">
                       <span
                         className="material-symbols-outlined"
-                        style={{ fontSize: 17, color: '#5de6ff', marginTop: 1 }}
+                        style={{ fontSize: 17, color: '#22d3ee', marginTop: 1 }}
                       >
                         info
                       </span>
@@ -1331,6 +1390,128 @@ export function AdminContractsPage() {
                     </span>
                   </button>
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Gia hạn: Admin chọn ngày kết thúc mới đã thống nhất với Chủ tòa nhà ── */}
+      {renewTarget && (
+        <div
+          className="adm-modal-overlay"
+          onClick={() => !renewing && setRenewTarget(null)}
+          role="presentation"
+        >
+          <div className="adm-modal-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <div className="adm-modal-card__topline" />
+            <div className="adm-modal-card__head">
+              <div className="adm-modal-card__head-left">
+                <div className="adm-modal-card__badge">
+                  <span className="material-symbols-outlined" style={{ fontSize: 22 }}>
+                    autorenew
+                  </span>
+                </div>
+                <div>
+                  <h2 className="adm-modal-card__title">Gia hạn hợp đồng</h2>
+                  <p className="adm-modal-card__subtitle">
+                    #{renewTarget.contractCode} · {renewTarget.customerName}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="adm-modal-card__close"
+                onClick={() => setRenewTarget(null)}
+                disabled={renewing}
+                aria-label="Đóng"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  close
+                </span>
+              </button>
+            </div>
+
+            <form
+              className="adm-modal-form"
+              onSubmit={(e) => {
+                e.preventDefault()
+                void handleRenew()
+              }}
+            >
+              {renewTarget.renewalRequested && (
+                <div className="cnt-note-box" style={{ margin: 0 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#fbbf24', marginTop: 1 }}>
+                    notification_important
+                  </span>
+                  <div>
+                    <strong style={{ color: '#fbbf24' }}>
+                      Chủ tòa nhà xin gia hạn{renewTarget.renewalAmount && renewTarget.renewalUnit ? ` thêm ${formatRenewalAmount(renewTarget.renewalAmount, renewTarget.renewalUnit)}` : ''}
+                    </strong>
+                    {renewTarget.renewalNote && <span>: {renewTarget.renewalNote}</span>}
+                  </div>
+                </div>
+              )}
+
+              <div className="adm-field">
+                <label className="adm-field__label">
+                  <span>Ngày kết thúc hiện tại</span>
+                </label>
+                <div style={{ fontWeight: 700, color: '#ffffff' }}>{formatDateVN(renewTarget.endDate)}</div>
+              </div>
+
+              <div className="adm-field">
+                <label className="adm-field__label" htmlFor="renew-end">
+                  <span>
+                    Ngày kết thúc mới <span className="adm-field__req">*</span>
+                  </span>
+                </label>
+                <input
+                  id="renew-end"
+                  type="date"
+                  className="adm-input"
+                  style={{ paddingLeft: 14 }}
+                  min={nextDay(renewTarget.endDate)}
+                  value={renewEnd}
+                  onChange={(e) => setRenewEnd(e.target.value)}
+                  required
+                />
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                  {renewChoices(renewTarget).map((choice) => (
+                    <button
+                      key={`${choice.amount}-${choice.unit}`}
+                      type="button"
+                      className={`adm-btn adm-btn--sm ${choice.requested ? 'adm-btn--primary' : ''}`}
+                      onClick={() => setRenewEnd(addToDay(renewBase(renewTarget), choice.amount, choice.unit))}
+                    >
+                      +{formatRenewalAmount(choice.amount, choice.unit)}
+                      {choice.requested ? ' (theo yêu cầu)' : ''}
+                    </button>
+                  ))}
+                </div>
+                <span className="adm-field__hint">
+                  Chọn nhanh tính từ {renewBase(renewTarget) === renewTarget.endDate ? 'ngày kết thúc hiện tại' : 'hôm nay (hợp đồng đã hết hạn)'}, hoặc nhập đúng ngày đã thỏa thuận.
+                </span>
+              </div>
+
+              <div className="adm-modal-footer">
+                {renewTarget.renewalRequested && (
+                  <button
+                    type="button"
+                    className="adm-btn"
+                    style={{ marginRight: 'auto' }}
+                    onClick={() => void handleRenew(true)}
+                    disabled={renewing}
+                  >
+                    Bỏ qua yêu cầu
+                  </button>
+                )}
+                <button type="button" className="adm-btn" onClick={() => setRenewTarget(null)} disabled={renewing}>
+                  Hủy
+                </button>
+                <button type="submit" className="adm-btn adm-btn--primary" disabled={renewing || !renewEnd}>
+                  {renewing ? 'Đang lưu...' : 'Lưu gia hạn'}
+                </button>
               </div>
             </form>
           </div>

@@ -273,7 +273,7 @@
 .swm-topline {
   height: 3px;
   width: 100%;
-  background: linear-gradient(90deg, #8b5cf6 0%, #ec4899 50%, #22d3ee 100%);
+  background: linear-gradient(90deg, #8b5cf6 0%, #8b5cf6 50%, #22d3ee 100%);
 }
 
 .swm-head {
@@ -313,10 +313,10 @@
 }
 
 .swm-badge--pink {
-  background: linear-gradient(135deg, rgba(236, 72, 153, 0.22) 0%, rgba(139, 92, 246, 0.18) 100%);
-  border-color: rgba(236, 72, 153, 0.45);
-  color: #f472b6;
-  box-shadow: 0 0 18px rgba(236, 72, 153, 0.22);
+  background: linear-gradient(135deg, rgba(139,92,246, 0.22) 0%, rgba(139, 92, 246, 0.18) 100%);
+  border-color: rgba(139,92,246, 0.45);
+  color: #a78bfa;
+  box-shadow: 0 0 18px rgba(139,92,246, 0.22);
 }
 
 .swm-title {
@@ -379,7 +379,7 @@
 }
 
 .swm-req {
-  color: #f472b6;
+  color: #a78bfa;
   margin-left: 3px;
 }
 
@@ -477,7 +477,7 @@
 
 .swm-gen-btn:hover {
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(34, 211, 238, 0.2) 100%);
-  border-color: #c084fc;
+  border-color: #a78bfa;
   color: #ffffff;
   box-shadow: 0 0 14px rgba(139, 92, 246, 0.3);
 }
@@ -622,7 +622,7 @@
 }
 
 .swm-upload-zone:hover {
-  border-color: #ec4899;
+  border-color: #8b5cf6;
   background: rgba(139, 92, 246, 0.08);
 }
 
@@ -688,7 +688,7 @@
 }
 
 .swm-btn--primary {
-  background: linear-gradient(90deg, #8b5cf6 0%, #ec4899 100%);
+  background: linear-gradient(90deg, #8b5cf6 0%, #8b5cf6 100%);
   border: none;
   color: #ffffff;
   font-weight: 700;
@@ -696,8 +696,8 @@
 }
 
 .swm-btn--primary:hover:not(:disabled) {
-  background: linear-gradient(90deg, #9333ea 0%, #db2777 100%);
-  box-shadow: 0 10px 28px rgba(236, 72, 153, 0.42);
+  background: linear-gradient(90deg, #9333ea 0%, #7c3aed 100%);
+  box-shadow: 0 10px 28px rgba(139,92,246, 0.42);
   transform: translateY(-1px);
 }
 

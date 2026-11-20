@@ -1,6 +1,7 @@
 import { apiClient } from './client'
 import type {
   CreateServiceContractPayload,
+  RenewalUnit,
   ServiceContract,
   UpdateServiceContractPayload,
 } from '../types/contract'
@@ -45,6 +46,11 @@ export async function getOwnerContract(id: string): Promise<ServiceContract> {
   return data
 }
 
-export async function submitContractRenewalRequest(contractId: string, note: string): Promise<void> {
-  await apiClient.post(`/tenant/contracts/${contractId}/renew-request`, { note })
+export async function submitContractRenewalRequest(
+  contractId: string,
+  amount: number,
+  unit: RenewalUnit,
+  note: string,
+): Promise<void> {
+  await apiClient.post(`/tenant/contracts/${contractId}/renew-request`, { amount, unit, ...(note ? { note } : {}) })
 }

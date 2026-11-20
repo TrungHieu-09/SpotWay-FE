@@ -1,0 +1,76 @@
+.sx-root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(circle at 20% 10%, rgba(139, 92, 246, 0.18), transparent 45%), #0b0b1a;
+}
+
+.sx-card {
+  width: 100%;
+  max-width: 520px;
+  padding: 36px 32px;
+  border-radius: 24px;
+  text-align: center;
+  background: rgba(18, 18, 42, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
+.sx-icon {
+  font-size: 44px;
+  color: #fbbf24;
+}
+
+.sx-title {
+  margin: 10px 0 12px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 24px;
+  color: #ffffff;
+}
+
+.sx-text {
+  margin: 0 0 10px;
+  color: #e3e0f6;
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.sx-text--muted {
+  color: #958ea0;
+  font-size: 13.5px;
+}
+
+.sx-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 22px;
+}
+
+.sx-btn {
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: #e3e0f6;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sx-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sx-btn--primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  color: #ffffff;
+}
+
+.sx-btn--primary:hover {
+  filter: brightness(1.1);
+}

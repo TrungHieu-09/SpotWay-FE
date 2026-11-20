@@ -42,10 +42,10 @@ export function AdminOverviewPage() {
     const { users } = overview
     const total = Math.max(users.total, 1)
     const raw = [
-      { key: 'building_manager', label: 'Quản lý tòa nhà', count: users.buildingManager, color: '#8B5CF6' },
-      { key: 'admin', label: 'Quản trị viên', count: users.admin, color: '#EC4899' },
-      { key: 'building_owner', label: 'Chủ tòa nhà', count: users.buildingOwner, color: '#10B981' },
-      { key: 'store_owner', label: 'Chủ gian hàng', count: users.storeOwner, color: '#F59E0B' },
+      { key: 'building_manager', label: 'Quản lý tòa nhà', count: users.buildingManager, color: '#60a5fa' },
+      { key: 'admin', label: 'Quản trị viên', count: users.admin, color: '#a78bfa' },
+      { key: 'building_owner', label: 'Chủ tòa nhà', count: users.buildingOwner, color: '#22d3ee' },
+      { key: 'store_owner', label: 'Chủ gian hàng', count: users.storeOwner, color: '#818cf8' },
     ]
 
     const circumference = 2 * Math.PI * 38 // ~238.76
@@ -175,10 +175,10 @@ export function AdminOverviewPage() {
             </div>
           </div>
           <div className="adm-stat-card__bottom">
-            <span className="adm-stat-card__meta" style={{ color: '#34d399' }}>
+            <span className="adm-stat-card__meta" style={{ color: '#22d3ee' }}>
               Chủ sở hữu
             </span>
-            <svg className="adm-stat-card__spark" width="60" height="22" fill="none" stroke="#34d399" viewBox="0 0 60 20">
+            <svg className="adm-stat-card__spark" width="60" height="22" fill="none" stroke="#22d3ee" viewBox="0 0 60 20">
               <path d="M2,12 Q20,12 35,11 T58,8" fill="none" strokeLinecap="round" />
             </svg>
           </div>
@@ -194,15 +194,15 @@ export function AdminOverviewPage() {
               <p className="adm-stat-card__label">Quản lý tòa nhà</p>
               <h3 className="adm-stat-card__value">{users.buildingManager}</h3>
             </div>
-            <div className="adm-stat-card__icon adm-stat-card__icon--purple">
+            <div className="adm-stat-card__icon adm-stat-card__icon--blue">
               <span className="material-symbols-outlined">badge</span>
             </div>
           </div>
           <div className="adm-stat-card__bottom">
-            <span className="adm-stat-card__meta" style={{ color: '#c084fc' }}>
+            <span className="adm-stat-card__meta" style={{ color: '#60a5fa' }}>
               Vận hành khu vực
             </span>
-            <svg className="adm-stat-card__spark" width="60" height="22" fill="none" stroke="#c084fc" viewBox="0 0 60 20">
+            <svg className="adm-stat-card__spark" width="60" height="22" fill="none" stroke="#a78bfa" viewBox="0 0 60 20">
               <path d="M2,15 Q18,16 30,9 T48,11 T58,5" fill="none" strokeLinecap="round" />
             </svg>
           </div>
@@ -218,12 +218,12 @@ export function AdminOverviewPage() {
               <p className="adm-stat-card__label">Chủ gian hàng</p>
               <h3 className="adm-stat-card__value">{users.storeOwner}</h3>
             </div>
-            <div className="adm-stat-card__icon adm-stat-card__icon--amber">
+            <div className="adm-stat-card__icon adm-stat-card__icon--indigo">
               <span className="material-symbols-outlined">storefront</span>
             </div>
           </div>
           <div className="adm-stat-card__bottom">
-            <span className="adm-stat-card__meta" style={{ color: '#fbbf24' }}>
+            <span className="adm-stat-card__meta" style={{ color: '#818cf8' }}>
               Kiosk &amp; Điểm thuê
             </span>
             <svg className="adm-stat-card__spark" width="60" height="22" fill="none" stroke="#fbbf24" viewBox="0 0 60 20">
@@ -262,7 +262,7 @@ export function AdminOverviewPage() {
             <div className="adm-panel__head">
               <div>
                 <h2 className="adm-panel__title">
-                  <span className="material-symbols-outlined" style={{ color: '#e879f9' }}>
+                  <span className="material-symbols-outlined" style={{ color: '#a78bfa' }}>
                     pie_chart
                   </span>
                   Tài khoản theo vai trò

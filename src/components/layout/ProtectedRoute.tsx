@@ -1,7 +1,12 @@
 import { Spin } from 'antd'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../auth/store'
+import { useServiceLockStore } from '../../store/useServiceLockStore'
+import { ServiceExpiredScreen } from './ServiceExpiredScreen'
 import type { Role } from '../../types/auth'
+
+/** Pages that keep working after the contract ended: the contract itself and the own account. */
+const STILL_OPEN_AFTER_EXPIRY = ['/owner/contracts', '/owner/profile', '/manager/profile', '/store/account', '/profile', '/change-password']
 
 type ProtectedRouteProps = {
   allowedRoles: Role[]
@@ -11,6 +16,7 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   const location = useLocation()
   const user = useAuthStore((state) => state.user)
   const isInitializing = useAuthStore((state) => state.isInitializing)
+  const serviceLocked = useServiceLockStore((state) => state.message !== null)
 
   if (isInitializing) {
     return (
@@ -50,6 +56,10 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
       return <Navigate to="/account" replace />
     }
     return <Navigate to="/403" replace />
+  }
+
+  if (serviceLocked && !STILL_OPEN_AFTER_EXPIRY.some((path) => location.pathname.startsWith(path))) {
+    return <ServiceExpiredScreen />
   }
 
   return <Outlet />

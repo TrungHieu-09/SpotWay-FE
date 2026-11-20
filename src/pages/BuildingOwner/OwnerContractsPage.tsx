@@ -4,10 +4,13 @@ import { Link } from 'react-router-dom'
 import { getOwnerContract, getOwnerContracts, submitContractRenewalRequest } from '../../api/contracts'
 import { getTenantOverview } from '../../api/tenant'
 import { useBuildingStore } from '../../store/useBuildingStore'
+import { useContractAlertStore } from '../../store/useContractAlertStore'
 import { ContractScanViewer } from '../../components/contracts/ContractScanViewer'
-import type { ServiceContract } from '../../types/contract'
+import type { RenewalUnit, ServiceContract } from '../../types/contract'
 import {
+  EXPIRING_SOON_DAYS,
   formatContractValue,
+  formatRenewalAmount,
   getContractLifecycle,
 } from '../../types/contract'
 import type { TenantOverview } from '../../types/auth'
@@ -19,6 +22,7 @@ export function OwnerContractsPage() {
   const buildings = useBuildingStore((s) => s.buildings)
   const loadBuildings = useBuildingStore((s) => s.loadBuildings)
 
+  const refreshContractAlert = useContractAlertStore((s) => s.load)
   const [contracts, setContracts] = useState<ServiceContract[]>([])
   const [selectedId, setSelectedId] = useState<string>('')
   const [overview, setOverview] = useState<TenantOverview | null>(null)
@@ -28,6 +32,8 @@ export function OwnerContractsPage() {
 
   // Renewal request dialog
   const [renewOpen, setRenewOpen] = useState(false)
+  const [renewAmount, setRenewAmount] = useState(12)
+  const [renewUnit, setRenewUnit] = useState<RenewalUnit>('month')
   const [renewNote, setRenewNote] = useState('')
   const [sendingRenew, setSendingRenew] = useState(false)
 
@@ -70,11 +76,14 @@ export function OwnerContractsPage() {
     if (!selectedContract) return
     setSendingRenew(true)
     try {
-      await submitContractRenewalRequest(selectedContract.id, renewNote.trim())
+      await submitContractRenewalRequest(selectedContract.id, renewAmount, renewUnit, renewNote.trim())
       message.success('Đã gửi yêu cầu gia hạn tới Quản trị viên.')
       setRenewOpen(false)
       setRenewNote('')
+      setRenewAmount(12)
+      setRenewUnit('month')
       await reload()
+      void refreshContractAlert()
     } catch (err) {
       message.error((err as Error).message || 'Không gửi được yêu cầu. Vui lòng thử lại.')
     } finally {
@@ -151,21 +160,31 @@ export function OwnerContractsPage() {
           <div>
             <div className="ocp-alert-banner__title-row">
               <span className="ocp-alert-banner__title">
-                {lifecycle.daysRemaining <= 45
-                  ? 'Hợp đồng sắp hết hạn!'
-                  : 'Hợp đồng đã ký kết với Quản trị viên (Admin)'}
+                {lifecycle.daysRemaining < 0
+                  ? 'Hợp đồng đã hết hạn'
+                  : lifecycle.daysRemaining <= EXPIRING_SOON_DAYS
+                    ? 'Hợp đồng sắp hết hạn!'
+                    : 'Hợp đồng đã ký kết với Quản trị viên (Admin)'}
               </span>
               <span className="ocp-alert-banner__tag">
-                {lifecycle.daysRemaining <= 45 ? 'Cảnh báo kỳ hạn' : 'Đang hiệu lực'}
+                {lifecycle.daysRemaining < 0 ? 'Đã khóa dịch vụ' : lifecycle.daysRemaining <= EXPIRING_SOON_DAYS ? 'Cảnh báo kỳ hạn' : 'Đang hiệu lực'}
               </span>
             </div>
 
             <p className="ocp-alert-banner__desc">
-              Hợp đồng dịch vụ Spatial OS đã ký giữa quý khách và Quản trị viên hiện còn{' '}
-              <strong style={{ color: isWarning ? '#fcd34d' : '#6ee7b7' }}>
-                {Math.max(0, lifecycle.daysRemaining)} ngày hiệu lực
-              </strong>{' '}
-              (kết thúc ngày {lifecycle.formattedEndDate}). Đây là bản scan do Quản trị viên tải lên; nếu cần gia hạn hoặc điều chỉnh điều khoản, hãy gửi yêu cầu gia hạn.
+              {lifecycle.daysRemaining < 0 ? (
+                <>
+                  Hợp đồng đã kết thúc ngày <strong style={{ color: '#f87171' }}>{lifecycle.formattedEndDate}</strong>. Dịch vụ
+                  đã bị khóa với bạn và nhân sự trong tòa nhà cho tới khi Quản trị viên gia hạn. Hãy gửi yêu cầu gia hạn.
+                </>
+              ) : (
+                <>
+                  Hợp đồng dịch vụ Spatial OS đã ký giữa quý khách và Quản trị viên hiện còn{' '}
+                  <strong style={{ color: isWarning ? '#fbbf24' : '#67e8f9' }}>{lifecycle.daysRemaining} ngày hiệu lực</strong>{' '}
+                  (kết thúc ngày {lifecycle.formattedEndDate}). Đây là bản scan do Quản trị viên tải lên; nếu cần gia hạn hoặc
+                  điều chỉnh điều khoản, hãy gửi yêu cầu gia hạn.
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -173,7 +192,7 @@ export function OwnerContractsPage() {
         <div className="ocp-alert-banner__actions">
           {selectedContract.renewalRequested ? (
             <span style={{ color: '#fbbf24', fontSize: 13, fontWeight: 600 }}>
-              Đã gửi yêu cầu gia hạn, đang chờ Quản trị viên xử lý
+              Đã gửi yêu cầu gia hạn{selectedContract.renewalAmount && selectedContract.renewalUnit ? ` thêm ${formatRenewalAmount(selectedContract.renewalAmount, selectedContract.renewalUnit)}` : ''}, đang chờ Quản trị viên xử lý
             </span>
           ) : (
             <button type="button" className="adm-btn" onClick={() => setRenewOpen(true)}>
@@ -199,7 +218,7 @@ export function OwnerContractsPage() {
                 <>
                   <span style={{ color: '#494454' }}>•</span>
                   <span className="ocp-mesh-tag">
-                    <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#34d399' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#22d3ee' }}>
                       verified_user
                     </span>
                     <span>
@@ -217,7 +236,7 @@ export function OwnerContractsPage() {
             <div className="ocp-beneficiary-row">
               <span
                 className="material-symbols-outlined"
-                style={{ fontSize: 18, color: '#5de6ff' }}
+                style={{ fontSize: 18, color: '#22d3ee' }}
               >
                 corporate_fare
               </span>
@@ -274,7 +293,7 @@ export function OwnerContractsPage() {
                 </span>
                 <span>
                   Hết hạn:{' '}
-                  <strong style={{ color: '#fcd34d' }}>
+                  <strong style={{ color: '#fbbf24' }}>
                     {lifecycle.formattedEndDate}
                   </strong>
                 </span>
@@ -316,7 +335,7 @@ export function OwnerContractsPage() {
               </strong>{' '}
               ({lifecycle.elapsedPercent}% thời hạn cam kết)
             </span>
-            <span style={{ color: '#34d399', fontWeight: 600, fontSize: 12 }}>
+            <span style={{ color: '#22d3ee', fontWeight: 600, fontSize: 12 }}>
               ✓{' '}
               {selectedContract.paymentStatus === 'paid'
                 ? 'Đã thanh toán 100% chi phí kỳ hiện tại'
@@ -330,7 +349,7 @@ export function OwnerContractsPage() {
           <div className="ocp-data-pill">
             <div
               className="ocp-data-pill__icon"
-              style={{ background: 'rgba(93, 230, 255, 0.14)', color: '#5de6ff' }}
+              style={{ background: 'rgba(34,211,238, 0.14)', color: '#22d3ee' }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
                 payments
@@ -349,7 +368,7 @@ export function OwnerContractsPage() {
             <div className="ocp-data-pill">
               <div
                 className="ocp-data-pill__icon"
-                style={{ background: 'rgba(160, 120, 255, 0.16)', color: '#d0bcff' }}
+                style={{ background: 'rgba(139,92,246, 0.16)', color: '#c4b5fd' }}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
                   domain
@@ -368,7 +387,7 @@ export function OwnerContractsPage() {
           <div className="ocp-data-pill">
             <div
               className="ocp-data-pill__icon"
-              style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}
+              style={{ background: 'rgba(34,211,238, 0.15)', color: '#22d3ee' }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
                 handshake
@@ -383,7 +402,7 @@ export function OwnerContractsPage() {
           <div className="ocp-data-pill">
             <div
               className="ocp-data-pill__icon"
-              style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24' }}
+              style={{ background: 'rgba(139,92,246, 0.16)', color: '#a78bfa' }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
                 verified
@@ -391,7 +410,7 @@ export function OwnerContractsPage() {
             </div>
             <div>
               <div className="ocp-data-pill__label">Bản scan</div>
-              <div className="ocp-data-pill__value" style={{ color: selectedContract.hasScan ? '#6ee7b7' : '#f87171' }}>
+              <div className="ocp-data-pill__value" style={{ color: selectedContract.hasScan ? '#67e8f9' : '#f87171' }}>
                 {selectedContract.hasScan ? `${selectedContract.pageCount} tệp` : 'Chưa có'}
               </div>
             </div>
@@ -416,8 +435,8 @@ export function OwnerContractsPage() {
                   style={{
                     width: 34,
                     height: 34,
-                    background: 'rgba(93, 230, 255, 0.14)',
-                    color: '#5de6ff',
+                    background: 'rgba(34,211,238, 0.14)',
+                    color: '#22d3ee',
                   }}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
@@ -437,13 +456,13 @@ export function OwnerContractsPage() {
               </div>
               <div className="ocp-legal-cell">
                 <span className="cnt-info-label">Thời hạn hợp đồng</span>
-                <span className="cnt-info-value" style={{ color: '#34d399' }}>
+                <span className="cnt-info-value" style={{ color: '#22d3ee' }}>
                   {lifecycle.durationMonths} tháng
                 </span>
               </div>
               <div className="ocp-legal-cell">
                 <span className="cnt-info-label">Ngày kết thúc</span>
-                <span className="cnt-info-value" style={{ color: '#fcd34d' }}>
+                <span className="cnt-info-value" style={{ color: '#fbbf24' }}>
                   {lifecycle.formattedEndDate}
                 </span>
               </div>
@@ -469,7 +488,7 @@ export function OwnerContractsPage() {
                   >
                     <span
                       className="material-symbols-outlined"
-                      style={{ fontSize: 16, color: '#5de6ff' }}
+                      style={{ fontSize: 16, color: '#22d3ee' }}
                     >
                       apartment
                     </span>
@@ -482,7 +501,7 @@ export function OwnerContractsPage() {
                 <Link to="/owner/buildings" className="ocp-building-chip">
                   <span
                     className="material-symbols-outlined"
-                    style={{ fontSize: 16, color: '#5de6ff' }}
+                    style={{ fontSize: 16, color: '#22d3ee' }}
                   >
                     apartment
                   </span>
@@ -503,8 +522,8 @@ export function OwnerContractsPage() {
                   style={{
                     width: 34,
                     height: 34,
-                    background: 'rgba(16, 185, 129, 0.15)',
-                    color: '#34d399',
+                    background: 'rgba(34,211,238, 0.15)',
+                    color: '#22d3ee',
                   }}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
@@ -534,7 +553,7 @@ export function OwnerContractsPage() {
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                 <span
                   className="material-symbols-outlined"
-                  style={{ fontSize: 20, color: '#5de6ff', marginTop: 2 }}
+                  style={{ fontSize: 20, color: '#22d3ee', marginTop: 2 }}
                 >
                   info
                 </span>
@@ -588,9 +607,9 @@ export function OwnerContractsPage() {
                 type="button"
                 className="adm-btn adm-btn--sm"
                 style={{
-                  background: 'rgba(93, 230, 255, 0.12)',
-                  borderColor: 'rgba(93, 230, 255, 0.3)',
-                  color: '#5de6ff',
+                  background: 'rgba(34,211,238, 0.12)',
+                  borderColor: 'rgba(34,211,238, 0.3)',
+                  color: '#22d3ee',
                 }}
                 onClick={() => setHistoryModalOpen(true)}
               >
@@ -648,15 +667,65 @@ export function OwnerContractsPage() {
               }}
             >
               <div className="adm-field">
+                <label className="adm-field__label" htmlFor="renew-months">
+                  <span>
+                    Muốn gia hạn thêm bao lâu? <span className="adm-field__req">*</span>
+                  </span>
+                </label>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  {(['day', 'month'] as const).map((unit) => (
+                    <button
+                      key={unit}
+                      type="button"
+                      className={`adm-btn adm-btn--sm ${renewUnit === unit ? 'adm-btn--primary' : ''}`}
+                      onClick={() => {
+                        setRenewUnit(unit)
+                        setRenewAmount(unit === 'day' ? 30 : 12)
+                      }}
+                    >
+                      {unit === 'day' ? 'Theo ngày' : 'Theo tháng'}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  {(renewUnit === 'day' ? [30, 60, 90, 180] : [3, 6, 12, 24]).map((amount) => (
+                    <button
+                      key={amount}
+                      type="button"
+                      className={`adm-btn adm-btn--sm ${renewAmount === amount ? 'adm-btn--primary' : ''}`}
+                      onClick={() => setRenewAmount(amount)}
+                    >
+                      {amount} {renewUnit === 'day' ? 'ngày' : 'tháng'}
+                    </button>
+                  ))}
+                  <input
+                    id="renew-months"
+                    type="number"
+                    min={1}
+                    max={renewUnit === 'day' ? 3650 : 60}
+                    className="adm-input"
+                    style={{ width: 96, paddingLeft: 12 }}
+                    value={renewAmount}
+                    onChange={(e) =>
+                      setRenewAmount(Math.min(renewUnit === 'day' ? 3650 : 60, Math.max(1, Math.floor(Number(e.target.value)) || 1)))
+                    }
+                  />
+                  <span style={{ color: '#958ea0', fontSize: 13 }}>{renewUnit === 'day' ? 'ngày' : 'tháng'}</span>
+                </div>
+                <span className="adm-field__hint">
+                  Đây chỉ là đề nghị. Thời gian gia hạn chính thức do Quản trị viên xác nhận sau khi hai bên trao đổi.
+                </span>
+              </div>
+              <div className="adm-field">
                 <label className="adm-field__label" htmlFor="renew-note">
-                  <span>Nội dung gửi Quản trị viên (không bắt buộc)</span>
+                  <span>Ghi chú thêm (không bắt buộc)</span>
                 </label>
                 <textarea
                   id="renew-note"
                   className="adm-input"
                   rows={4}
                   maxLength={500}
-                  placeholder="Ví dụ: Muốn gia hạn thêm 12 tháng."
+                  placeholder="Ví dụ: cần tăng thêm hạn mức tòa nhà."
                   value={renewNote}
                   onChange={(e) => setRenewNote(e.target.value)}
                   style={{ resize: 'vertical', padding: 12, height: 'auto' }}
@@ -713,7 +782,7 @@ export function OwnerContractsPage() {
                     className="ocp-legal-cell"
                     style={{
                       cursor: 'pointer',
-                      borderColor: c.id === selectedContract.id ? 'rgba(93, 230, 255, 0.5)' : undefined,
+                      borderColor: c.id === selectedContract.id ? 'rgba(34,211,238, 0.5)' : undefined,
                     }}
                     onClick={() => {
                       setSelectedId(c.id)
@@ -721,7 +790,7 @@ export function OwnerContractsPage() {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                      <strong style={{ color: '#5de6ff', fontSize: 14 }}>
+                      <strong style={{ color: '#22d3ee', fontSize: 14 }}>
                         #{c.contractCode}
                         {c.annualValue > 0 ? ` — ${formatContractValue(c)}` : ''}
                       </strong>

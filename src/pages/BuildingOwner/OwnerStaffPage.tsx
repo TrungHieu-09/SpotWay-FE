@@ -673,7 +673,7 @@ export function OwnerStaffPage() {
                               className="material-symbols-outlined"
                               style={{
                                 fontSize: 18,
-                                color: checked ? '#a855f7' : 'rgba(255,255,255,0.2)',
+                                color: checked ? '#8b5cf6' : 'rgba(255,255,255,0.2)',
                               }}
                             >
                               {checked ? 'check_circle' : 'radio_button_unchecked'}

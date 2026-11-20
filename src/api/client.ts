@@ -1,4 +1,5 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
+import { useServiceLockStore } from "../store/useServiceLockStore";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
@@ -130,6 +131,10 @@ apiClient.interceptors.response.use(
       error.response?.data?.message ??
       error.message ??
       "Request failed";
+    // The workspace's contract ended: the whole app switches to the expired screen (see ProtectedRoute).
+    if (error.response?.status === 403 && error.response?.data?.error?.code === "CONTRACT_EXPIRED") {
+      useServiceLockStore.getState().lock(String(rawMessage));
+    }
     // Express/Nest trả "Cannot GET /api/..." khi route chưa tồn tại: báo dễ hiểu thay vì lộ nguyên văn.
     const isMissingEndpoint =
       error.response?.status === 404 &&
