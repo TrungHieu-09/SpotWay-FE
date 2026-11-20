@@ -32,6 +32,17 @@ export async function updateAdminContract(id: string, payload: UpdateServiceCont
   return data
 }
 
+/** Ends the contract early: the workspace is locked from `terminatedAt`, the record and the reason stay. */
+export async function terminateAdminContract(id: string, terminatedAt: string, reason: string): Promise<ServiceContract> {
+  const { data } = await apiClient.post<ServiceContract>(`/admin/contracts/${id}/terminate`, { terminatedAt, reason })
+  return data
+}
+
+export async function restoreAdminContract(id: string): Promise<ServiceContract> {
+  const { data } = await apiClient.post<ServiceContract>(`/admin/contracts/${id}/restore`)
+  return data
+}
+
 export async function deleteAdminContract(id: string): Promise<void> {
   await apiClient.delete(`/admin/contracts/${id}`)
 }

@@ -1,4 +1,4 @@
-export type ContractLifecycleStatus = 'active' | 'expiring' | 'expired'
+export type ContractLifecycleStatus = 'active' | 'expiring' | 'expired' | 'terminated'
 export type ContractPaymentStatus = 'paid' | 'pending' | 'custom'
 export type ContractCurrency = 'USD' | 'VND'
 export type RenewalUnit = 'day' | 'month'
@@ -43,6 +43,9 @@ export interface ServiceContract {
   notes: string
   renewalRequested?: boolean
   renewalNote?: string | null
+  /** First day without service when the admin ended the contract early. */
+  terminatedAt?: string | null
+  terminationReason?: string | null
   /** How much time the owner asked to add, in `renewalUnit` (only while a request is open). */
   renewalAmount?: number | null
   renewalUnit?: RenewalUnit | null
@@ -114,12 +117,23 @@ export function getContractAlert(contracts: ServiceContract[]): ContractAlert | 
   return current && current.daysRemaining <= EXPIRING_SOON_DAYS ? current : null
 }
 
+function dayBefore(day: string): string {
+  const date = new Date(day + 'T00:00:00Z')
+  date.setUTCDate(date.getUTCDate() - 1)
+  return date.toISOString().slice(0, 10)
+}
+
 export function getContractLifecycle(contract: ServiceContract): ContractLifecycleInfo {
   const now = new Date()
   const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
 
+  // An early termination moves the last usable day to the day before it.
+  const endedEarly = Boolean(contract.terminatedAt) && dayBefore(contract.terminatedAt as string) < contract.endDate
+  const lastDay = endedEarly ? dayBefore(contract.terminatedAt as string) : contract.endDate
+  const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
   const startMs = new Date(contract.startDate).getTime() || todayMs
-  const endMs = new Date(contract.endDate).getTime() || todayMs
+  const endMs = new Date(lastDay).getTime() || todayMs
 
   const dayMs = 1000 * 60 * 60 * 24
   const totalDays = Math.max(1, Math.round((endMs - startMs) / dayMs))
@@ -131,7 +145,10 @@ export function getContractLifecycle(contract: ServiceContract): ContractLifecyc
   let status: ContractLifecycleStatus = 'active'
   let statusLabel = 'Đang hiệu lực'
 
-  if (daysRemaining < 0) {
+  if (endedEarly && (contract.terminatedAt as string) <= todayIso) {
+    status = 'terminated'
+    statusLabel = 'Đã kết thúc sớm'
+  } else if (daysRemaining < 0) {
     status = 'expired'
     statusLabel = 'Hết hạn'
   } else if (daysRemaining <= EXPIRING_SOON_DAYS) {

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { App as AntApp, Popconfirm } from 'antd'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   createAdminContract,
   deleteAdminContract,
   getAdminContract,
+  restoreAdminContract,
+  terminateAdminContract,
   getAdminContracts,
   updateAdminContract,
 } from '../../api/contracts'
@@ -98,6 +100,7 @@ function nextContractCode(existing: ServiceContract[]): string {
 export function AdminContractsPage() {
   const { message } = AntApp.useApp()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [contracts, setContracts] = useState<ServiceContract[]>([])
   const [owners, setOwners] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -115,6 +118,10 @@ export function AdminContractsPage() {
   const [isDragging, setIsDragging] = useState(false)
   const [scansDirty, setScansDirty] = useState(false)
   const [renewTarget, setRenewTarget] = useState<ServiceContract | null>(null)
+  const [terminateTarget, setTerminateTarget] = useState<ServiceContract | null>(null)
+  const [terminateDate, setTerminateDate] = useState('')
+  const [terminateReason, setTerminateReason] = useState('')
+  const [terminating, setTerminating] = useState(false)
   const [renewEnd, setRenewEnd] = useState('')
   const [renewing, setRenewing] = useState(false)
   const [loadingScans, setLoadingScans] = useState(false)
@@ -162,6 +169,15 @@ export function AdminContractsPage() {
     void reload()
   }, [reload])
 
+  // "Thêm hợp đồng" from the accounts list opens the upload form with that owner already chosen.
+  const ownerParam = searchParams.get('owner')
+  useEffect(() => {
+    if (!ownerParam || loading || owners.length === 0) return
+    openCreateModal(ownerParam)
+    setSearchParams({}, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ownerParam, loading, owners])
+
   const counts = useMemo(() => {
     let active = 0
     let expiring = 0
@@ -179,7 +195,8 @@ export function AdminContractsPage() {
     const q = searchQuery.trim().toLowerCase()
     const list = contracts.filter((c) => {
       const st = getContractLifecycle(c).status
-      if (statusFilter !== 'all' && st !== statusFilter) return false
+      // An early termination counts with the expired ones in the filter and the counters.
+      if (statusFilter !== 'all' && (st === 'terminated' ? 'expired' : st) !== statusFilter) return false
       if (q) {
         const hay = `${c.contractCode} ${c.customerName} ${c.ownerEmail} ${c.representative} ${c.workspaceDomain}`.toLowerCase()
         if (!hay.includes(q)) return false
@@ -204,7 +221,7 @@ export function AdminContractsPage() {
     )
   }, [contracts, filteredContracts, selectedId])
 
-  function openCreateModal() {
+  function openCreateModal(preferredOwnerId?: string) {
     if (loading) {
       message.info('Đang tải dữ liệu, vui lòng thử lại sau giây lát.')
       return
@@ -216,7 +233,7 @@ export function AdminContractsPage() {
     }
     setEditingId(null)
     setFormCode(nextContractCode(contracts))
-    setFormOwnerId(owners[0].id)
+    setFormOwnerId((owners.find((o) => o.id === preferredOwnerId) ?? owners[0]).id)
     const today = new Date().toISOString().slice(0, 10)
     const nextYear = new Date()
     nextYear.setFullYear(nextYear.getFullYear() + 1)
@@ -430,6 +447,41 @@ export function AdminContractsPage() {
     }
   }
 
+  function openTerminateDialog(c: ServiceContract) {
+    setTerminateTarget(c)
+    setTerminateDate(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10))
+    setTerminateReason('')
+  }
+
+  async function handleTerminate() {
+    if (!terminateTarget) return
+    if (!terminateReason.trim()) {
+      message.error('Vui lòng nhập lý do kết thúc sớm.')
+      return
+    }
+    setTerminating(true)
+    try {
+      const updated = await terminateAdminContract(terminateTarget.id, terminateDate, terminateReason.trim())
+      setContracts((prev) => prev.map((item) => (item.id === terminateTarget.id ? { ...updated, scanPages: [] } : item)))
+      message.success(`Đã kết thúc sớm hợp đồng ${terminateTarget.contractCode} từ ngày ${formatDateVN(terminateDate)}.`)
+      setTerminateTarget(null)
+    } catch (err) {
+      message.error((err as Error).message || 'Không thể kết thúc sớm hợp đồng.')
+    } finally {
+      setTerminating(false)
+    }
+  }
+
+  async function handleRestore(c: ServiceContract) {
+    try {
+      const updated = await restoreAdminContract(c.id)
+      setContracts((prev) => prev.map((item) => (item.id === c.id ? { ...updated, scanPages: [] } : item)))
+      message.success(`Đã khôi phục hợp đồng ${c.contractCode}.`)
+    } catch (err) {
+      message.error((err as Error).message || 'Không thể khôi phục hợp đồng.')
+    }
+  }
+
   async function handleDeleteContract(id: string) {
     try {
       await deleteAdminContract(id)
@@ -464,7 +516,7 @@ export function AdminContractsPage() {
           <button
             type="button"
             className="adm-btn adm-btn--primary"
-            onClick={openCreateModal}
+            onClick={() => openCreateModal()}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
               add_circle
@@ -846,18 +898,50 @@ export function AdminContractsPage() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                className="adm-btn adm-btn--sm"
-                onClick={() => openRenewDialog(selectedContract)}
-                title="Chọn ngày kết thúc mới cho hợp đồng"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                  autorenew
-                </span>
-                <span>Gia hạn</span>
-              </button>
+              {getContractLifecycle(selectedContract).status === 'terminated' ? (
+                <button
+                  type="button"
+                  className="adm-btn adm-btn--sm"
+                  onClick={() => void handleRestore(selectedContract)}
+                  title="Bỏ kết thúc sớm, hợp đồng chạy tiếp tới ngày kết thúc ban đầu"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                    undo
+                  </span>
+                  <span>Khôi phục</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="adm-btn adm-btn--sm"
+                  onClick={() => openRenewDialog(selectedContract)}
+                  title="Chọn ngày kết thúc mới cho hợp đồng"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                    autorenew
+                  </span>
+                  <span>Gia hạn</span>
+                </button>
+              )}
             </div>
+
+            {selectedContract.terminatedAt && (
+              <div
+                className="cnt-note-box"
+                style={{ margin: '0 0 12px', borderColor: 'rgba(248, 113, 113, 0.5)', background: 'rgba(248, 113, 113, 0.08)' }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#f87171', marginTop: 1 }}>
+                  gpp_bad
+                </span>
+                <div>
+                  <strong style={{ color: '#f87171' }}>
+                    {getContractLifecycle(selectedContract).status === 'terminated' ? 'Đã kết thúc sớm từ ngày ' : 'Sẽ kết thúc sớm từ ngày '}
+                    {formatDateVN(selectedContract.terminatedAt)}
+                  </strong>
+                  {selectedContract.terminationReason && <span>: {selectedContract.terminationReason}</span>}
+                </div>
+              </div>
+            )}
 
             {selectedContract.renewalRequested && (
               <div
@@ -955,9 +1039,18 @@ export function AdminContractsPage() {
                 <span>Chỉnh sửa</span>
               </button>
 
+              {!selectedContract.terminatedAt && (
+                <button type="button" className="adm-btn" onClick={() => openTerminateDialog(selectedContract)} title="Kết thúc hợp đồng trước hạn, vẫn lưu hồ sơ">
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                    event_busy
+                  </span>
+                  <span>Kết thúc sớm</span>
+                </button>
+              )}
+
               <Popconfirm
                 title="Xóa hồ sơ hợp đồng này?"
-                description={`Bạn có chắc muốn xóa hợp đồng ${selectedContract.contractCode}?`}
+                description={`Xóa hợp đồng ${selectedContract.contractCode} là xóa hẳn hồ sơ. Nếu đây là hợp đồng cuối cùng của chủ tòa nhà, họ sẽ dùng được không giới hạn trở lại. Muốn dừng dịch vụ, hãy dùng "Kết thúc sớm".`}
                 okText="Xóa hợp đồng"
                 cancelText="Hủy"
                 okButtonProps={{ danger: true }}
@@ -1390,6 +1483,99 @@ export function AdminContractsPage() {
                     </span>
                   </button>
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Kết thúc sớm: dừng dịch vụ từ một ngày, giữ lại hồ sơ và lý do ── */}
+      {terminateTarget && (
+        <div className="adm-modal-overlay" onClick={() => !terminating && setTerminateTarget(null)} role="presentation">
+          <div className="adm-modal-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <div className="adm-modal-card__topline" />
+            <div className="adm-modal-card__head">
+              <div className="adm-modal-card__head-left">
+                <div className="adm-modal-card__badge">
+                  <span className="material-symbols-outlined" style={{ fontSize: 22 }}>
+                    event_busy
+                  </span>
+                </div>
+                <div>
+                  <h2 className="adm-modal-card__title">Kết thúc hợp đồng sớm</h2>
+                  <p className="adm-modal-card__subtitle">
+                    #{terminateTarget.contractCode} · {terminateTarget.customerName}
+                  </p>
+                </div>
+              </div>
+              <button type="button" className="adm-modal-card__close" onClick={() => setTerminateTarget(null)} disabled={terminating} aria-label="Đóng">
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  close
+                </span>
+              </button>
+            </div>
+
+            <form
+              className="adm-modal-form"
+              onSubmit={(e) => {
+                e.preventDefault()
+                void handleTerminate()
+              }}
+            >
+              <div className="cnt-note-box" style={{ margin: 0 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#fbbf24', marginTop: 1 }}>
+                  warning
+                </span>
+                <div>
+                  Từ ngày kết thúc sớm, chủ tòa nhà và nhân sự trong tòa nhà không dùng được ứng dụng. Hồ sơ hợp đồng vẫn được lưu và bạn có thể khôi phục.
+                </div>
+              </div>
+
+              <div className="adm-field">
+                <label className="adm-field__label" htmlFor="terminate-date">
+                  <span>
+                    Ngày kết thúc sớm <span className="adm-field__req">*</span>
+                  </span>
+                </label>
+                <input
+                  id="terminate-date"
+                  type="date"
+                  className="adm-input"
+                  style={{ paddingLeft: 14 }}
+                  min={nextDay(terminateTarget.startDate)}
+                  max={terminateTarget.endDate}
+                  value={terminateDate}
+                  onChange={(e) => setTerminateDate(e.target.value)}
+                  required
+                />
+                <span className="adm-field__hint">Dịch vụ dừng từ ngày này (hôm nay nghĩa là dừng ngay). Hợp đồng kết thúc ngày {formatDateVN(terminateTarget.endDate)}.</span>
+              </div>
+
+              <div className="adm-field">
+                <label className="adm-field__label" htmlFor="terminate-reason">
+                  <span>
+                    Lý do <span className="adm-field__req">*</span>
+                  </span>
+                </label>
+                <textarea
+                  id="terminate-reason"
+                  className="adm-input"
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Ví dụ: hai bên thỏa thuận kết thúc trước hạn."
+                  value={terminateReason}
+                  onChange={(e) => setTerminateReason(e.target.value)}
+                  style={{ resize: 'vertical', padding: 12, height: 'auto' }}
+                />
+              </div>
+
+              <div className="adm-modal-footer">
+                <button type="button" className="adm-btn" onClick={() => setTerminateTarget(null)} disabled={terminating}>
+                  Hủy
+                </button>
+                <button type="submit" className="adm-btn adm-btn--danger" disabled={terminating || !terminateDate || !terminateReason.trim()}>
+                  {terminating ? 'Đang lưu...' : 'Kết thúc hợp đồng'}
+                </button>
               </div>
             </form>
           </div>

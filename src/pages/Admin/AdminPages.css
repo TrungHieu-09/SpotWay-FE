@@ -1157,3 +1157,22 @@ $1rgba(129,140,248, 0.15);
   color: #818cf8;
   box-shadow: 0 0 15px rgba(129, 140, 248, 0.22);
 }
+
+/* Small status tags under an account's email */
+.adm-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.adm-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 99px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 700;
+  background: transparent;
+  line-height: 1.6;
+}
+.adm-tag--danger { color: #f87171; background: rgba(248, 113, 113, 0.12); border-color: rgba(248, 113, 113, 0.4); }
+.adm-tag--warn { color: #fbbf24; background: rgba(251, 191, 36, 0.12); border-color: rgba(251, 191, 36, 0.4); }
+.adm-tag--link { cursor: pointer; color: #a78bfa; background: rgba(139, 92, 246, 0.12); border-color: rgba(139, 92, 246, 0.4); }
+.adm-tag--link:hover { background: rgba(139, 92, 246, 0.22); }

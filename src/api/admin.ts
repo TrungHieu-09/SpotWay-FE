@@ -26,6 +26,12 @@ export async function resetAdminUserPassword(userId: string, newPassword?: strin
   return data
 }
 
+/** Locked accounts cannot sign in; their open sessions end at once. */
+export async function setAdminUserStatus(userId: string, status: 'active' | 'locked') {
+  const { data } = await apiClient.patch<AdminUser>(`/admin/users/${userId}/status`, { status })
+  return data
+}
+
 export async function deleteAdminUser(userId: string) {
   await apiClient.delete(`/admin/users/${userId}`)
 }

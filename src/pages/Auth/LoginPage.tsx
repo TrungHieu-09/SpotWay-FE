@@ -25,6 +25,11 @@ function describeLoginError(err: unknown, lang: 'EN' | 'VI') {
   if (code === 'INVALID_CREDENTIALS' || status === 401) {
     return vi ? 'Sai email hoặc mật khẩu.' : 'Incorrect email or password.'
   }
+  if (code === 'ACCOUNT_LOCKED') {
+    return vi
+      ? 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.'
+      : 'Your account is locked. Please contact your administrator.'
+  }
   if (code === 'TENANT_SUSPENDED') {
     return vi
       ? 'Không gian làm việc của bạn đang bị tạm khóa. Vui lòng liên hệ quản trị viên.'

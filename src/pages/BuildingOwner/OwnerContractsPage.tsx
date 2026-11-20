@@ -10,6 +10,7 @@ import type { RenewalUnit, ServiceContract } from '../../types/contract'
 import {
   EXPIRING_SOON_DAYS,
   formatContractValue,
+  formatDateVN,
   formatRenewalAmount,
   getContractLifecycle,
 } from '../../types/contract'
@@ -160,19 +161,27 @@ export function OwnerContractsPage() {
           <div>
             <div className="ocp-alert-banner__title-row">
               <span className="ocp-alert-banner__title">
-                {lifecycle.daysRemaining < 0
+                {lifecycle.status === 'terminated'
+                  ? 'Hợp đồng đã kết thúc sớm'
+                  : lifecycle.daysRemaining < 0
                   ? 'Hợp đồng đã hết hạn'
                   : lifecycle.daysRemaining <= EXPIRING_SOON_DAYS
                     ? 'Hợp đồng sắp hết hạn!'
                     : 'Hợp đồng đã ký kết với Quản trị viên (Admin)'}
               </span>
               <span className="ocp-alert-banner__tag">
-                {lifecycle.daysRemaining < 0 ? 'Đã khóa dịch vụ' : lifecycle.daysRemaining <= EXPIRING_SOON_DAYS ? 'Cảnh báo kỳ hạn' : 'Đang hiệu lực'}
+                {lifecycle.status === 'terminated' || lifecycle.daysRemaining < 0 ? 'Đã khóa dịch vụ' : lifecycle.daysRemaining <= EXPIRING_SOON_DAYS ? 'Cảnh báo kỳ hạn' : 'Đang hiệu lực'}
               </span>
             </div>
 
             <p className="ocp-alert-banner__desc">
-              {lifecycle.daysRemaining < 0 ? (
+              {lifecycle.status === 'terminated' ? (
+                <>
+                  Hợp đồng đã được Quản trị viên kết thúc sớm từ ngày{' '}
+                  <strong style={{ color: '#f87171' }}>{formatDateVN(selectedContract.terminatedAt ?? '')}</strong>.
+                  {selectedContract.terminationReason ? <> Lý do: {selectedContract.terminationReason}.</> : null} Dịch vụ đã bị khóa với bạn và nhân sự trong tòa nhà. Hãy liên hệ Quản trị viên hoặc gửi yêu cầu.
+                </>
+              ) : lifecycle.daysRemaining < 0 ? (
                 <>
                   Hợp đồng đã kết thúc ngày <strong style={{ color: '#f87171' }}>{lifecycle.formattedEndDate}</strong>. Dịch vụ
                   đã bị khóa với bạn và nhân sự trong tòa nhà cho tới khi Quản trị viên gia hạn. Hãy gửi yêu cầu gia hạn.

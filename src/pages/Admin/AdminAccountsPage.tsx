@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { App as AntApp, Popconfirm, Space, Typography } from 'antd'
-import { KeyOutlined, DeleteOutlined } from '@ant-design/icons'
-import { useSearchParams } from 'react-router-dom'
+import { KeyOutlined, DeleteOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   createAdminUser,
   deleteAdminUser,
   getAdminUsers,
   resetAdminUserPassword,
+  setAdminUserStatus,
 } from '../../api/admin'
+import { getAdminContracts } from '../../api/contracts'
 import { useAuthStore } from '../../auth/store'
 import type { AdminUser, AssignableRole } from '../../types/admin'
 import type { Role } from '../../types/auth'
@@ -78,8 +80,11 @@ function getInitials(nameOrEmail: string): string {
 const PAGE_SIZE = 10
 
 export function AdminAccountsPage() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [users, setUsers] = useState<AdminUser[]>([])
+  /** Owners and workspaces that have at least one contract; null while unknown, so no false reminders. */
+  const [contracted, setContracted] = useState<{ ownerIds: Set<string>; tenantIds: Set<string> } | null>(null)
   const [keyword, setKeyword] = useState(() => searchParams.get('q') ?? '')
   const [role, setRole] = useState<Role | undefined>(() => {
     const r = searchParams.get('role') as Role | null
@@ -116,7 +121,26 @@ export function AdminAccountsPage() {
     } finally {
       setLoading(false)
     }
+    // The reminder is a nicety: a failed contracts request just hides it.
+    getAdminContracts()
+      .then((list) =>
+        setContracted({
+          ownerIds: new Set(list.flatMap((c) => (c.ownerId ? [c.ownerId] : []))),
+          tenantIds: new Set(list.flatMap((c) => (c.tenantId ? [c.tenantId] : []))),
+        }),
+      )
+      .catch(() => setContracted(null))
   }, [message])
+
+  async function changeStatus(user: AdminUser, status: 'active' | 'locked') {
+    try {
+      await setAdminUserStatus(user.id, status)
+      message.success(status === 'locked' ? `Đã khóa tài khoản ${user.email}` : `Đã mở khóa tài khoản ${user.email}`)
+      await reload()
+    } catch (error) {
+      message.error((error as Error).message)
+    }
+  }
 
   useEffect(() => {
     void reload()
@@ -616,6 +640,28 @@ export function AdminAccountsPage() {
                               {user.name || user.email.split('@')[0]}
                             </div>
                             <div className="adm-user-cell__email">{user.email}</div>
+                            {(user.status === 'locked' ||
+                              (user.role === 'building_owner' &&
+                                contracted &&
+                                !contracted.ownerIds.has(user.id) &&
+                                !(user.tenantId && contracted.tenantIds.has(user.tenantId)))) && (
+                              <div className="adm-tag-row">
+                                {user.status === 'locked' && <span className="adm-tag adm-tag--danger">Đã khóa</span>}
+                                {user.role === 'building_owner' &&
+                                  contracted &&
+                                  !contracted.ownerIds.has(user.id) &&
+                                  !(user.tenantId && contracted.tenantIds.has(user.tenantId)) && (
+                                    <button
+                                      type="button"
+                                      className="adm-tag adm-tag--warn"
+                                      title="Thêm hợp đồng cho chủ tòa nhà này"
+                                      onClick={() => navigate(`/admin/contracts?owner=${user.id}`)}
+                                    >
+                                      Chưa có hợp đồng · Thêm
+                                    </button>
+                                  )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -648,6 +694,25 @@ export function AdminAccountsPage() {
                               <span>Đặt lại mật khẩu</span>
                             </button>
                           </Popconfirm>
+                          {user.role !== 'admin' && (
+                            <Popconfirm
+                              title={user.status === 'locked' ? 'Mở khóa tài khoản này?' : 'Khóa tài khoản này?'}
+                              description={
+                                user.status === 'locked'
+                                  ? 'Người dùng sẽ đăng nhập lại được.'
+                                  : 'Người dùng bị đăng xuất và không đăng nhập được cho tới khi mở khóa.'
+                              }
+                              okText={user.status === 'locked' ? 'Mở khóa' : 'Khóa'}
+                              cancelText="Hủy"
+                              onConfirm={() => void changeStatus(user, user.status === 'locked' ? 'active' : 'locked')}
+                              disabled={isSelf}
+                            >
+                              <button type="button" className="adm-btn adm-btn--sm" disabled={isSelf} title={isSelf ? 'Không thể tự khóa chính mình' : undefined}>
+                                {user.status === 'locked' ? <UnlockOutlined /> : <LockOutlined />}
+                                <span>{user.status === 'locked' ? 'Mở khóa' : 'Khóa'}</span>
+                              </button>
+                            </Popconfirm>
+                          )}
                           <Popconfirm
                             title="Xóa tài khoản này?"
                             okText="Xóa"

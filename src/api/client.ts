@@ -132,8 +132,9 @@ apiClient.interceptors.response.use(
       error.message ??
       "Request failed";
     // The workspace's contract ended: the whole app switches to the expired screen (see ProtectedRoute).
-    if (error.response?.status === 403 && error.response?.data?.error?.code === "CONTRACT_EXPIRED") {
-      useServiceLockStore.getState().lock(String(rawMessage));
+    const lockCode = error.response?.data?.error?.code;
+    if (error.response?.status === 403 && (lockCode === "CONTRACT_EXPIRED" || lockCode === "CONTRACT_TERMINATED")) {
+      useServiceLockStore.getState().lock(String(rawMessage), lockCode === "CONTRACT_TERMINATED" ? "terminated" : "expired");
     }
     // Express/Nest trả "Cannot GET /api/..." khi route chưa tồn tại: báo dễ hiểu thay vì lộ nguyên văn.
     const isMissingEndpoint =

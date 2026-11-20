@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Alert, Skeleton } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { getAdminOverview, getAdminUsers } from '../../api/admin'
+import { getAdminContracts } from '../../api/contracts'
 import type { AdminOverview, AdminUser } from '../../types/admin'
 import type { Role } from '../../types/auth'
 import './AdminPages.css'
@@ -27,12 +28,21 @@ export function AdminOverviewPage() {
   const [overview, setOverview] = useState<AdminOverview | null>(null)
   const [recentUsers, setRecentUsers] = useState<AdminUser[]>([])
   const [error, setError] = useState<string | null>(null)
+  /** Building Owners with no contract on file yet (null until known). */
+  const [ownersWithoutContract, setOwnersWithoutContract] = useState<number | null>(null)
 
   useEffect(() => {
-    Promise.all([getAdminOverview(), getAdminUsers()])
-      .then(([overviewData, usersData]) => {
+    Promise.all([getAdminOverview(), getAdminUsers(), getAdminContracts().catch(() => null)])
+      .then(([overviewData, usersData, contracts]) => {
         setOverview(overviewData)
         setRecentUsers(usersData.slice(0, 5))
+        if (contracts) {
+          const ownerIds = new Set(contracts.flatMap((c) => (c.ownerId ? [c.ownerId] : [])))
+          const tenantIds = new Set(contracts.flatMap((c) => (c.tenantId ? [c.tenantId] : [])))
+          setOwnersWithoutContract(
+            usersData.filter((u) => u.role === 'building_owner' && !ownerIds.has(u.id) && !(u.tenantId && tenantIds.has(u.tenantId))).length,
+          )
+        }
       })
       .catch((reason: Error) => setError(reason.message))
   }, [])
@@ -135,6 +145,25 @@ export function AdminOverviewPage() {
       </div>
 
       {/* ── Row of 5 Stat Cards ── */}
+      {ownersWithoutContract ? (
+        <div
+          className="adm-glass-card"
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/admin/accounts?role=building_owner')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') navigate('/admin/accounts?role=building_owner')
+          }}
+          style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px', cursor: 'pointer', color: '#fbbf24' }}
+        >
+          <span className="material-symbols-outlined">description</span>
+          <span style={{ flex: 1 }}>
+            {ownersWithoutContract} chủ tòa nhà chưa có hợp đồng trong hệ thống. Bấm để xem và thêm hợp đồng.
+          </span>
+          <span className="material-symbols-outlined">chevron_right</span>
+        </div>
+      ) : null}
+
       <div className="adm-stat-grid">
         {/* Card 1: Tài khoản */}
         <div
